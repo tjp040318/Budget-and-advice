@@ -6,18 +6,41 @@ import UIKit
 ///
 /// This is the moment the whole genre is built around, so it is staged rather
 /// than shown: a charge, a flash, the figure, the stars ticking in one by one,
-/// the name slamming down, then the details. A ten-pull reveals one at a time
-/// with the option to skip to the grid; a tap during the sequence completes it
-/// instantly, a tap after it advances.
+/// the name slamming down, then the details. A pull of several is ONE
+/// ceremony since 2026-09-24 (Docs/FEEL.md W2.3, `SummonBoard.swift`): one
+/// charge on the ladder climbing to the best grade in it, a flash that opens
+/// onto a board of face-down cards turning left to right 90 ms apart, every
+/// 4★, 5★ or new unit landing with a rim flare and lifting off the board for
+/// its own reveal on the beam, and a summary that always fits the phone,
+/// where a tap on a card replays it. It revealed the ten one at a time before
+/// — ten taps — and ended on a grid that scrolled. A tap during a sequence
+/// completes it; a tap after it moves on.
 struct SummonRevealView: View {
     let results: [SummonResult]
     /// The scroll the summon spent, drawn in the charge. Nil infers one from
     /// the result (`scrollShown`), and an awakening draws none.
     var scroll: ScrollType? = nil
+    /// "Summon ×10 again" on a pull of several's summary (W2.3), handed in by
+    /// the summon room; nil draws none (the Hall of Ka, a shrine, the stress).
+    var againOffer: SummonAgainOffer? = nil
+    /// Where the summon room's scroll stood when it handed over, in window
+    /// points (Docs/FEEL.md W2.14): the scroll starts there and settles into
+    /// its own place as the charge comes up round it
+    /// (`RevealGeometry.handoff`), so one object travels from the altar into
+    /// the charge. Nil for a reveal opened any other way, whose charge is up
+    /// from its first frame, as before.
+    var openingScrollFrame: CGRect? = nil
+    /// A reveal that plays itself (the CI's memory stress, `-tour-stress
+    /// summon`): each figure's name stands this long before it moves on, and
+    /// the summary this long before it closes. Nil waits for the player.
+    var autoAdvance: TimeInterval? = nil
     let onFinish: () -> Void
 
     @State private var index = 0
-    @State private var showAll = false
+    /// Where the reveal stands (`RevealPhase`): a single is `.single` from its
+    /// first frame to its last; a pull of several goes through the ten's
+    /// charge, the board, its featured cards' reveals and the summary.
+    @State private var revealPhase: RevealPhase = .single
 
     // The staged reveal, in order. `charging` starts TRUE so the very first
     // frame, drawn before the stage has been built, is already the charge.
@@ -72,6 +95,54 @@ struct SummonRevealView: View {
     /// from a skipped reveal cannot land on the next one.
     @State private var sequence = 0
 
+    // The board (Docs/FEEL.md W2.3). Its looks are functions of `boardClock` and
+    // the wall clock; everything below is the bookkeeping of what has turned,
+    // what waits to lift, and which timers still belong to it.
+
+    /// The board's clock: the deal, each card's turn and flare, the summary.
+    @State private var boardClock = SummonBoardClock(dealtAt: .distantFuture)
+    /// The face each card turns to, resolved once when the ten is summoned.
+    @State private var boardUnits: [ResolvedUnit] = []
+    /// The next card no run has begun to turn, and how many have LANDED (a
+    /// prefix: every turn is as long as every other). Skip's words read the
+    /// landed count, so they change only when a card lands (W2.23).
+    @State private var boardCursor = 0
+    @State private var boardLanded = 0
+    /// The run of turns under way: a skip, a stop or a lift bumps it, and a
+    /// turn still waiting on it goes nowhere.
+    @State private var boardRun = 0
+    /// The board itself: a new one, or the reveal leaving, bumps it, and a
+    /// landing still in flight goes nowhere.
+    @State private var boardSerial = 0
+    /// Featured cards up and waiting their turn on the beam, in order.
+    @State private var boardQueue: [Int] = []
+    /// Featured cards a skip ran past: they keep their flare and wait for the
+    /// summary, where a tap replays them.
+    @State private var passedOver: Set<Int> = []
+    /// A skip's quick run of turns, and the card it runs to (nil: the
+    /// summary); cards landing on the way flare but never lift.
+    @State private var fastForwarding = false
+    @State private var fastTo: Int?
+    /// The lift waiting on a featured card's hold; a skip or a tap that lifts
+    /// sooner bumps it.
+    @State private var liftSerial = 0
+    /// When the lifted card left its slot, and whether the figure on the beam
+    /// came in on one: its charge was the ten's, so it lands the moment its
+    /// stage is ready and the card has arrived.
+    @State private var liftStart: Date?
+    @State private var lifting = false
+    /// Whether the board's timeline draws: it stops once all is still.
+    @State private var boardTicking = true
+    /// The ten's charge has landed: the board's sky is lit.
+    @State private var tenLanded = false
+    /// The cards whose figures this reveal has asked the model library to
+    /// parse (`warmCard`): each once, ONE AHEAD of the beam (review,
+    /// 2026-09-24). Every warm is its own background parse queued on the one
+    /// importer lock, and the first cut started one per featured card at the
+    /// deal — ten for a ten of new units — so a lifted card whose family was
+    /// not parsed yet built on the main thread behind any number of them.
+    @State private var warmedCards: Set<Int> = []
+
     private var current: SummonResult? {
         results.indices.contains(index) ? results[index] : nil
     }
@@ -79,6 +150,68 @@ struct SummonRevealView: View {
     /// The pull's name is on its card: a tap moves on rather than finishing
     /// the words.
     private var isFullyRevealed: Bool { namedFor == sequence }
+
+    /// A pull of several: the board's ceremony rather than one reveal.
+    private var isBoard: Bool { results.count > 1 }
+
+    /// The pull the ten's one charge climbs to (`SummonBoard.headline`).
+    private var headlineIndex: Int { SummonBoard.headline(of: results) ?? 0 }
+
+    /// A figure stands on the beam: a single, a card lifted off the board, a
+    /// replay from the summary.
+    private var showsFigure: Bool {
+        switch revealPhase {
+        case .single, .featured, .replay: return true
+        case .tenCharge, .board, .summary: return false
+        }
+    }
+
+    /// The board is on the screen.
+    private var showsBoard: Bool {
+        switch revealPhase {
+        case .board, .summary: return true
+        case .single, .tenCharge, .featured, .replay: return false
+        }
+    }
+
+    /// The card lifted off the board, drawn in the charge where a scroll
+    /// hangs until the flash takes it.
+    private var liftedIndex: Int? {
+        switch revealPhase {
+        case .featured(let lifted), .replay(let lifted): return lifted
+        case .single, .tenCharge, .board, .summary: return nil
+        }
+    }
+
+    /// What the sky is lit for: the pull on the beam, or the ten's best.
+    private var skyResult: SummonResult? {
+        if showsFigure { return current }
+        return results.indices.contains(headlineIndex) ? results[headlineIndex] : nil
+    }
+
+    /// Whether the sky has bloomed: the pull on the beam has landed, or the
+    /// ten's charge has.
+    private var skyLit: Bool { showsFigure ? revealed : tenLanded }
+
+    /// Where the sky's light is centred: the figure's line, or the board's
+    /// middle.
+    private var skyCentre: UnitPoint {
+        showsFigure ? UnitPoint(x: RevealGeometry.figureLine + 0.01, y: 0.5) : UnitPoint(x: 0.5, y: 0.45)
+    }
+
+    /// The beam's line: the figure's, or the middle for the ten's charge.
+    private var chargeLine: CGFloat {
+        revealPhase == .tenCharge ? RevealGeometry.boardLine : RevealGeometry.figureLine
+    }
+
+    /// The summary's "Summon again": the room's, or under the CI's ten a
+    /// stand-in that shows the plate (`tourAgainOffer`).
+    private var offer: SummonAgainOffer? {
+        #if DEBUG
+        if againOffer == nil, let demo = Self.tourAgainOffer() { return demo }
+        #endif
+        return againOffer
+    }
 
     var body: some View {
         ZStack {
@@ -94,7 +227,13 @@ struct SummonRevealView: View {
             // builds of Sekhmet in one reveal, 1.4 s, 2.1 s and 0.4 s of
             // main thread, and the 3-second frame fell inside the second —
             // an empty dusk with only Skip on it.
-            if !showAll, let current {
+            //
+            // A stage is mounted only while a figure stands on the beam
+            // (W2.3): a single, a featured card lifted off the board, a
+            // replay. The ten's charge, the board and the summary have none,
+            // and a card's stage is taken down the moment its reveal hands
+            // back to the board, so a ten holds one set at a time at most.
+            if showsFigure, let current {
                 let key = stageKey(current)
                 if mountedStage == key {
                     SummonStageView(
@@ -112,11 +251,24 @@ struct SummonRevealView: View {
                 if charging {
                     chargeLayer(current)
                 }
+            } else if revealPhase == .tenCharge, charging, results.indices.contains(headlineIndex) {
+                // The ten's one charge (W2.3), in the middle of the frame
+                // with no set behind it: nothing stands on the beam until a
+                // card lifts off the board. A tap anywhere lands it now, as
+                // a tap on a 5★'s charge does — never past it.
+                chargeLayer(results[headlineIndex])
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { landTenNow() }
             }
 
-            if showAll {
-                grid
-            } else if let current {
+            if showsBoard {
+                boardLayer
+                    .transition(.opacity.combined(with: .scale(scale: 0.94)))
+            }
+
+            if showsFigure, let current {
                 single(current)
             }
 
@@ -147,7 +299,7 @@ struct SummonRevealView: View {
                     Spacer()
                     RevealSkipControl(
                         label: skipLabel,
-                        offersHold: !showAll && results.count > 1,
+                        offersHold: offersHold,
                         onTap: { skipTapped() },
                         onHold: { skipAll() }
                     )
@@ -162,28 +314,82 @@ struct SummonRevealView: View {
             RevealFlipbook.prepare()
             // The music steps back for the rite (Docs/FEEL.md W2.7).
             musicDuck = AudioLibrary.shared.duck(to: Self.musicUnderReveal, fade: 0.5)
-            revealNext()
+            if isBoard {
+                startTenCharge()
+            } else {
+                revealNext()
+            }
         }
         // The stage goes when the reveal does (2026-09-24). A dismissed
         // full-screen cover can keep its content on iOS 17, and with it the
         // stage's scene, its figure and every texture it uploaded (run 242:
         // about 30 MB a reveal, never given back). Unmounting it here hands
         // it to `SummonStageView.dismantleUIView` whatever the cover does.
+        // The board's turns, landings and lifts still in flight go with it.
         .onDisappear {
             sequence += 1
+            boardSerial += 1
+            boardRun += 1
+            liftSerial += 1
+            boardTicking = false
             awaitingStage = nil
             mountedStage = nil
             readyStage = nil
-            hushCharge(over: 0.2)
+            // Only this reveal's OWN charge, still sounding (review,
+            // 2026-09-24). `fadeOut` turns down every voice of the stems,
+            // whoever started it, and a reveal "Summon ×10 again" replaces
+            // leaves AFTER its successor has appeared (the cover's content
+            // changed under it; `AudioLibrary.unduck` records the order):
+            // an unconditional hush here took the new ten's base drone and
+            // Light & Dark layer 0.2 s into its charge. A reveal leaves its
+            // summary with `charging` false, and every path that clears it
+            // has faded its stems already (`land`, `landTen`, `leaveFigure`,
+            // `enterSummary`, `completeInstantly`).
+            if charging { hushCharge(over: 0.2) }
             AudioLibrary.shared.unduck(musicDuck, fade: 1.0)
         }
     }
 
-    /// What Skip says: where a tap on it goes, or Done over the summary.
+    /// What Skip says (Docs/FEEL.md W2.23): where a tap on it goes, or Done
+    /// over the summary. Never the grade of what has not landed: plain Skip
+    /// through the ten's charge, and on the board the words are read off the
+    /// cards that have LANDED (`RevealSkip.boardLabel`), so they change only
+    /// when one does. On the board they name the card `boardSkip` lifts —
+    /// the first card up and waiting that is worth seeing, read by the same
+    /// function (`RevealSkip.boardWaiting`) — so a duplicate 4★ at the head
+    /// of the queue never hides the 5★ waiting behind it (review,
+    /// 2026-09-24).
     private var skipLabel: RevealSkipLabel {
-        if showAll { return .done }
-        let target: RevealSkipTarget = RevealSkip.target(in: results, at: index, landed: revealed)
-        return RevealSkip.label(in: results, for: target, at: index)
+        switch revealPhase {
+        case .single, .featured:
+            let target: RevealSkipTarget = RevealSkip.target(in: results, at: index, landed: revealed)
+            return RevealSkip.label(in: results, for: target, at: index)
+        case .tenCharge, .replay:
+            return .skip
+        case .board:
+            return RevealSkip.boardLabel(in: results, from: boardLanded, queue: boardQueue)
+        case .summary:
+            return .done
+        }
+    }
+
+    /// Whether a hold on Skip skips everything: a pull of several, until its
+    /// summary.
+    private var offersHold: Bool {
+        guard isBoard else { return false }
+        switch revealPhase {
+        case .summary: return false
+        case .single, .tenCharge, .board, .featured, .replay: return true
+        }
+    }
+
+    /// The hint under a figure's name card.
+    private var hintWords: String {
+        switch revealPhase {
+        case .featured: return "Tap to continue"
+        case .replay: return "Tap to return"
+        case .single, .tenCharge, .board, .summary: return "Tap to finish"
+        }
     }
 
     /// The island's music under a reveal, as a share of its own level: about
@@ -203,18 +409,13 @@ struct SummonRevealView: View {
             // sky between the columns is this — deep indigo over a violet dusk
             // and an ember horizon — and the corners fall to ink, so the words
             // on the right are cream and gold on dark, the way a reveal's are.
-            LinearGradient(
-                stops: [
-                    .init(color: Self.duskZenith, location: 0.0),
-                    .init(color: Self.duskViolet, location: 0.45),
-                    .init(color: Self.duskEmber, location: 0.72),
-                    .init(color: Self.duskGround, location: 1.0),
-                ],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // Shared with the summon room since 2026-09-24 (`RevealDusk`,
+            // W2.14): the room fades to this same sky under the scroll's
+            // flight, so the reveal's first frame is the room's last.
+            RevealDuskSky()
+                .ignoresSafeArea()
 
-            if let current {
+            if let current = skyResult {
                 let tint = tint(for: current)
 
                 // Rays for the top grades. They rotate slowly the whole time
@@ -232,7 +433,7 @@ struct SummonRevealView: View {
                         center: .center
                     )
                     .scaleEffect(2.4)
-                    .opacity(revealed ? 1 : 0)
+                    .opacity(skyLit ? 1 : 0)
                     // The fade is scoped to sit UNDER the rotation, not over
                     // it. An `.animation(_:value:)` governs every animatable
                     // change in the subtree it wraps at the instant its value
@@ -243,14 +444,17 @@ struct SummonRevealView: View {
                     // the spin and leave the rays parked for the rest of the
                     // reveal. Opacity and a rotation about the same centre
                     // commute, so keeping them in this order costs nothing.
-                    .animation(.easeOut(duration: 0.7), value: revealed)
+                    .animation(.easeOut(duration: 0.7), value: skyLit)
                     .rotationEffect(.degrees(rays))
                     .blendMode(.plusLighter)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
                     .onAppear {
+                        // A turn on from wherever the last rays stopped: the
+                        // rays come and go with the board's cards (W2.3), and
+                        // a second `rays = 360` would animate nothing.
                         withAnimation(.linear(duration: 18).repeatForever(autoreverses: false)) {
-                            rays = 360
+                            rays += 360
                         }
                     }
                 }
@@ -282,54 +486,41 @@ struct SummonRevealView: View {
                     .allowsHitTesting(false)
                 }
                 RadialGradient(
-                    colors: [tint.opacity(revealed ? 0.40 : 0),
-                             tint.opacity(revealed ? 0.19 : 0),
-                             tint.opacity(revealed ? 0.06 : 0),
+                    colors: [tint.opacity(skyLit ? 0.40 : 0),
+                             tint.opacity(skyLit ? 0.19 : 0),
+                             tint.opacity(skyLit ? 0.06 : 0),
                              .clear],
-                    center: .init(x: 0.27, y: 0.5),
+                    center: skyCentre,
                     startRadius: 0,
-                    endRadius: revealed ? 320 : 130
+                    endRadius: skyLit ? 320 : 130
                 )
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
-                .animation(.easeOut(duration: 0.5), value: revealed)
+                .animation(.easeOut(duration: 0.5), value: skyLit)
 
                 // The corners go back to the plain ground. A landscape frame
                 // is wide enough that the glow and the rays reach all four of
                 // them, and a corner left to the rays is the cheapest-looking
-                // thing in a reveal, so the fall-off returns them to the cream
-                // the rest of the interface stands on. Centred on the figure,
-                // not on the screen, so it frames the character rather than
-                // the layout. Cream, not ink: the ground is `Theme.backdrop`
-                // and the words on the right are ink, and an ink corner stood
-                // the name and the epithet on the one dark patch of the frame.
-                RadialGradient(
-                    colors: [.clear, Self.duskGround.opacity(0.10), Self.duskGround.opacity(0.42), Self.duskGround.opacity(0.82)],
-                    center: .init(x: 0.30, y: 0.52),
-                    startRadius: 0,
-                    endRadius: 560
-                )
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+                // thing in a reveal, so the fall-off returns them to the
+                // ground the dusk stands on. Centred on the figure, not on
+                // the screen, so it frames the character rather than the
+                // layout — and on the middle for the ten's charge and board.
+                RevealDuskVignette(centre: RevealDusk.vignetteCentre(line: vignetteLine))
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
             }
         }
+    }
+
+    /// The line the corners fall to ink round: the figure's, or the middle
+    /// for the ten's charge and its board.
+    private var vignetteLine: CGFloat {
+        showsFigure ? RevealGeometry.figureLine : RevealGeometry.boardLine
     }
 
     private func tint(for result: SummonResult) -> Color {
         Rarity(stars: result.stars).glow
     }
-
-    /// The dusk the reveal stands in (see `backdrop`), and the cream its
-    /// words are set in.
-    private static let duskZenith = Color(hex: "#12162B")
-    private static let duskViolet = Color(hex: "#3A2C4E")
-    private static let duskEmber = Color(hex: "#9C5F33")
-    private static let duskGround = Color(hex: "#15110F")
-    private static let duskInk = Color(hex: "#D9CDB3")
-    /// The name's gold, pale at the top of the letters and deeper at their
-    /// foot; NEW and AWAKENED wear it too.
-    private static let nameGold = LinearGradient(colors: [Color(hex: "#FFF3C4"), Color(hex: "#E2C15E")],
-                                                 startPoint: .top, endPoint: .bottom)
 
     /// The flash's white at `date`: 0.85 when it goes off, falling straight
     /// to nothing over `span`, whatever the frames in between were doing.
@@ -380,16 +571,72 @@ struct SummonRevealView: View {
     /// stage is still being built and drawn.
     private func chargeLayer(_ result: SummonResult) -> some View {
         GeometryReader { frame in
+            let size: CGSize = frame.size
+            let insets: EdgeInsets = frame.safeAreaInsets
             TimelineView(.animation) { timeline in
+                let now: Date = timeline.date
+                let ambient: TimeInterval = max(0, now.timeIntervalSince(ambientStart))
                 chargeScene(result,
-                            clock: chargeClock(at: timeline.date),
-                            ambient: max(0, timeline.date.timeIntervalSince(ambientStart)),
-                            size: frame.size)
+                            clock: chargeClock(at: now),
+                            ambient: ambient,
+                            size: size,
+                            framing: chargeFraming(size: size, insets: insets, ambient: ambient, at: now))
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }
+
+    /// What frames the charge besides its two clocks (2026-09-24): the line
+    /// it stands on, how far it has come up round what it was handed, where
+    /// the room's scroll came from (W2.14), and the card lifted off the board
+    /// in the scroll's place (W2.3).
+    private struct ChargeFraming {
+        /// The beam's line, as a share of the width.
+        let line: CGFloat
+        /// 0 → 1: the rings, the pool, the beam, the motes and the flare
+        /// coming up round the scroll or the card handed over; 1 from the
+        /// first frame when nothing was.
+        let entry: CGFloat
+        /// The room's scroll's square, in this layer's points, and how far
+        /// the scroll has settled from it into its own place.
+        let opening: CGRect?
+        let settle: CGFloat
+        /// The card lifted off the board, drawn where the scroll hangs; nil
+        /// draws the scroll.
+        let card: RevealLiftPose?
+        let cardIndex: Int?
+        /// Past every rung: a lifted card's charge stands at its grade from
+        /// its first frame, since its face already says the grade.
+        let summit: Bool
+    }
+
+    private func chargeFraming(size: CGSize, insets: EdgeInsets, ambient: TimeInterval, at now: Date) -> ChargeFraming {
+        let line: CGFloat = chargeLine
+        let calm: Bool = MotionComfort.isReduced
+        if let lifted = liftedIndex {
+            let layout = SummonBoardLayout.make(count: results.count, size: size, insets: insets)
+            let fallback = CGRect(x: size.width / 2 - layout.card / 2, y: size.height / 2 - layout.card / 2,
+                                  width: layout.card, height: layout.card)
+            let slot: CGRect = layout.slots.indices.contains(lifted) ? layout.slots[lifted] : fallback
+            let flown: TimeInterval = liftStart.map { now.timeIntervalSince($0) } ?? RevealLift.span
+            let progress: CGFloat = RevealLift.progress(elapsed: flown, calm: calm)
+            let beam = CGPoint(x: size.width * line, y: size.height * RevealGeometry.heart)
+            let pose: RevealLiftPose = RevealLift.pose(from: slot, to: beam, progress: progress)
+            return ChargeFraming(line: line, entry: progress, opening: nil, settle: 1,
+                                 card: pose, cardIndex: lifted, summit: true)
+        }
+        guard let opening = openingScrollFrame else {
+            return ChargeFraming(line: line, entry: 1, opening: nil, settle: 1, card: nil, cardIndex: nil, summit: false)
+        }
+        let handoff: CGFloat = calm ? 1 : RevealGeometry.handoff(ambient: ambient)
+        return ChargeFraming(line: line, entry: handoff, opening: opening, settle: handoff,
+                             card: nil, cardIndex: nil, summit: false)
+    }
+
+    /// The clock a lifted card's charge stands at: past every rung and the
+    /// whole gather, the flare held low (`chargeLook`).
+    private static let summitClock: TimeInterval = max(ChargeLadder.baseSpan, ChargeLadder.splitAt + ChargeLadder.step)
 
     /// Seconds since the charge's clock started; zero while the stage is
     /// still being built, which holds the opening pose.
@@ -412,7 +659,7 @@ struct SummonRevealView: View {
     /// brighter and a little wider for each rung climbed — at gold 0.30,
     /// under the reveal's own 0.40.
     private func chargeSky(_ result: SummonResult, at date: Date) -> some View {
-        let gathered: TimeInterval = gatheredClock(chargeClock(at: date))
+        let gathered: TimeInterval = liftedIndex != nil ? Self.summitClock : gatheredClock(chargeClock(at: date))
         let rgb: ChargeRGB = ChargeLadder.light(stars: result.stars, element: result.blueprint.element, at: gathered)
         let light: Color = rgb.color
         let level: CGFloat = ChargeLadder.rung(stars: result.stars, at: gathered)
@@ -422,12 +669,12 @@ struct SummonRevealView: View {
         let peak: Double = 0.20 * gatherIn * lift
         let colours: [Color] = [light.opacity(peak), light.opacity(peak * 0.45), light.opacity(peak * 0.15), .clear]
         let radius: CGFloat = 130 + 25 * level
-        return RadialGradient(colors: colours, center: .init(x: 0.27, y: 0.5), startRadius: 0, endRadius: radius)
+        return RadialGradient(colors: colours, center: skyCentre, startRadius: 0, endRadius: radius)
     }
 
     private func chargeScene(_ result: SummonResult, clock: TimeInterval, ambient: TimeInterval,
-                             size: CGSize) -> some View {
-        let look = chargeLook(result, clock: clock, ambient: ambient, size: size)
+                             size: CGSize, framing: ChargeFraming) -> some View {
+        let look = chargeLook(result, clock: clock, ambient: ambient, size: size, framing: framing)
         // One small builder per layer, every number worked out beforehand in
         // `ChargeLook`: the one ZStack of eight layers with its sums inline
         // was more than the owner's Xcode could type-check "in reasonable
@@ -442,7 +689,9 @@ struct SummonRevealView: View {
             // (run 234): drawn as the scroll's own shadow, the glow lay over
             // the column and turned it red below the roll, so the pillar
             // faded out before it reached the scroll it holds up.
-            chargeScrollGlow(result, look: look)
+            if framing.card == nil {
+                chargeScrollGlow(result, look: look)
+            }
             // The beam, rising from the floor as the charge gathers: OVER the
             // rings, so the pillar of light runs through them to the scroll
             // (the genre's scroll burns in its column; run 221 drew the
@@ -451,9 +700,31 @@ struct SummonRevealView: View {
             chargeLightning(look)
             chargeMotes(look)
             chargeFlare(look)
-            chargeScrollLayer(result, look: look)
+            // A card lifted off the board hangs where the scroll would
+            // (W2.3): its charge was the ten's, and the flash that lands its
+            // figure covers it.
+            if let pose = framing.card, let lifted = framing.cardIndex, results.indices.contains(lifted) {
+                chargeCard(lifted, pose: pose)
+            } else {
+                chargeScrollLayer(result, look: look)
+            }
         }
         .frame(width: size.width, height: size.height)
+    }
+
+    /// The lifted card (W2.3): drawn at the size it arrives at and scaled
+    /// down to its pose, so its painting is decoded once, and lit by its
+    /// grade's glow.
+    private func chargeCard(_ lifted: Int, pose: RevealLiftPose) -> some View {
+        let result: SummonResult = results[lifted]
+        let unit: ResolvedUnit? = boardUnits.indices.contains(lifted) ? boardUnits[lifted] : nil
+        let scale: CGFloat = pose.side / max(1, pose.finalSide)
+        let glow: Color = Rarity(stars: result.stars).glow
+        return SummonBoardCard(result: result, unit: unit, size: pose.finalSide, turned: 1, flare: nil,
+                               calm: MotionComfort.isReduced)
+            .shadow(color: glow.opacity(0.8), radius: 14)
+            .scaleEffect(scale)
+            .position(x: pose.centre.x, y: pose.centre.y)
     }
 
     /// Every number the charge draws with, as typed values, so no layer's
@@ -503,7 +774,14 @@ struct SummonRevealView: View {
         let scrollTilt: Double
         let scrollScale: CGFloat
         let scrollGlow: CGFloat
+        /// Where the scroll hangs and how big it is: its own place, or on
+        /// its way there from the room's (W2.14, `ChargeFraming.opening`).
+        let scrollX: CGFloat
         let scrollY: CGFloat
+        let scrollSide: CGFloat
+        /// How far the charge has come up round what it was handed, 0 → 1
+        /// (`ChargeFraming.entry`); every layer but the scroll is drawn at it.
+        let entry: Double
         /// A Dark 5★'s violet-black veil, 0 for every other pull.
         let shade: Double
         let veilSide: CGFloat
@@ -520,15 +798,16 @@ struct SummonRevealView: View {
     }
 
     private func chargeLook(_ result: SummonResult, clock: TimeInterval, ambient: TimeInterval,
-                            size: CGSize) -> ChargeLook {
+                            size: CGSize, framing: ChargeFraming) -> ChargeLook {
         let stars: Int = result.stars
         let element: Element = result.blueprint.element
         let colour: Color = element.color
         let span: TimeInterval = max(0.1, chargeDuration)
         // Held (the CI's charge frames, `chargeHold`) at a fraction of the
         // way: the rings and the motes keep turning at the rung reached, the
-        // gathering stops there.
-        let gathered: TimeInterval = gatheredClock(clock)
+        // gathering stops there. A card lifted off the board stands at the
+        // summit of its grade's ladder from its first frame (W2.3).
+        let gathered: TimeInterval = framing.summit ? Self.summitClock : gatheredClock(clock)
         // The gather runs on the BASE span for every grade (review,
         // 2026-09-24): over the pull's own span a 5★'s beam rose visibly
         // slower from the first frame — 12 points shorter at 0.35 s, before
@@ -541,7 +820,11 @@ struct SummonRevealView: View {
         let gather: CGFloat = 1 - rest * rest * rest
         let flareStart: TimeInterval = span - 0.35
         let flareRamp: CGFloat = CGFloat((gathered - flareStart) / 0.35)
-        let flare: CGFloat = max(0, min(1, flareRamp))
+        let flareCap: CGFloat = framing.summit ? 0.35 : 1
+        let flare: CGFloat = max(0, min(flareCap, flareRamp))
+        // Every layer but the scroll comes up round what the charge was
+        // handed (W2.14, W2.3): 1 from the first frame when nothing was.
+        let entry: Double = Double(framing.entry)
 
         // THE LADDER (2026-09-24). `level` is 0 on the ground every charge
         // opens on, 1 at violet, 2 at gold; `grand` is the same on the 0…1
@@ -565,11 +848,12 @@ struct SummonRevealView: View {
         // The figure's line and height, as the stage's camera is solved
         // (`SummonStageView.frameCamera`): its centre line 26% in from the
         // left, its feet 7% above the bottom edge, its heart a little above
-        // the frame's middle.
+        // the frame's middle. The ten's charge stands on the middle line
+        // (`ChargeFraming.line`): no figure follows it onto the beam.
         let height: CGFloat = size.height
-        let x: CGFloat = size.width * SummonStageView.figureLine
+        let x: CGFloat = size.width * framing.line
         let feet: CGFloat = height * 0.93
-        let heart: CGFloat = height * 0.42
+        let heart: CGFloat = height * RevealGeometry.heart
 
         // A 5★'s pillar is 0.28 of the frame's height across (run 221: at
         // 0.20, and drawn under the rings, it showed as a faint streak below
@@ -585,7 +869,7 @@ struct SummonRevealView: View {
         let beamBase: CGFloat = 0.45 + 0.40 * grand
         let beamFlare: CGFloat = 1 + 0.15 * flare
         let beamLight: CGFloat = min(1, beamBase * beamFlare)
-        let beamOpacity: Double = Double(beamLight)
+        let beamOpacity: Double = Double(beamLight) * entry
         // The motes keep the sway they had with the narrower beam. All
         // twelve are laid out from the first frame and lit as the ladder
         // reaches them, so none pops in at a step; they rise at 0.55 of the
@@ -603,7 +887,7 @@ struct SummonRevealView: View {
         let poolRadius: CGFloat = height * 0.20
         let poolStretch: CGFloat = 1 + 0.4 * grand
         let poolLight: CGFloat = 0.45 + 0.45 * gather
-        let poolOpacity: Double = Double(poolLight)
+        let poolOpacity: Double = Double(poolLight) * entry
 
         // Two rings, turning opposite ways, closing in as it gathers.
         let ringShare: CGFloat = 0.44 + 0.18 * grand
@@ -627,20 +911,35 @@ struct SummonRevealView: View {
         let flareRadius: CGFloat = side * 0.9
         let flareScale: CGFloat = 0.6 + 0.8 * flare
         let flareLight: CGFloat = 0.45 + 0.45 * grand
-        let flareOpacity: Double = Double(flare * flareLight)
+        let flareOpacity: Double = Double(flare * flareLight) * entry
 
-        // The scroll itself, straightening and swelling in the light.
+        // The scroll itself, straightening and swelling in the light. Handed
+        // over by the room (W2.14), it starts on the square the room's flight
+        // ended on and settles into its own place as the charge comes up.
         let sway: Double = sin(ambient * 2.6)
         let bob: CGFloat = CGFloat(sway) * 4 * rest
-        let scrollTilt: Double = -12 * Double(rest)
+        let scrollTilt: Double = RevealGeometry.scrollTilt * Double(rest)
         let scrollScale: CGFloat = 1 + 0.16 * gather
+        let ownY: CGFloat = heart + bob
+        let settle: CGFloat = framing.settle
+        let scrollX: CGFloat
+        let scrollY: CGFloat
+        let scrollSide: CGFloat
+        if let opening = framing.opening {
+            scrollX = opening.midX + (x - opening.midX) * settle
+            scrollY = opening.midY + (ownY - opening.midY) * settle
+            scrollSide = opening.width + (side - opening.width) * settle
+        } else {
+            scrollX = x
+            scrollY = ownY
+            scrollSide = side
+        }
         let glowShare: CGFloat = 0.08 + 0.14 * gather
-        let scrollGlow: CGFloat = side * glowShare
-        let scrollY: CGFloat = heart + bob
+        let scrollGlow: CGFloat = scrollSide * glowShare
 
         // A Dark 5★'s split: a veil of violet-black a frame's height across,
         // at half strength once it has parted.
-        let shade: Double = 0.5 * Double(darkParting)
+        let shade: Double = 0.5 * Double(darkParting) * entry
         let veilSide: CGFloat = height * 1.1
 
         // THE LIGHTNING (2026-09-24): a 5★'s tell, from the gold rung on.
@@ -670,7 +969,7 @@ struct SummonRevealView: View {
         let boltLeft: Int = boltTick % cycle
         let boltRight: Int = (boltTick + cycle / 2) % cycle
         let boltStrength: CGFloat = calm ? 0.3 : 0.55
-        let lightning: Double = Double(goldReached * boltStrength)
+        let lightning: Double = Double(goldReached * boltStrength) * entry
         let boltTint: Color = lightRGB.mixed(with: ChargeRGB.white, by: 0.25).color
         let boltLeftX: CGFloat = x - boltReach
         let boltRightX: CGFloat = x + boltReach
@@ -681,12 +980,13 @@ struct SummonRevealView: View {
             poolSide: poolSide, poolRadius: poolRadius, poolStretch: poolStretch, poolOpacity: poolOpacity,
             ringSize: ringSize, innerRingSize: innerRingSize, ringScale: ringScale,
             outerTurn: outerTurn, innerTurn: innerTurn,
-            outerRingOpacity: Double(outerLight), innerRingOpacity: Double(innerLight),
+            outerRingOpacity: Double(outerLight) * entry, innerRingOpacity: Double(innerLight) * entry,
             beamWidth: beamWidth, beamHeight: beamHeight, beamCentre: beamCentre, beamOpacity: beamOpacity,
             moteSpread: moteSpread, motes: motes, moteLevel: moteLevel, moteTravel: moteTravel,
             side: side, flareSide: flareSide, flareRadius: flareRadius,
             flareScale: flareScale, flareOpacity: flareOpacity,
-            scrollTilt: scrollTilt, scrollScale: scrollScale, scrollGlow: scrollGlow, scrollY: scrollY,
+            scrollTilt: scrollTilt, scrollScale: scrollScale, scrollGlow: scrollGlow,
+            scrollX: scrollX, scrollY: scrollY, scrollSide: scrollSide, entry: entry,
             shade: shade, veilSide: veilSide,
             lightning: lightning, boltTint: boltTint, boltSide: boltSide, boltY: boltY,
             boltLeftX: boltLeftX, boltRightX: boltRightX,
@@ -809,21 +1109,21 @@ struct SummonRevealView: View {
     /// over it (`chargeScene`).
     private func chargeScrollGlow(_ result: SummonResult, look: ChargeLook) -> some View {
         look.light.opacity(0.85)
-            .frame(width: look.side, height: look.side)
-            .mask { chargeScroll(result, side: look.side, colour: look.colour) }
+            .frame(width: look.scrollSide, height: look.scrollSide)
+            .mask { chargeScroll(result, side: look.scrollSide, colour: look.colour) }
             .rotationEffect(.degrees(look.scrollTilt))
             .scaleEffect(look.scrollScale)
             .blur(radius: look.scrollGlow)
-            .position(x: look.x, y: look.scrollY)
+            .position(x: look.scrollX, y: look.scrollY)
     }
 
     /// The scroll itself, straightening and swelling in the light, over the
     /// beam; its glow is `chargeScrollGlow`, under it.
     private func chargeScrollLayer(_ result: SummonResult, look: ChargeLook) -> some View {
-        chargeScroll(result, side: look.side, colour: look.colour)
+        chargeScroll(result, side: look.scrollSide, colour: look.colour)
             .rotationEffect(.degrees(look.scrollTilt))
             .scaleEffect(look.scrollScale)
-            .position(x: look.x, y: look.scrollY)
+            .position(x: look.scrollX, y: look.scrollY)
     }
 
     /// The violet-black a Dark 5★'s charge parts into (`chargeVeil`).
@@ -958,7 +1258,7 @@ struct SummonRevealView: View {
         let rise: CGFloat = Self.moteRise(mote, travel: look.moteTravel)
         let dot: CGFloat = 3 + 2 * look.grand + CGFloat(mote % 3)
         let lit: CGFloat = min(1, max(0, look.moteLevel - CGFloat(mote)))
-        let fade: CGFloat = min(1, rise * 5) * (1 - rise) * lit
+        let fade: CGFloat = min(1, rise * 5) * (1 - rise) * lit * CGFloat(look.entry)
         return Circle()
             .fill(RadialGradient(
                 colors: [look.core, look.light.opacity(0.7), look.light.opacity(0)],
@@ -1011,7 +1311,7 @@ struct SummonRevealView: View {
                     .position(x: right - column / 2, y: size.height * 0.47)
                 // On a glass plate over the lit floor of the set: bare text
                 // there read as a caption lost on the stone (runs 217–221).
-                Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
+                Text(hintWords)
                     .font(Theme.body(13))
                     .foregroundStyle(Theme.onGlass)
                     .fixedSize()
@@ -1047,50 +1347,66 @@ struct SummonRevealView: View {
             return
         }
         AudioLibrary.shared.play(.uiTap)
-        if index + 1 < results.count {
-            index += 1
-            revealNext()
-        } else if results.count > 1 {
-            enterGrid()
-        } else {
+        switch revealPhase {
+        case .featured:
+            returnToBoard(then: .run)
+        case .replay:
+            returnToSummary()
+        case .single, .tenCharge, .board, .summary:
             onFinish()
         }
     }
 
     // MARK: - Skip (Docs/FEEL.md W2.23)
 
-    /// A tap on Skip: to the flash of the pull on the beam while it is worth
-    /// seeing and still charging, else on to the next pull worth seeing,
-    /// else the summary (`RevealSkip.target`); Done over the summary.
+    /// A tap on Skip. A single: to its flash while it is worth seeing and
+    /// still charging, else done. The ten's charge: to its flash, never past
+    /// it. The board: to the next card worth seeing — the one waiting to
+    /// lift, else the next still face down (`RevealSkip.boardStop`) — else
+    /// the summary. A card's reveal: to its flash, else to the next card
+    /// worth seeing, else the summary (`RevealSkip.target`). Done over the
+    /// summary; back to it from a replay.
     private func skipTapped() {
-        if showAll {
-            onFinish()
-            return
-        }
-        switch RevealSkip.target(in: results, at: index, landed: revealed) {
-        case .land:
-            landNow()
-        case .pull(let next):
-            jump(to: next)
+        switch revealPhase {
+        case .single:
+            switch RevealSkip.target(in: results, at: index, landed: revealed) {
+            case .land:
+                landNow()
+            case .pull, .summary:
+                onFinish()
+            }
+        case .tenCharge:
+            landTenNow()
+        case .board:
+            boardSkip()
+        case .featured(let lifted):
+            switch RevealSkip.target(in: results, at: lifted, landed: revealed) {
+            case .land:
+                landNow()
+            case .pull(let next):
+                returnToBoard(then: .to(next))
+            case .summary:
+                returnToBoard(then: .summary)
+            }
         case .summary:
-            enterGrid()
+            onFinish()
+        case .replay:
+            returnToSummary()
         }
     }
 
-    /// A hold on Skip: everything, straight to the summary.
+    /// A hold on Skip: everything, straight to the summary — from the ten's
+    /// charge, the board or a card's reveal; from a replay, back to it.
     private func skipAll() {
-        guard !showAll else { return }
-        enterGrid()
-    }
-
-    /// On to pull `next`, the ones between left for the summary. Its figure
-    /// starts parsing now, while the stage it replaces comes down.
-    private func jump(to next: Int) {
-        guard results.indices.contains(next), next != index else { return }
-        let target = results[next]
-        ModelLibrary.shared.warm(forms: [(spec: target.blueprint.model, awakened: target.isAwakening || target.unit.isAwakened)])
-        index = next
-        revealNext()
+        guard isBoard else { return }
+        switch revealPhase {
+        case .tenCharge, .board, .featured:
+            enterSummary()
+        case .replay:
+            returnToSummary()
+        case .single, .summary:
+            break
+        }
     }
 
     /// The pull on the beam lands now: its charge cut short at the flash,
@@ -1106,19 +1422,529 @@ struct SummonRevealView: View {
         land(sequence, result: result)
     }
 
-    /// The grid of every pull, from Skip or the last pull of a ten-pull.
-    /// Skip mid-charge left `charging` true (review, 2026-09-24), and the
-    /// charge sky's `TimelineView` behind the grid redrew every frame for
-    /// as long as it stood — at 120 Hz on ProMotion — still climbing the
-    /// skipped pull's ladder to violet or gold at the grid's left. The
-    /// charge, its wait for a stage and any flash end here.
-    private func enterGrid() {
+    // MARK: - The ten-pull (Docs/FEEL.md W2.3)
+
+    /// The ten's one charge: on the ladder, climbing to the best grade in
+    /// the ten (`SummonBoard.headline`), in the middle of the frame with no
+    /// set behind it. Its clock starts at once — there is no stage to wait
+    /// for — and its stems and rungs sound as a single's do, read off the
+    /// best pull's stars and nothing looser.
+    private func startTenCharge() {
+        guard results.indices.contains(headlineIndex) else { return }
+        let head: SummonResult = results[headlineIndex]
         sequence += 1
+        let mine = sequence
+        boardSerial += 1
+        revealPhase = .tenCharge
+        index = headlineIndex
+        boardUnits = results.map { ProgressionService.resolve($0.unit, blueprint: $0.blueprint, equipped: []) }
+        charging = true
+        revealed = false
+        tenLanded = false
+        flashAt = nil
+        ambientStart = Date()
+        chargeStart = Date()
+        chargeDuration = ChargeLadder.span(stars: head.stars)
+        // The first figure the board will stand on its beam, should the
+        // room not have started it (a reveal opened by the tour); the rest
+        // parse one ahead of the beam (`warmAhead`).
+        warmedCards = []
+        if let lead = SummonBoard.nextFeatured(from: 0, in: results) {
+            warmCard(lead)
+        }
+        for stem in ChargeLadder.stems(stars: head.stars, scroll: scroll) where stem.at <= 0 {
+            AudioLibrary.shared.play(stem.sound, volume: stem.volume)
+        }
+        let held: TimeInterval? = Self.chargeHold.map { chargeDuration * $0 }
+        scheduleRungs(head, mine: mine, until: held)
+        if held != nil { return }
+        after(chargeDuration) {
+            landTen(mine)
+        }
+    }
+
+    /// A tap during the ten's charge: its flash now, never past it.
+    private func landTenNow() {
+        guard revealPhase == .tenCharge, !tenLanded else { return }
+        sequence += 1
+        landTen(sequence)
+    }
+
+    /// The ten's flash: the best grade's burst, and the board dealt face
+    /// down from where the light was.
+    private func landTen(_ mine: Int) {
+        guard mine == sequence, revealPhase == .tenCharge, results.indices.contains(headlineIndex) else { return }
+        let head: SummonResult = results[headlineIndex]
+        let big: Bool = head.stars >= 4
+        let stamp = Date()
+        charging = false
+        tenLanded = true
+        flashSpan = big ? 0.55 : 0.4
+        flashAt = stamp
+        AudioLibrary.shared.fadeOut(ChargeLadder.stemSounds, over: ChargeLadder.stemFade)
+        AudioLibrary.shared.schedule(AudioLibrary.Sound.burst(forStars: head.stars), volume: 1, in: ChargeLadder.burstLead)
+        Juice.haptic(big ? .heavy : .medium)
+        after(flashSpan + 0.1) {
+            if flashAt == stamp { flashAt = nil }
+        }
+        dealBoard()
+    }
+
+    /// The board, dealt: ten cards fly out face down from the flash, and the
+    /// first turns once they have landed. Only featured cards' figures are
+    /// ever parsed — the only figures the board stands on its beam — and
+    /// one at a time, ahead of the beam (`warmAhead`): the first was started
+    /// by the room, each next one while the figure before it stands, and a
+    /// skip's stop the moment the skip picks it. A card that is not featured
+    /// parses only if the summary replays it.
+    private func dealBoard() {
+        boardSerial += 1
+        boardRun += 1
+        boardCursor = 0
+        boardLanded = 0
+        boardQueue = []
+        passedOver = []
+        fastForwarding = false
+        fastTo = nil
+        boardTicking = true
+        boardClock = SummonBoardClock(dealtAt: Date().addingTimeInterval(0.05))
+        withAnimation(Motion.panel) { revealPhase = .board }
+        AudioLibrary.shared.play(.whoosh, volume: 0.5)
+        let run: Int = boardRun
+        after(SummonBoard.firstFlip) {
+            startRun(run, from: 0)
+        }
+        scheduleTourSkipOnBoard()
+    }
+
+    /// A run of turns from card `from`, 90 ms apart, to the last card. A
+    /// featured card landing stops it (`cardLanded`): the turns still waiting
+    /// go nowhere, and a run starts again from the next unturned card when
+    /// the card's reveal hands back. Cards already turning finish their
+    /// turn, so no card is left half over and nothing tells a featured card
+    /// before it lands.
+    private func startRun(_ run: Int, from: Int) {
+        guard run == boardRun, revealPhase == .board, from < results.count else { return }
+        for card in max(0, from)..<results.count {
+            after(SummonBoard.flipDelay(of: card, from: from)) {
+                turnCard(card, run: run)
+            }
+        }
+    }
+
+    /// Card `card` begins to turn, once; it lands a turn's length later.
+    private func turnCard(_ card: Int, run: Int) {
+        guard run == boardRun, revealPhase == .board, results.indices.contains(card), boardClock.flips[card] == nil else { return }
+        boardClock.flips[card] = Date()
+        boardCursor = max(boardCursor, card + 1)
+        let serial: Int = boardSerial
+        after(SummonBoard.flipLength) {
+            cardLanded(card, serial: serial)
+        }
+    }
+
+    /// A card is face up. Its tick; a featured card's flare, its note — the
+    /// glockenspiel's step for its grade — and its touch; and, unless a skip
+    /// is running past it, the board stops on it: the turns still waiting
+    /// wait, and after the flare's hold it lifts off for its reveal. The
+    /// last card up with none waiting: the summary.
+    private func cardLanded(_ card: Int, serial: Int) {
+        guard serial == boardSerial, results.indices.contains(card) else { return }
+        boardLanded = max(boardLanded, card + 1)
+        if revealPhase == .summary { return }
+        let result: SummonResult = results[card]
+        let featured: Bool = SummonBoard.isFeatured(result)
+        AudioLibrary.shared.play(.starTick, volume: 0.35)
+        if featured {
+            boardClock.flares[card] = Date()
+            if revealPhase == .board {
+                AudioLibrary.shared.play(AudioLibrary.Sound.star(result.stars - 1), volume: 0.7)
+                Juice.haptic(result.stars >= 5 ? .heavy : .medium)
+            }
+        }
+        if fastForwarding {
+            if featured, let stop = fastTo, card == stop {
+                fastForwarding = false
+                fastTo = nil
+                boardQueue.insert(card, at: 0)
+                scheduleLift(after: SummonBoard.skipHold)
+                return
+            }
+            if featured { passedOver.insert(card) }
+            if fastTo == nil, boardLanded >= results.count {
+                fastForwarding = false
+                boardComplete()
+            }
+            return
+        }
+        if featured, !passedOver.contains(card), !Self.tourBoardHold {
+            boardQueue.append(card)
+            if boardQueue.count == 1, revealPhase == .board {
+                boardRun += 1
+                scheduleLift(after: SummonBoard.flareHold)
+            }
+            return
+        }
+        if boardLanded >= results.count, boardQueue.isEmpty, revealPhase == .board {
+            boardComplete()
+        }
+    }
+
+    /// Every card is up and none waits to lift: the summary, a breath
+    /// later. Under the CI's `-tour-reveal board` the full board holds
+    /// first, for its frame.
+    private func boardComplete() {
+        let serial: Int = boardSerial
+        #if DEBUG
+        if Self.tourBoardHold {
+            print("[TourCue] reveal-board")
+            after(Self.tourBoardSeconds) {
+                if serial == boardSerial, revealPhase == .board { enterSummary() }
+            }
+            return
+        }
+        #endif
+        after(SummonBoard.lastBeat) {
+            guard serial == boardSerial, revealPhase == .board, boardQueue.isEmpty else { return }
+            enterSummary()
+        }
+    }
+
+    /// The card at the head of the queue lifts off after `delay`, unless
+    /// something lifts sooner or the board moves on (`liftSerial`).
+    private func scheduleLift(after delay: TimeInterval) {
+        liftSerial += 1
+        let mine: Int = liftSerial
+        after(delay) {
+            guard mine == liftSerial, revealPhase == .board, let next = boardQueue.first else { return }
+            openFeatured(next)
+        }
+    }
+
+    /// A featured card lifts off the board for its reveal on the beam
+    /// (W2.3): the board steps aside, the card flies to where the figure
+    /// will stand, growing, and the figure lands the moment its stage is
+    /// ready and the card has arrived (`beginCharge`).
+    private func openFeatured(_ card: Int) {
+        guard results.indices.contains(card) else { return }
+        liftSerial += 1
+        boardRun += 1
+        boardClock.hidden = card
+        liftStart = Date()
+        index = card
+        AudioLibrary.shared.play(.whoosh, volume: 0.6)
+        withAnimation(Motion.panel) { revealPhase = .featured(card) }
+        revealNext(lift: true)
+    }
+
+    /// What the board does once a card's reveal hands back.
+    private enum BoardResume: Equatable {
+        /// Its run carries on.
+        case run
+        /// On to card N (a skip's stop): it lifts if it is up, else the
+        /// cards before it turn quickly and it lifts once it lands.
+        case to(Int)
+        /// Every card turns and the summary comes up.
+        case summary
+    }
+
+    /// A card's reveal hands back to the board (W2.3): its stage comes down
+    /// — a ten holds one set at a time — the board steps back in, and its
+    /// run carries on, or runs to the card a skip named, or turns
+    /// everything for the summary.
+    private func returnToBoard(then resume: BoardResume) {
+        guard case .featured(let card) = revealPhase else { return }
+        leaveFigure()
+        boardQueue.removeAll { $0 == card }
+        boardClock.hidden = nil
+        boardTicking = true
+        switch resume {
+        case .run:
+            withAnimation(Motion.panel) { revealPhase = .board }
+            continueBoard(after: SummonBoard.resume)
+        case .to(let next):
+            withAnimation(Motion.panel) { revealPhase = .board }
+            // The skip's stop starts parsing now, with this figure's stage
+            // coming down: it may lie past the one `warmAhead` started.
+            warmCard(next)
+            for waiting in boardQueue where waiting < next {
+                passedOver.insert(waiting)
+            }
+            boardQueue.removeAll { $0 < next }
+            if boardQueue.first == next {
+                scheduleLift(after: SummonBoard.resume)
+            } else {
+                let serial: Int = boardSerial
+                after(SummonBoard.resume) {
+                    guard serial == boardSerial, revealPhase == .board else { return }
+                    fastForward(to: next)
+                }
+            }
+        case .summary:
+            revealPhase = .board
+            enterSummary()
+        }
+    }
+
+    /// The figure on the beam comes down: its stage unmounted (and
+    /// dismantled, `SummonStageView.dismantleUIView`), its timers stopped,
+    /// its sound let go.
+    private func leaveFigure() {
+        sequence += 1
+        hushCharge(over: 0.3, bursts: true)
         charging = false
         awaitingStage = nil
+        mountedStage = nil
+        readyStage = nil
         flashAt = nil
-        showAll = true
-        hushCharge(over: 0.2)
+        revealed = false
+        cardBeat = .hidden
+        arrivedFor = nil
+        namedFor = nil
+        landOnReady = false
+        lifting = false
+        liftStart = nil
+    }
+
+    /// The board carries on after a reveal: the next card waiting lifts;
+    /// else a run picks up from the next card no run has turned; else, once
+    /// every card is up, the summary. Cards still turning carry the board on
+    /// by their landings.
+    private func continueBoard(after delay: TimeInterval) {
+        if !boardQueue.isEmpty {
+            scheduleLift(after: delay)
+            return
+        }
+        if boardCursor < results.count {
+            boardRun += 1
+            let run: Int = boardRun
+            let from: Int = boardCursor
+            after(delay) {
+                startRun(run, from: from)
+            }
+            return
+        }
+        if boardLanded >= results.count {
+            boardComplete()
+        }
+    }
+
+    /// A skip's quick run (W2.23): every card still face down up to `stop`
+    /// turns 40 ms apart and `stop` lifts once it lands; nil turns them all
+    /// and the summary follows. Featured cards landing on the way flare but
+    /// never lift — the summary replays them.
+    private func fastForward(to stop: Int?) {
+        guard revealPhase == .board else { return }
+        boardRun += 1
+        let run: Int = boardRun
+        fastForwarding = true
+        fastTo = stop
+        // The stop will lift within a second: its figure starts parsing now,
+        // while the board has no stage to build.
+        if let stop { warmCard(stop) }
+        let last: Int = min(results.count - 1, stop ?? (results.count - 1))
+        let first: Int = boardCursor
+        if first <= last {
+            for card in first...last {
+                let delay: TimeInterval = Double(card - first) * SummonBoard.rippleSpacing
+                after(delay) {
+                    turnCard(card, run: run)
+                }
+            }
+        }
+        if stop == nil, boardLanded >= results.count {
+            fastForwarding = false
+            boardComplete()
+        }
+    }
+
+    /// A tap on the board: the card waiting to lift goes now; else the cards
+    /// still face down turn quickly up to the next featured one, which
+    /// lifts; else every card turns. A tap never passes a featured card by.
+    private func hurryBoard() {
+        guard revealPhase == .board, !fastForwarding else { return }
+        if let waiting = boardQueue.first {
+            openFeatured(waiting)
+            return
+        }
+        fastForward(to: SummonBoard.nextFeatured(from: boardLanded, in: results))
+    }
+
+    /// Skip on the board (W2.23): the first card up and waiting that is
+    /// worth seeing — a 5★ or a new 4★ — lifts now, and the cards waiting
+    /// before it are passed over (`RevealSkip.boardWaiting`, the card the
+    /// words name); with none, everything waiting is passed over and the
+    /// board runs on to the next card worth seeing still face down, or
+    /// everything turns for the summary. A second press on the way to the
+    /// summary turns every card at once; one on the way to a card worth
+    /// seeing leaves the run going there; and one while a tap on the board
+    /// runs to a card NOT worth a skip's stop (a tap stops on every featured
+    /// card, a duplicate 4★ too) runs on past it to the card the words name.
+    private func boardSkip() {
+        guard revealPhase == .board else { return }
+        liftSerial += 1
+        if let waiting = RevealSkip.boardWaiting(in: results, queue: boardQueue) {
+            while let head = boardQueue.first, head != waiting {
+                passedOver.insert(head)
+                boardQueue.removeFirst()
+            }
+            openFeatured(waiting)
+            return
+        }
+        for waiting in boardQueue {
+            passedOver.insert(waiting)
+        }
+        boardQueue.removeAll()
+        if fastForwarding {
+            guard let stop = fastTo else {
+                enterSummary()
+                return
+            }
+            if results.indices.contains(stop), RevealSkip.isWorthSeeing(results[stop]) { return }
+            fastForward(to: RevealSkip.boardStop(in: results, from: boardLanded))
+            return
+        }
+        fastForward(to: RevealSkip.boardStop(in: results, from: boardLanded))
+    }
+
+    /// Every card up, the tally and the plate (W2.3): from the last card's
+    /// landing, a skip's run or a hold from anywhere. A figure on the beam
+    /// comes down first; cards still face down turn at once, 20 ms apart; a
+    /// featured card keeps its glow. The board's timeline stops drawing once
+    /// the summary is up and still.
+    private func enterSummary() {
+        guard isBoard, revealPhase != .summary else { return }
+        if showsFigure { leaveFigure() }
+        if revealPhase == .tenCharge {
+            // From the ten's charge: its flash is spared, the board dealt
+            // as it stands.
+            sequence += 1
+            charging = false
+            tenLanded = true
+            hushCharge(over: 0.2)
+            boardClock = SummonBoardClock(dealtAt: Date())
+        }
+        boardRun += 1
+        liftSerial += 1
+        boardQueue = []
+        fastForwarding = false
+        fastTo = nil
+        boardClock.hidden = nil
+        let now = Date()
+        var last: Date = now
+        var ripple: Int = 0
+        for card in results.indices where boardClock.flips[card] == nil {
+            let start: Date = now.addingTimeInterval(Double(ripple) * 0.02)
+            boardClock.flips[card] = start
+            if SummonBoard.isFeatured(results[card]) {
+                boardClock.flares[card] = start.addingTimeInterval(SummonBoard.flipLength)
+            }
+            last = start
+            ripple += 1
+        }
+        boardCursor = results.count
+        boardLanded = results.count
+        let settled: Date = last.addingTimeInterval(SummonBoard.flipLength)
+        boardClock.summaryAt = settled
+        boardTicking = true
+        withAnimation(Motion.panel) { revealPhase = .summary }
+        let serial: Int = boardSerial
+        let wait: TimeInterval = max(0, settled.timeIntervalSince(now))
+        after(wait) {
+            guard serial == boardSerial, revealPhase == .summary else { return }
+            AudioLibrary.shared.play(.uiConfirm, volume: 0.5)
+            #if DEBUG
+            if RevealEntrance.touring { print("[TourCue] reveal-summary") }
+            #endif
+        }
+        after(wait + SummonBoard.summaryIn + SummonBoard.flareLength) {
+            if serial == boardSerial, revealPhase == .summary { boardTicking = false }
+        }
+        if let autoAdvance {
+            after(wait + SummonBoard.summaryIn + autoAdvance) {
+                if serial == boardSerial, revealPhase == .summary { onFinish() }
+            }
+        }
+    }
+
+    /// A card tapped on the summary: its reveal again, lifted off the board
+    /// as it was the first time (W2.3).
+    private func openReplay(_ card: Int) {
+        guard revealPhase == .summary, results.indices.contains(card) else { return }
+        warmFigure(results[card])
+        boardClock.hidden = card
+        liftStart = Date()
+        index = card
+        AudioLibrary.shared.play(.whoosh, volume: 0.6)
+        withAnimation(Motion.panel) { revealPhase = .replay(card) }
+        revealNext(lift: true)
+    }
+
+    /// A replay hands back to the summary.
+    private func returnToSummary() {
+        guard case .replay = revealPhase else { return }
+        leaveFigure()
+        boardClock.hidden = nil
+        withAnimation(Motion.panel) { revealPhase = .summary }
+    }
+
+    /// Card `card`'s figure starts parsing on a background queue, once per
+    /// reveal (`warmedCards`).
+    private func warmCard(_ card: Int) {
+        guard results.indices.contains(card), !warmedCards.contains(card) else { return }
+        warmedCards.insert(card)
+        warmFigure(results[card])
+    }
+
+    /// The figure the board will lift after card `card` starts parsing: ONE
+    /// ahead of the beam (review, 2026-09-24), as the reveal of one pull at
+    /// a time always warmed the next pull and no further. Called once the
+    /// figure on the beam is built (`beginCharge`, after `stageReady`) — its
+    /// stage fetched its idle and its victory in that build, so the main
+    /// thread needs the importer no more while this parses — and the next
+    /// figure has the whole reveal on the beam to finish in. A card a skip
+    /// has run past is not the next; a skip warms its own stop
+    /// (`fastForward`, `returnToBoard`).
+    private func warmAhead(of card: Int) {
+        guard card + 1 < results.count else { return }
+        let next: Int? = ((card + 1)..<results.count).first { place in
+            SummonBoard.isFeatured(results[place]) && !passedOver.contains(place)
+        }
+        if let next { warmCard(next) }
+    }
+
+    private func warmFigure(_ result: SummonResult) {
+        ModelLibrary.shared.warm(forms: [(spec: result.blueprint.model, awakened: result.isAwakening || result.unit.isAwakened)])
+    }
+
+    /// The board and its summary (W2.3), laid out on the whole screen
+    /// (`SummonBoardLayout`). A tap on the board hurries it to the next
+    /// featured card; in the summary a card is a button that replays it.
+    private var boardLayer: some View {
+        GeometryReader { frame in
+            let layout = SummonBoardLayout.make(count: results.count, size: frame.size, insets: frame.safeAreaInsets)
+            // The scroll the header names: the one spent, or the one the
+            // charge drew for the ten's best when none was handed in.
+            let named: ScrollType? = scroll ?? (results.indices.contains(headlineIndex) ? scrollShown(for: results[headlineIndex]) : nil)
+            SummonBoardView(
+                results: results,
+                units: boardUnits,
+                clock: boardClock,
+                layout: layout,
+                ticking: boardTicking,
+                summary: revealPhase == .summary,
+                offer: offer,
+                scroll: named,
+                calm: MotionComfort.isReduced,
+                onTapCard: { tapped in openReplay(tapped) }
+            )
+            .frame(width: frame.size.width, height: frame.size.height)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if revealPhase == .board { hurryBoard() }
+            }
+        }
+        .ignoresSafeArea()
     }
 
     private func completeInstantly(_ result: SummonResult) {
@@ -1165,7 +1991,13 @@ struct SummonRevealView: View {
     /// `SummonStageView.makeUIView`), tells `stageReady` when it is done,
     /// and the beat starts then; a fallback starts it anyway should that
     /// word never come.
-    private func revealNext() {
+    ///
+    /// `lift` (W2.3): a card lifted off the board. Its charge was the ten's
+    /// and its face already says its grade, so no ladder is climbed again:
+    /// the charge stands at its grade's summit round the card
+    /// (`ChargeFraming.summit`) and the figure lands the moment its stage is
+    /// ready and the card has arrived on the beam.
+    private func revealNext(lift: Bool = false) {
         guard let result = current else { return }
         sequence += 1
         let mine = sequence
@@ -1180,19 +2012,13 @@ struct SummonRevealView: View {
         cardBeat = .hidden
         arrivedFor = nil
         namedFor = nil
-        landOnReady = false
+        lifting = lift
+        landOnReady = lift
         quickPull = RevealSkip.playsQuick(result, quick: RevealSkip.quickSummons)
         flashAt = nil
         ambientStart = Date()
         chargeStart = nil
         chargeDuration = ChargeLadder.span(stars: result.stars)
-
-        // The next pull's figure parses on a background queue while this one
-        // is on the beam, so its stage clones from the cache.
-        if results.indices.contains(index + 1) {
-            let next = results[index + 1]
-            ModelLibrary.shared.warm(forms: [(spec: next.blueprint.model, awakened: next.isAwakening || next.unit.isAwakened)])
-        }
 
         if readyStage == key {
             beginCharge(mine)
@@ -1201,7 +2027,7 @@ struct SummonRevealView: View {
         awaitingStage = mine
         if mountedStage != key {
             after(0.05) {
-                guard let now = current, stageKey(now) == key else { return }
+                guard showsFigure, let now = current, stageKey(now) == key else { return }
                 mountedStage = key
             }
         }
@@ -1256,6 +2082,20 @@ struct SummonRevealView: View {
         guard mine == sequence, let result = current else { return }
         awaitingStage = nil
         chargeStart = Date()
+        // A card lifted off the board lands once it has arrived on the beam
+        // (W2.3); at once under Reduce Motion, where it did not fly. Its
+        // figure is built now, so the next one the board will lift starts
+        // parsing (`warmAhead`).
+        if lifting {
+            if case .featured(let card) = revealPhase { warmAhead(of: card) }
+            let span: TimeInterval = MotionComfort.isReduced ? 0 : RevealLift.span
+            let flown: TimeInterval = liftStart.map { Date().timeIntervalSince($0) } ?? span
+            let left: TimeInterval = max(0, span - flown)
+            after(left) {
+                land(mine, result: result)
+            }
+            return
+        }
         // A Quick 3★, or a 5★ tapped while its stage was still building,
         // goes straight to the flash.
         if quickPull || landOnReady {
@@ -1349,6 +2189,14 @@ struct SummonRevealView: View {
         #if DEBUG
         if RevealEntrance.touring { print("[TourCue] reveal-named \(result.blueprint.id)") }
         #endif
+        // A reveal that plays itself (the memory stress) moves on once the
+        // name has stood its while.
+        if let autoAdvance {
+            after(autoAdvance) {
+                guard mine == sequence, isFullyRevealed else { return }
+                advance()
+            }
+        }
     }
 
     /// The stars' ticks: each star lands on the next note of the
@@ -1388,11 +2236,12 @@ struct SummonRevealView: View {
     }
 
     /// `-tour-reveal-skip` (DEBUG, the CI's frame of a Skip that could not
-    /// swallow a 5★): Skip is pressed once, half a second into the first
-    /// pull's charge, as a thumb would press it.
+    /// swallow a 5★): Skip is pressed once, half a second into a single's
+    /// charge, as a thumb would press it. A ten's is pressed on its board
+    /// (`scheduleTourSkipOnBoard`).
     private func scheduleTourSkip(_ mine: Int) {
         #if DEBUG
-        guard Self.tourAutoSkip, !tourSkipped else { return }
+        guard Self.tourAutoSkip, !tourSkipped, revealPhase == .single else { return }
         tourSkipped = true
         after(0.5) {
             guard mine == sequence else { return }
@@ -1412,6 +2261,38 @@ struct SummonRevealView: View {
         #endif
     }()
 
+    /// `-tour-reveal ten -tour-reveal-skip` (DEBUG, W2.3 with W2.23): Skip
+    /// is pressed once, half a second into the board, as a thumb would —
+    /// and the frame is the 5★'s reveal, the Skip having run past the 4★
+    /// before it, never the summary.
+    private func scheduleTourSkipOnBoard() {
+        #if DEBUG
+        guard Self.tourAutoSkip, !tourSkipped else { return }
+        tourSkipped = true
+        let serial: Int = boardSerial
+        after(0.5) {
+            guard serial == boardSerial, revealPhase == .board else { return }
+            print("[TourCue] reveal-skip board")
+            skipTapped()
+        }
+        #endif
+    }
+
+    /// `-tour-reveal board` (DEBUG): the CI's frames of the board and its
+    /// summary. No card lifts; the full board holds `tourBoardSeconds` with
+    /// `[TourCue] reveal-board`, then the summary comes up with `[TourCue]
+    /// reveal-summary` and stays.
+    private static let tourBoardHold: Bool = {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-reveal"), at + 1 < args.count else { return false }
+        return args[at + 1] == "board"
+        #else
+        return false
+        #endif
+    }()
+    private static let tourBoardSeconds: TimeInterval = 12
+
     /// A Quick 3★'s name, not waiting for the pose.
     private static let quickName: TimeInterval = 0.22
 
@@ -1430,97 +2311,27 @@ struct SummonRevealView: View {
     private func after(_ seconds: TimeInterval, _ body: @escaping () -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: body)
     }
+}
 
-    // MARK: - Grid
-
-    private var grid: some View {
-        VStack(spacing: 12) {
-            // Carved gold on the dusk the grid stands on; the ink it was set
-            // in vanished against the sky.
-            Text("Summoned")
-                .font(Theme.display(30))
-                .carved()
-
-            ScrollView {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
-                    ForEach(results) { result in
-                        gridTile(result)
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-
-            PrimaryButton(title: "Continue", action: onFinish)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
-        }
-        .padding(.top, 50)
-    }
-
-    private func gridTile(_ result: SummonResult) -> some View {
-        let rarity = Rarity(stars: result.stars)
-        return VStack(spacing: 4) {
-            ZStack {
-                if BundleImage.exists(result.blueprint.model.portraitName(awakened: result.unit.isAwakened || result.isAwakening)) {
-                    // Decoded at the tile's 74 points, not the card's 1024
-                    // pixels: a full decode is 4 MB a tile (2026-09-24).
-                    BundleImage(name: result.blueprint.model.portraitName(awakened: result.unit.isAwakened || result.isAwakening), renderedAt: 74)
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    RoundedRectangle(cornerRadius: Theme.tightCorner)
-                        .fill(
-                            LinearGradient(
-                                colors: [tint(for: result).opacity(0.5), Theme.surface],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                        )
-                    Text(String(result.blueprint.name.prefix(1)))
-                        .font(Theme.display(30))
-                        .foregroundStyle(Theme.textPrimary)
-                }
-                if result.isNew {
-                    Text("NEW")
-                        .font(Theme.body(7).weight(.black))
-                        .padding(.horizontal, 3)
-                        .padding(.vertical, 1)
-                        .background(Capsule().fill(Theme.gold))
-                        .foregroundStyle(Theme.ink)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .padding(3)
-                } else if let skillUp = result.skillUp {
-                    SummonDuplicateChip(skillUp: skillUp)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .padding(3)
-                }
-            }
-            .frame(width: 74, height: 74)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
-            .overlay(
-                Group {
-                    if let frame = Chrome.image(rarity.frameImageName) {
-                        Image(uiImage: frame).resizable()
-                    }
-                }
-            )
-            .shadow(color: rarity.glow.opacity(rarity.glowRadius > 0 ? 0.7 : 0), radius: rarity.glowRadius)
-
-            StarRow(stars: result.stars, size: 8)
-            // Two lines, never an ellipsis: "The Unwrapped King" is wider
-            // than a 74-point tile.
-            Text(result.blueprint.name)
-                .font(Theme.body(11))
-                .foregroundStyle(Self.duskInk)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
+/// Where a reveal stands (Docs/FEEL.md W2.3).
+private enum RevealPhase: Equatable {
+    /// One pull: its charge, its figure, its name — every reveal of one.
+    case single
+    /// A pull of several: its one charge, climbing to the best grade in it.
+    case tenCharge
+    /// The board: the cards dealt face down and turning.
+    case board
+    /// Card N lifted off the board for its reveal on the beam.
+    case featured(Int)
+    /// Every card up, the tally and "Summon ×10 again".
+    case summary
+    /// Card N's reveal played again from the summary.
+    case replay(Int)
 }
 
 /// A duplicate's chip on a summon tile (2026-09-24): what the copy did, in
 /// a word or two — a skill-up it really made, or that the kit is capped
-/// (`SummonSkillUp`). The ten-pull summary of the next wave wears the same
-/// chip beside NEW.
+/// (`SummonSkillUp`). The ten-pull's board wears it beside NEW (W2.3).
 struct SummonDuplicateChip: View {
     let skillUp: SummonSkillUp
 
@@ -1585,8 +2396,10 @@ struct SummonStageView: UIViewRepresentable {
 
     /// Where the figure's centre line stands, as a fraction of the width
     /// from the left: the camera is solved for it (`frameCamera`) and the
-    /// reveal's SwiftUI charge is drawn on it.
-    static let figureLine: CGFloat = 0.26
+    /// reveal's SwiftUI charge is drawn on it. The number is
+    /// `RevealGeometry.figureLine`, where the summon room's flight reads it
+    /// off the main actor (W2.14).
+    static let figureLine: CGFloat = RevealGeometry.figureLine
 
     /// How long, from the end of the build, the stage waits for its warm-up
     /// to be drawn before it comes in anyway. The CI's simulator compiled
@@ -2803,27 +3616,16 @@ struct SummonStageView: UIViewRepresentable {
         return RevealEntranceClip(clip: clip)
     }
 
-    /// The column of `VFXLibrary.summonBeam` — the same cylinder under the
-    /// same material, which is what its shader is compiled for — drawn in
-    /// the warm-up only and taken down after it. The beam itself is spawned
-    /// at the reveal, as it always was: its motes rise from a particle
-    /// system, and a node carrying one may not leave the scene while its
-    /// motes live (the fight's two crashes of 2026-09-15). The twin carries
-    /// none; the motes draw with the braziers' particle shader, which the
-    /// set's own flames have compiled. Should the beam's material change,
-    /// change it here too.
+    /// The column of `VFXLibrary.summonBeam`, built by the same function
+    /// (`VFXLibrary.summonBeamColumn`) so its shader is the one the flash
+    /// needs, drawn in the warm-up only and taken down after it. The beam
+    /// itself is spawned at the reveal, as it always was: its motes rise
+    /// from a particle system, and a node carrying one may not leave the
+    /// scene while its motes live (the fight's two crashes of 2026-09-15).
+    /// The twin carries none; the motes draw with the braziers' particle
+    /// shader, which the set's own flames have compiled.
     private static func warmBeamTwin(tint: UIColor) -> SCNNode {
-        let beam = SCNCylinder(radius: 0.8, height: 14)
-        let material = SCNMaterial()
-        material.lightingModel = .constant
-        material.diffuse.contents = tint.withAlphaComponent(0.25)
-        material.emission.contents = tint
-        material.blendMode = .add
-        material.writesToDepthBuffer = false
-        beam.firstMaterial = material
-        let node = SCNNode(geometry: beam)
-        node.position = SCNVector3(0, 7, 0)
-        return node
+        VFXLibrary.summonBeamColumn(tint: tint)
     }
 
     /// Black in the middle, transparent at the rim, with the alpha channel the

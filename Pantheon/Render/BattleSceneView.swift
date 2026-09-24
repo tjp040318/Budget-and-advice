@@ -45,6 +45,12 @@ struct BattleSceneView: UIViewRepresentable {
         )
         view.addGestureRecognizer(tap)
         context.coordinator.view = view
+        // The camera hangs under a rig (Docs/FEEL.md W2.18): the view looks
+        // through it by name, the one a build has made and each one after.
+        if let lens = controller.currentLens { view.pointOfView = lens }
+        controller.onCameraBuilt = { [weak view] lens in view?.pointOfView = lens }
+        // The reward box stands over a still of the field (Docs/FEEL.md W2.2).
+        controller.snapshotter = { [weak view] in view?.snapshot() }
         return view
     }
 
@@ -99,6 +105,8 @@ struct BattleSceneView: UIViewRepresentable {
         uiView.delegate = nil
         uiView.gestureRecognizers?.forEach { uiView.removeGestureRecognizer($0) }
         coordinator.onTapUnit = nil
+        coordinator.controller?.onCameraBuilt = nil
+        coordinator.controller?.snapshotter = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + SummonStageView.teardownSettle) {
             uiView.overlaySKScene = nil
             uiView.scene = nil
@@ -145,7 +153,7 @@ struct BattleSceneView: UIViewRepresentable {
         /// directly: the impact frame's grade goes on or comes off the
         /// camera (`BattleSceneController.renderUpdate`).
         func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
-            controller?.renderUpdate()
+            controller?.renderUpdate(at: time)
         }
 
         /// The clips have been applied for this frame: swing every cape on
@@ -252,6 +260,11 @@ final class UnitPlateOverlay: SKScene {
     /// band is up (`setPlatesDimmed`). A node of its own, so the band's dim
     /// and the reckoning's fade (`setFieldHidden`) never undo each other.
     private let dimLayer = SKNode()
+    /// The marks circling the heads of the stunned, the sleeping and the
+    /// frozen (Docs/FEEL.md W2.22), under the plates' words and bursts.
+    private let markLayer = SKNode()
+    /// Each marked unit's mark. Render thread.
+    private var headMarks: [UUID: StatusHeadMark] = [:]
     /// The words and numbers in flight. Render thread only: added through
     /// `perform`, moved and retired by `BattleSceneController.layoutFloats`.
     private(set) var floats: [FloatingLabel] = []
@@ -272,6 +285,8 @@ final class UnitPlateOverlay: SKScene {
         plateLayer.zPosition = 0
         addChild(plateLayer)
         plateLayer.addChild(dimLayer)
+        markLayer.zPosition = 80
+        addChild(markLayer)
         burstLayer.zPosition = 90
         addChild(burstLayer)
         floatLayer.zPosition = 100
@@ -425,6 +440,50 @@ final class UnitPlateOverlay: SKScene {
         }
     }
 
+    // MARK: Drawn in advance (Docs/FEEL.md W2.24)
+
+    /// The sprites drawn once under the stage card, so SpriteKit's additive
+    /// and tinted pipelines are built before a kill's speed lines or a
+    /// reticle ask for them. Render thread.
+    private var predrawn: [SKNode] = []
+
+    /// A speed line, a burst's core and a reticle, all but invisible, in
+    /// the layer they are drawn in. Main thread; drawn on the render thread.
+    func predraw() {
+        perform { [weak self] in
+            guard let self else { return }
+            let line = SKSpriteNode(texture: PlateArt.speedLine())
+            line.size = CGSize(width: 3.2, height: 60)
+            line.color = .white
+            line.colorBlendFactor = 0.7
+            line.blendMode = .add
+            let core = SKSpriteNode(texture: PlateArt.burstCore())
+            core.size = CGSize(width: 72, height: 72)
+            core.color = .white
+            core.colorBlendFactor = 0.45
+            core.blendMode = .add
+            let mark = SKSpriteNode(texture: PlateArt.reticle())
+            mark.size = CGSize(width: 60, height: 60)
+            mark.color = .white
+            mark.colorBlendFactor = 0.85
+            for (index, node) in [line, core, mark].enumerated() {
+                node.alpha = 0.02
+                node.position = CGPoint(x: 60 + CGFloat(index) * 80, y: 60)
+                self.burstLayer.addChild(node)
+            }
+            self.predrawn = [line, core, mark]
+        }
+    }
+
+    /// The pre-drawn sprites go (the card is leaving, or its steps ended).
+    func endPredraw() {
+        perform { [weak self] in
+            guard let self else { return }
+            for node in self.predrawn { node.removeFromParent() }
+            self.predrawn.removeAll()
+        }
+    }
+
     /// Takes the finished words off the field. Render thread.
     func retireFloats(_ finished: [FloatingLabel]) {
         guard !finished.isEmpty else { return }
@@ -450,7 +509,7 @@ final class UnitPlateOverlay: SKScene {
     func setFieldHidden(_ hidden: Bool) {
         perform { [weak self] in
             guard let self else { return }
-            for layer in [self.plateLayer, self.burstLayer, self.floatLayer] {
+            for layer in [self.plateLayer, self.markLayer, self.burstLayer, self.floatLayer] {
                 layer.removeAction(forKey: "field")
                 layer.run(.fadeAlpha(to: hidden ? 0 : 1, duration: 0.25), withKey: "field")
             }
@@ -477,7 +536,177 @@ final class UnitPlateOverlay: SKScene {
     func removeAllPlates() {
         let gone = Array(plates.values)
         plates.removeAll()
-        perform { for plate in gone { plate.removeFromParent() } }
+        perform { [weak self] in
+            for plate in gone { plate.removeFromParent() }
+            // A new run's field wears none of the last one's head marks.
+            self?.markLayer.removeAllChildren()
+            self?.headMarks.removeAll()
+        }
+    }
+
+    // MARK: Head marks (Docs/FEEL.md W2.22)
+
+    /// A unit that cannot act wears a mark circling its head — stars for a
+    /// stun, Z's for sleep, frost for a freeze — or, with `kind` nil, loses
+    /// it. Main thread (`UnitNode.setStatuses`); made on the render thread.
+    func setHeadMark(_ kind: HeadMarkKind?, for id: UUID) {
+        let calm = MotionComfort.isReduced
+        perform { [weak self] in
+            guard let self else { return }
+            if let existing = self.headMarks[id] {
+                if existing.kind == kind { return }
+                existing.leave()
+                self.headMarks[id] = nil
+            }
+            guard let kind else { return }
+            let mark = StatusHeadMark(kind: kind, calm: calm)
+            mark.isHidden = true
+            self.markLayer.addChild(mark)
+            self.headMarks[id] = mark
+        }
+    }
+
+    /// Render thread (`BattleSceneController.layoutPlates`): each mark at its
+    /// unit's head in this frame, in the overlay's points and at its size; a
+    /// mark whose unit has no place this frame is hidden.
+    func placeHeadMarks(_ places: [UUID: (point: CGPoint, scale: CGFloat)]) {
+        guard !headMarks.isEmpty else { return }
+        for (id, mark) in headMarks {
+            guard let place = places[id] else {
+                mark.isHidden = true
+                continue
+            }
+            mark.isHidden = false
+            mark.position = place.point
+            mark.setScale(place.scale)
+        }
+    }
+
+    #if DEBUG
+    // MARK: The CI tour's hold (-tour-status)
+
+    /// Holds every plate's, tile's and head mark's motion where it stands for
+    /// `seconds`, for a CI frame: the tour's status drill freezes a tile at
+    /// the top of its pop. A head mark still fading in is set at full
+    /// strength first — the hold would catch it half way, its stars at 45%
+    /// (review, 2026-09-24). The floats, a push's chip among them, are placed
+    /// from their age every frame and rest by themselves. Main thread;
+    /// applied on the render thread.
+    func holdForTour(_ seconds: TimeInterval) {
+        perform { [weak self] in
+            guard let self else { return }
+            for mark in self.headMarks.values { mark.settleForTour() }
+            self.isPaused = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            self?.perform { [weak self] in self?.isPaused = false }
+        }
+    }
+    #endif
+}
+
+/// The mark that circles the head of a unit that cannot act (Docs/FEEL.md
+/// W2.22): gold stars for a stun, Z's for sleep, frost for a freeze.
+enum HeadMarkKind: Equatable {
+    case stars, sleep, frost
+
+    /// The mark a unit's statuses call for: a freeze's frost over a stun's
+    /// stars over sleep's Z's; nil for a unit that can act.
+    static func of(_ kinds: [StatusKind]) -> HeadMarkKind? {
+        if kinds.contains(.freeze) { return .frost }
+        if kinds.contains(.stun) { return .stars }
+        if kinds.contains(.sleep) { return .sleep }
+        return nil
+    }
+}
+
+/// Which attack-bar changes float a chip (Docs/FEEL.md W2.22). A PUSH reads
+/// — a skill's, a passive's, a boon's, a regalia's, a resonance's — but two
+/// relic sets top a bar up on their own clock, and a chip for each would be
+/// one every turn and one per blow: Ichor, for its wearer's next turn, as
+/// each of that wearer's turns opens, and Nemesis, on every hit its wearer
+/// takes (a three-hit put three chips on one spot; review, 2026-09-24).
+/// They move the bar alone, as every change did before W2.22. The engine
+/// does not say where a change came from; `BattleSceneController` reads it
+/// off the events round it — the turn that is opening, the hit just landed —
+/// and each set's wearers.
+enum BarPush {
+    /// The whole percent a change floats as a chip, or nil when it floats
+    /// nothing: a change that rounds to no percent, or a top-up — which only
+    /// ever gives, so a fall is always a push, whoever's turn it is.
+    static func chipPercent(delta: Double, ichorTopUp: Bool, nemesisGain: Bool) -> Int? {
+        let percent = Int((delta * 100).rounded())
+        guard percent != 0 else { return nil }
+        if delta > 0, ichorTopUp || nemesisGain { return nil }
+        return percent
+    }
+}
+
+/// A head mark: three glyphs on a flat ellipse round the crown, turning —
+/// the ones in front larger and brighter than the ones behind — so it
+/// reads as a ring around the head rather than a badge over it. A sprite
+/// ring on the plate overlay, placed each frame from the unit's head
+/// (`placeHeadMarks`): no particles, so no particle rule applies. Still
+/// under Reduce Motion.
+final class StatusHeadMark: SKNode {
+    let kind: HeadMarkKind
+    private var glyphs: [SKSpriteNode] = []
+    /// The ellipse, in points at a hero's size, and a lap's length.
+    static let radiusX: CGFloat = 17
+    static let radiusY: CGFloat = 5
+    static let lap: TimeInterval = 1.6
+    static let glyphSize: CGFloat = 13
+
+    init(kind: HeadMarkKind, calm: Bool) {
+        self.kind = kind
+        super.init()
+        let texture = PlateArt.headMark(kind)
+        for _ in 0..<3 {
+            let glyph = SKSpriteNode(texture: texture)
+            glyph.size = CGSize(width: Self.glyphSize, height: Self.glyphSize)
+            addChild(glyph)
+            glyphs.append(glyph)
+        }
+        place(at: 0)
+        alpha = 0
+        run(.fadeIn(withDuration: 0.2), withKey: "arrive")
+        guard !calm else { return }
+        let lap = Self.lap
+        let orbit = SKAction.customAction(withDuration: lap) { [weak self] _, elapsed in
+            self?.place(at: elapsed / CGFloat(lap))
+        }
+        run(.repeatForever(orbit), withKey: "orbit")
+    }
+
+    required init?(coder: NSCoder) { fatalError("StatusHeadMark is created in code") }
+
+    #if DEBUG
+    /// At full strength at once, for a CI frame held while the mark is still
+    /// arriving (`UnitPlateOverlay.holdForTour`). Render thread.
+    func settleForTour() {
+        removeAction(forKey: "arrive")
+        alpha = 1
+    }
+    #endif
+
+    /// The glyphs round the ellipse `turn` of the way through a lap.
+    private func place(at turn: CGFloat) {
+        let count = CGFloat(glyphs.count)
+        for (index, glyph) in glyphs.enumerated() {
+            let angle: CGFloat = 2 * .pi * (turn + CGFloat(index) / count)
+            // Nearest the lens at the ellipse's foot: larger, brighter, over.
+            let near: CGFloat = (sin(angle) + 1) / 2
+            glyph.position = CGPoint(x: cos(angle) * Self.radiusX, y: -sin(angle) * Self.radiusY)
+            glyph.setScale(0.78 + 0.3 * near)
+            glyph.alpha = 0.5 + 0.5 * near
+            glyph.zPosition = near
+        }
+    }
+
+    /// Fades out and goes.
+    func leave() {
+        removeAllActions()
+        run(.sequence([.fadeOut(withDuration: 0.2), .removeFromParent()]))
     }
 }
 
@@ -633,6 +862,12 @@ final class FloatingLabel {
     }
 }
 
+/// How a status leaves its plate tile (Docs/FEEL.md W2.22): it runs out and
+/// shrinks away, or a cleanse wipes it.
+enum StatusTileExit: Equatable {
+    case expire, cleanse
+}
+
 /// One fighter's bars, the genre's way — and OVER THE HEAD, where the genre
 /// keeps them (2026-09-15; the owner, with Summoners War's frame beside
 /// ours: "The health bars are not above the heads"). A SILVER FRAME round a
@@ -754,6 +989,10 @@ final class UnitPlate: SKNode {
     private let atbFill: SKSpriteNode
     private let atbMask: SKSpriteNode
     private let statusRow = SKNode()
+    /// The status tiles standing now, by kind (render thread): the row is
+    /// diffed against it, so a tile that stays slides, a new one pops and a
+    /// gone one shrinks or is wiped (Docs/FEEL.md W2.22).
+    private var tileNodes: [StatusKind: SKSpriteNode] = [:]
     private let badge: SKSpriteNode
     private let levelBadge: SKSpriteNode
     private let elementHex: String
@@ -954,12 +1193,24 @@ final class UnitPlate: SKNode {
     /// points would run the row half a plate past either end). The pictures
     /// are drawn here, on the caller's thread; the row is rebuilt on the
     /// renderer's.
-    func setStatuses(_ statuses: [ActiveStatus]) {
+    ///
+    /// Since 2026-09-24 (Docs/FEEL.md W2.22) the row is diffed rather than
+    /// rebuilt: a new tile POPS in with a flash and four sparks, one that
+    /// stays slides to its new place, one that runs out shrinks away, and a
+    /// debuff taken off by a cleanse (`leaving` `.cleanse`) is WIPED — a
+    /// streak of light crosses it and it lifts out. The declutter reads the
+    /// row as it will stand, never a tile mid-pop.
+    func setStatuses(_ statuses: [ActiveStatus], leaving: StatusTileExit = .expire) {
         var byKind: [StatusKind: Int] = [:]
         for status in statuses { byKind[status.kind] = max(byKind[status.kind] ?? 0, status.turnsRemaining) }
         let shown = byKind.sorted { $0.key.rawValue < $1.key.rawValue }.prefix(5)
-        let tiles = shown.compactMap { StatusIconRenderer.plateTile(kind: $0.key, turns: $0.value) }
-        later { [self] in applyStatuses(tiles) }
+        let tiles: [(kind: StatusKind, tile: StatusIconRenderer.PlateTile)] = shown.compactMap { entry in
+            guard let tile = StatusIconRenderer.plateTile(kind: entry.key, turns: entry.value) else { return nil }
+            return (kind: entry.key, tile: tile)
+        }
+        // Read here, on the main thread, for the render thread's moment.
+        let calm = MotionComfort.isReduced
+        later { [self] in applyStatuses(tiles, leaving: leaving, calm: calm) }
     }
 
     /// The advantage arrow at the bar's right end on a player's turn.
@@ -1059,33 +1310,142 @@ final class UnitPlate: SKNode {
         }
     }
 
-    private func applyStatuses(_ tiles: [StatusIconRenderer.PlateTile]) {
-        statusRow.removeAllChildren()
+    private func applyStatuses(_ tiles: [(kind: StatusKind, tile: StatusIconRenderer.PlateTile)],
+                               leaving: StatusTileExit, calm: Bool) {
         reachAbove = tiles.isEmpty ? UnitPlate.badgeSize / 2 : UnitPlate.tallestReach
-        tilesLeft = 0
-        tilesRight = 0
-        guard !tiles.isEmpty else { return }
         let step = UnitPlate.tileStep
-        let totalWidth = step * CGFloat(tiles.count - 1)
+        let totalWidth = step * CGFloat(max(0, tiles.count - 1))
         var rowLeft: CGFloat = 0
         var rowRight: CGFloat = 0
-        for (index, tile) in tiles.enumerated() {
+        var standing: [StatusKind: SKSpriteNode] = [:]
+        for (index, entry) in tiles.enumerated() {
             // The picture is the tile and its chip; the anchor is the tile's
             // centre, so the row lines up on the tiles.
-            let sprite = SKSpriteNode(texture: SKTexture(image: tile.image))
-            sprite.size = tile.image.size
-            sprite.anchorPoint = tile.anchor
             let x: CGFloat = -totalWidth / 2 + step * CGFloat(index)
-            sprite.position = CGPoint(x: x, y: 0)
+            let place = CGPoint(x: x, y: 0)
+            let sprite: SKSpriteNode
+            if let kept = tileNodes[entry.kind] {
+                sprite = kept
+                sprite.texture = SKTexture(image: entry.tile.image)
+                sprite.size = entry.tile.image.size
+                sprite.anchorPoint = entry.tile.anchor
+                sprite.removeAction(forKey: "slide")
+                if calm || sprite.position == place {
+                    sprite.position = place
+                } else {
+                    let slide = SKAction.move(to: place, duration: 0.18)
+                    slide.timingMode = .easeOut
+                    sprite.run(slide, withKey: "slide")
+                }
+            } else {
+                sprite = SKSpriteNode(texture: SKTexture(image: entry.tile.image))
+                sprite.size = entry.tile.image.size
+                sprite.anchorPoint = entry.tile.anchor
+                sprite.position = place
+                statusRow.addChild(sprite)
+                popIn(sprite, buff: entry.kind.isBuff, calm: calm)
+            }
             // Each chip over its right-hand neighbour's corner.
             sprite.zPosition = CGFloat(tiles.count - index)
-            statusRow.addChild(sprite)
-            let width: CGFloat = tile.image.size.width
-            rowLeft = min(rowLeft, x - tile.anchor.x * width)
-            rowRight = max(rowRight, x + (1 - tile.anchor.x) * width)
+            standing[entry.kind] = sprite
+            let width: CGFloat = entry.tile.image.size.width
+            rowLeft = min(rowLeft, x - entry.tile.anchor.x * width)
+            rowRight = max(rowRight, x + (1 - entry.tile.anchor.x) * width)
         }
-        tilesLeft = rowLeft
-        tilesRight = rowRight
+        for (kind, sprite) in tileNodes where standing[kind] == nil {
+            let wiped: Bool = leaving == .cleanse && !kind.isBuff
+            tileLeaves(sprite, wiped: wiped, calm: calm)
+        }
+        tileNodes = standing
+        // The row as it will stand: a tile mid-pop or on its way out is no
+        // part of the declutter's box.
+        tilesLeft = tiles.isEmpty ? 0 : rowLeft
+        tilesRight = tiles.isEmpty ? 0 : rowRight
+    }
+
+    /// A new tile's arrival: in from a fifth of its size past its own and
+    /// back, a flash over it and four sparks off its corners, in the blue of
+    /// a buff or the red of a debuff. A fade under Reduce Motion.
+    private func popIn(_ sprite: SKSpriteNode, buff: Bool, calm: Bool) {
+        guard !calm else {
+            sprite.alpha = 0
+            sprite.run(.fadeIn(withDuration: 0.15))
+            return
+        }
+        sprite.setScale(0.2)
+        let grow = SKAction.scale(to: 1.28, duration: 0.11)
+        grow.timingMode = .easeOut
+        let settle = SKAction.scale(to: 1.0, duration: 0.12)
+        settle.timingMode = .easeInEaseOut
+        sprite.run(.sequence([grow, settle]), withKey: "pop")
+        let tint: UIColor = (UIColor(hex: buff ? "#9FE6FF" : "#FF9C8E") ?? .white)
+        let flash = SKSpriteNode(texture: PlateArt.burstCore())
+        flash.size = CGSize(width: 30, height: 30)
+        flash.color = tint
+        flash.colorBlendFactor = 0.5
+        flash.blendMode = .add
+        flash.position = sprite.position
+        flash.zPosition = 50
+        flash.setScale(0.6)
+        flash.run(.sequence([
+            .group([.scale(to: 1.4, duration: 0.22), .fadeOut(withDuration: 0.22)]),
+            .removeFromParent(),
+        ]))
+        statusRow.addChild(flash)
+        for corner in 0..<4 {
+            let angle: CGFloat = .pi / 4 + CGFloat(corner) * .pi / 2
+            let spark = SKSpriteNode(texture: PlateArt.burstCore())
+            spark.size = CGSize(width: 6, height: 6)
+            spark.color = tint
+            spark.colorBlendFactor = 0.3
+            spark.blendMode = .add
+            spark.position = sprite.position
+            spark.zPosition = 51
+            let fly = SKAction.moveBy(x: cos(angle) * 15, y: sin(angle) * 15, duration: 0.26)
+            fly.timingMode = .easeOut
+            spark.run(.sequence([
+                .group([fly, .sequence([.wait(forDuration: 0.1), .fadeOut(withDuration: 0.16)])]),
+                .removeFromParent(),
+            ]))
+            statusRow.addChild(spark)
+        }
+    }
+
+    /// A tile's leaving: it shrinks away when its effect runs out; wiped by a
+    /// cleanse, a streak of light crosses it and it lifts out. A fade under
+    /// Reduce Motion.
+    private func tileLeaves(_ sprite: SKSpriteNode, wiped: Bool, calm: Bool) {
+        sprite.removeAllActions()
+        guard !calm else {
+            sprite.run(.sequence([.fadeOut(withDuration: 0.15), .removeFromParent()]))
+            return
+        }
+        guard wiped else {
+            let shrink = SKAction.scale(to: 0.1, duration: 0.2)
+            shrink.timingMode = .easeIn
+            sprite.run(.sequence([.group([shrink, .fadeOut(withDuration: 0.2)]), .removeFromParent()]))
+            return
+        }
+        let streak = SKSpriteNode(texture: PlateArt.speedLine())
+        streak.size = CGSize(width: 4, height: 26)
+        streak.color = UIColor(hex: "#E8FFF4") ?? .white
+        streak.colorBlendFactor = 0.4
+        streak.blendMode = .add
+        streak.zRotation = -0.35
+        streak.position = CGPoint(x: sprite.position.x - 12, y: sprite.position.y)
+        streak.zPosition = 60
+        streak.run(.sequence([
+            .group([.moveBy(x: 26, y: 0, duration: 0.2), .sequence([.wait(forDuration: 0.12), .fadeOut(withDuration: 0.08)])]),
+            .removeFromParent(),
+        ]))
+        statusRow.addChild(streak)
+        let lift = SKAction.moveBy(x: 6, y: 7, duration: 0.2)
+        lift.timingMode = .easeIn
+        sprite.run(.sequence([
+            .wait(forDuration: 0.06),
+            .group([lift, .fadeOut(withDuration: 0.2), .scale(to: 0.8, duration: 0.2)]),
+            .removeFromParent(),
+        ]))
     }
 
     private func applyMatchup(_ image: UIImage?) {
@@ -1312,6 +1672,126 @@ enum PlateArt {
             paintStops(context, in: rect, path: path, stops: [
                 (0, "#FFFFFF00"), (0.3, "#FFFFFFB0"), (0.55, "#FFFFFFFF"), (0.8, "#FFFFFF90"), (1, "#FFFFFF00"),
             ])
+        }
+    }
+
+    // MARK: Statuses that land (Docs/FEEL.md W2.22)
+
+    /// A head mark's glyph: a gold star for a stun, a pale Z for sleep, an
+    /// ice-blue flake for a freeze, each on a dark edge so it reads on the
+    /// pale sets and against a pale figure.
+    static func headMark(_ kind: HeadMarkKind) -> SKTexture {
+        let size = CGSize(width: 16, height: 16)
+        switch kind {
+        case .stars:
+            return texture("mark_stars", size: size) { context, rect in
+                let centre = CGPoint(x: rect.midX, y: rect.midY)
+                let path = UIBezierPath()
+                for point in 0..<10 {
+                    let radius: CGFloat = point % 2 == 0 ? rect.width * 0.46 : rect.width * 0.2
+                    let angle: CGFloat = -.pi / 2 + CGFloat(point) * .pi / 5
+                    let at = CGPoint(x: centre.x + cos(angle) * radius, y: centre.y + sin(angle) * radius)
+                    if point == 0 { path.move(to: at) } else { path.addLine(to: at) }
+                }
+                path.close()
+                context.setLineJoin(.round)
+                color("#3A2A10").setStroke()
+                path.lineWidth = 1.6
+                path.stroke()
+                color("#FFD66B").setFill()
+                path.fill()
+            }
+        case .sleep:
+            return texture("mark_sleep", size: size) { _, rect in
+                let font = UIFont(name: Theme.carvedFace, size: 13) ?? UIFont.systemFont(ofSize: 13, weight: .heavy)
+                let edge = NSAttributedString(string: "Z", attributes: [
+                    .font: font, .strokeColor: color("#1C2340"), .strokeWidth: CGFloat(16),
+                ])
+                let fill = NSAttributedString(string: "Z", attributes: [.font: font, .foregroundColor: color("#D6DEFF")])
+                let measured = fill.size()
+                let at = CGPoint(x: rect.midX - measured.width / 2, y: rect.midY - measured.height / 2)
+                edge.draw(at: at)
+                fill.draw(at: at)
+            }
+        case .frost:
+            return texture("mark_frost", size: size) { context, rect in
+                let centre = CGPoint(x: rect.midX, y: rect.midY)
+                let arm: CGFloat = rect.width * 0.44
+                let path = UIBezierPath()
+                for spoke in 0..<6 {
+                    let angle: CGFloat = CGFloat(spoke) * .pi / 3
+                    let tip = CGPoint(x: centre.x + cos(angle) * arm, y: centre.y + sin(angle) * arm)
+                    path.move(to: centre)
+                    path.addLine(to: tip)
+                    // A barb either side, two thirds out.
+                    let barb = CGPoint(x: centre.x + cos(angle) * arm * 0.62, y: centre.y + sin(angle) * arm * 0.62)
+                    for side in [CGFloat(-1), CGFloat(1)] {
+                        let twist: CGFloat = angle + side * .pi / 4
+                        path.move(to: barb)
+                        path.addLine(to: CGPoint(x: barb.x + cos(twist) * arm * 0.3, y: barb.y + sin(twist) * arm * 0.3))
+                    }
+                }
+                context.setLineCap(.round)
+                color("#12324A").setStroke()
+                path.lineWidth = 2.6
+                path.stroke()
+                color("#CFF2FF").setStroke()
+                path.lineWidth = 1.2
+                path.stroke()
+            }
+        }
+    }
+
+    /// The clear edge round a push chip's capsule. Every float's picture
+    /// carries one (`FloatingTextRenderer`: the letters' edge and five
+    /// points), and `BattleSceneController.layoutFloats` spaces a float from
+    /// the plates and from the unit's other floats counting on it
+    /// (`floatEdge`), so the chip carries the same.
+    static let chipClearEdge: CGFloat = 6
+
+    /// An attack-bar push, as the chip that floats over its unit (W2.22):
+    /// "+25%" in the attack bar's blue with a rising arrow, "−50%" in red
+    /// with a falling one, on dark glass with a soft shadow under it, as the
+    /// words carry, so it lifts off pale marble. Drawn on the main thread;
+    /// small, so not kept.
+    static func pushChip(percent: Int) -> UIImage {
+        let rising = percent > 0
+        let text = rising ? "+\(percent)%" : "\u{2212}\(abs(percent))%"
+        let tint = color(rising ? "#8FD8FF" : "#FF8C8C")
+        let font = UIFont(name: "Manrope-ExtraBold", size: 12) ?? UIFont.systemFont(ofSize: 12, weight: .heavy)
+        let label = NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: tint])
+        let measured = label.size()
+        let arrow: CGFloat = 7
+        let capsule = CGSize(width: ceil(measured.width + arrow + 15), height: ceil(measured.height + 5))
+        let edge = chipClearEdge
+        let size = CGSize(width: capsule.width + 2 * edge, height: capsule.height + 2 * edge)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 3
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            let rect = CGRect(origin: CGPoint(x: edge, y: edge), size: capsule).insetBy(dx: 0.5, dy: 0.5)
+            let outline = UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2)
+            let cg = context.cgContext
+            cg.saveGState()
+            cg.setShadow(offset: CGSize(width: 0, height: 1.5), blur: 3,
+                         color: UIColor.black.withAlphaComponent(0.6).cgColor)
+            color("#120D0A").withAlphaComponent(0.86).setFill()
+            outline.fill()
+            cg.restoreGState()
+            tint.withAlphaComponent(0.8).setStroke()
+            outline.lineWidth = 1
+            outline.stroke()
+            // The arrow, up or down, before the figure.
+            let middle = CGPoint(x: edge + 6 + arrow / 2, y: edge + capsule.height / 2)
+            let head = UIBezierPath()
+            let lift: CGFloat = rising ? -1 : 1
+            head.move(to: CGPoint(x: middle.x - arrow / 2, y: middle.y - lift * arrow * 0.3))
+            head.addLine(to: CGPoint(x: middle.x + arrow / 2, y: middle.y - lift * arrow * 0.3))
+            head.addLine(to: CGPoint(x: middle.x, y: middle.y + lift * arrow * 0.45))
+            head.close()
+            tint.setFill()
+            head.fill()
+            label.draw(at: CGPoint(x: edge + 6 + arrow + 3, y: edge + (capsule.height - measured.height) / 2))
         }
     }
 

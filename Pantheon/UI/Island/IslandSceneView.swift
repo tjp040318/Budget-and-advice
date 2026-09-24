@@ -76,9 +76,29 @@ struct IslandSceneView: UIViewRepresentable {
     /// times a second is a tax on whichever screen is showing, so it stops
     /// playing the moment the island is not the screen.
     var isActive: Bool = true
+    /// True while a finger is on the island or a figure is answering one
+    /// (Docs/FEEL.md W2.26): the island draws at 60 — 120 where the player
+    /// chose it — instead of its ambient 30, because its figures are laid
+    /// out inside the scene from the painting's frame and at 30 they trail
+    /// the sand under the finger. `IslandView` lets it fall half a second
+    /// after the last touch.
+    var isInteracting: Bool = false
     /// Called on the main thread when a figure stirs by itself, with its
     /// index, so the screen can name it.
     var onStir: ((Int) -> Void)? = nil
+
+    /// The island's rate: its ambient rate at rest, and under a finger 60,
+    /// or 120 when the player chose ProMotion; a player who capped every
+    /// stage at 30 keeps 30.
+    nonisolated static func framesPerSecond(interacting: Bool, choice: FrameRateChoice) -> Int {
+        let rest: Int = GraphicsSettings.framesPerSecond(for: .island, choice: choice)
+        guard interacting else { return rest }
+        switch choice {
+        case .battery: return rest
+        case .standard: return FrameRateChoice.standard.rawValue
+        case .promotion: return FrameRateChoice.promotion.rawValue
+        }
+    }
 
     /// A figure's height as a fraction of the stage's (`stageHeight`).
     static let figureHeight: CGFloat = 0.11
@@ -132,6 +152,8 @@ struct IslandSceneView: UIViewRepresentable {
             view.rendersContinuously = isActive
             view.isPlaying = isActive
         }
+        let rate: Int = Self.framesPerSecond(interacting: isInteracting && isActive, choice: GraphicsSettings.frameRate)
+        if view.preferredFramesPerSecond != rate { view.preferredFramesPerSecond = rate }
         context.coordinator.onStir = onStir
         context.coordinator.update(
             units: units, stands: stands, decorations: decorations, paintingFrame: paintingFrame,

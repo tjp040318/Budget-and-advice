@@ -47,6 +47,11 @@ jobs:
     # (-tour-victory field|defeat): about two minutes, and five when the
     # victory's three cue waits (120 + 60 + 60 s) all run out: 110. Run
     # 245 took 54 minutes in all.
+
+    # Wave 2 batch B (2026-09-24) adds the reveal's board and summary, four
+    # chapter-map relaunches and the missions' Claim All: about two minutes,
+    # and under seven when every new cue wait (40 + 40, 30 + 40 + 30 + 30 s)
+    # and both longer stress waits (420 and 500 s) run out — inside 110.
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
@@ -306,12 +311,20 @@ jobs:
                 # is the app's own cue, printed when the clip peaks.
                 again -tour-reveal-hold apex; cue_again reveal-apex 25; sleep 2; shoot "$step-${names[$step]}-apex"
                 again -tour-reveal awakened -tour-reveal-hold apex; cue_again reveal-apex 25; sleep 2; shoot "$step-${names[$step]}-awakened-apex"
-                # Skip never swallows a 5★ (W2.23): a ten-pull whose fifth
-                # pull is the 5★. The first pull's card, its Skip saying
-                # "Skip to ★★★★★"; then Skip pressed half a second into the
-                # first charge, and the frame is the 5★'s card, not the grid.
+                # The ten-pull as one ceremony (W2.3) and a Skip that never
+                # swallows a 5★ (W2.23): a ten whose fifth pull is the 5★ and
+                # whose third is a duplicate 4★. -ten is the board stopped
+                # with that 4★ lifted off for its reveal, Skip saying "Skip to
+                # ★★★★★"; -ten-skipped has Skip pressed half a second into the
+                # board, the cards turning quickly past the 4★ to the 5★'s
+                # card, never the summary. -board is the same ten turned with
+                # no card lifted, held full ([TourCue] reveal-board), and
+                # -summary the ten named, the tally, the pity and "Summon ×10
+                # again" (reveal-summary).
                 again -tour-reveal ten; sleep 9; shoot "$step-${names[$step]}-ten"
                 again -tour-reveal ten -tour-reveal-skip; cue_again reveal-named 30; sleep 2; shoot "$step-${names[$step]}-ten-skipped"
+                again -tour-reveal board; cue_again reveal-board 40; sleep 1; shoot "$step-${names[$step]}-board"
+                cue_again reveal-summary 40; sleep 2; shoot "$step-${names[$step]}-summary"
                 # And the awakened Ares under the reveal's light as it was
                 # before the figure and the temple had lights of their own
                 # (Docs/FEEL.md L1): the control for 5-reveal-awakened.
@@ -335,7 +348,27 @@ jobs:
                 # the set had lights of their own (Docs/FEEL.md L1): the
                 # control 6-battle-a is judged against, as the reveal's
                 # 5-reveal-awakened-layers-off is for its stage.
-                again -tour-layers off; sleep 9; shoot "$step-${names[$step]}-layers-off" ;;
+                again -tour-layers off; sleep 9; shoot "$step-${names[$step]}-layers-off"
+                # The way into a fight (Docs/FEEL.md W2.24): -tour-card holds
+                # the stage card over the realm's painting for 16 s once the
+                # field under it has been drawn ([TourCue] card): the carved
+                # plate with the realm, the stage, its waves and the two
+                # powers, over the painting pushing in.
+                again -tour-card; cue_again card 60; sleep 1; shoot_timed "$step-${names[$step]}-card"
+                # Statuses that land (W2.22): three seconds after the card
+                # lifts, a Defence Break and a Stun on the first enemy, a
+                # -50% push on the enemy beside it and an Attack Up with
+                # +25% on the first of the team, the world and the plates
+                # held at the tiles' pop for 16 s ([TourCue] status): the
+                # popped tiles, the two chips at rest under their plates and
+                # the stars circling the stunned head.
+                again -tour-status; cue_again status 60; sleep 1; shoot_timed "$step-${names[$step]}-status"
+                # The trauma shake (W2.18): three seconds after the card
+                # lifts, the lens stands at the shake's PEAK — the most roll
+                # (2.2 degrees), yaw, pitch and shift full trauma reaches,
+                # all at once — held 16 s ([TourCue] shake): the tilt judged
+                # against 6-battle-a, a jolt and never "slanted".
+                again -tour-shake; cue_again shake 60; sleep 1; shoot_timed "$step-${names[$step]}-shake" ;;
               # Then an enemy's area ultimate on the team, cast once a second
               # by -tour-aoe through the path a real one takes (run 224's b
               # caught Fenrir's by chance: four white sheets, one slab over
@@ -393,7 +426,14 @@ jobs:
                 shoot_timed "$step-${names[$step]}-triumph"
                 cue_again levelup 60; shoot_timed "$step-${names[$step]}-levelup"
                 again -tour-victory defeat
-                cue_again fallen 60; shoot_timed "$step-${names[$step]}-defeat" ;;
+                cue_again fallen 60; shoot_timed "$step-${names[$step]}-defeat"
+                # The reward box by rarity (Docs/FEEL.md W2.2): the demo's
+                # shelf with a rare, an epic and a Legend relic on it
+                # (-tour-spoils legend), plain first and the legend last,
+                # landing in its column of gold with its rays turning
+                # ([TourCue] spoils-legend), over the Duat's painting
+                # softened as a fight's still.
+                again -tour-spoils legend; cue_again spoils-legend 60; sleep 1; shoot_timed "$step-${names[$step]}-legend" ;;
               # The rite at its peak, then the awakened relic with its fifth
               # sub stat's choice up. The rite's own clock (RelicAwakeningRite
               # .play): the veil up by 0.35 s, the halo drawn by 1.2, AWAKENED
@@ -521,11 +561,26 @@ jobs:
               chapter_map)
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-chapter-scroll; sleep 5; shoot "$step-${names[$step]}-scroll"
-                again -tour-tier hell; sleep 5; shoot "$step-${names[$step]}-hell" ;;
+                again -tour-tier hell; sleep 5; shoot "$step-${names[$step]}-hell"
+                # The map plays the clear (Docs/FEEL.md W2.5), each beat held
+                # for its frame on the app's own cue: the boss's medallion
+                # caught turning gold, then CHAPTER CONQUERED landed with
+                # Hard's lock fallen off the tier well; the third stage's clear
+                # with the leader arrived and the fourth's lock breaking; and
+                # the world road lighting the next city.
+                again -tour-map-clear; cue_again map-flip 30; sleep 1; shoot_timed "$step-${names[$step]}-clear-flip"
+                cue_again map-conquered 40; sleep 1; shoot_timed "$step-${names[$step]}-clear-conquered"
+                again -tour-map-clear road; cue_again map-unlock 30; sleep 1; shoot_timed "$step-${names[$step]}-clear-road"
+                again -tour-road-ignite; cue_again road-ignite 30; sleep 1; shoot_timed "$step-${names[$step]}-road-ignite" ;;
               # The Feats: twenty-eight rows, the claimable ones first.
               missions)
                 sleep 5; shoot_lit "$step-${names[$step]}"
-                again -tour-missions-tab feats; sleep 5; shoot "$step-${names[$step]}-feats" ;;
+                again -tour-missions-tab feats; sleep 5; shoot "$step-${names[$step]}-feats"
+                # Claim All (Docs/FEEL.md W2.12): the Daily list seeded with
+                # two rows ready under the CLAIM ALL plate and the other six
+                # claimed in the COMPLETED group, each wearing its DONE seal;
+                # the tribute's pills six ticked and two ready.
+                again -tour-missions-ready; sleep 5; shoot "$step-${names[$step]}-ready" ;;
               # The Labyrinth's Halls and Tower wings, never photographed.
               labyrinth)
                 sleep 5; shoot_lit "$step-${names[$step]}"
@@ -595,7 +650,10 @@ jobs:
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-stress summon
                 sleep 40; shoot "$step-${names[$step]}-summon-mid"
-                await_stress 340; shoot "$step-${names[$step]}-summon"
+                # A ten-pull is one board since W2.3, played by itself:
+                # each lifted card's reveal is a stage built (a ten of new
+                # units can lift all ten), so the summon run's wait is 420 s.
+                await_stress 420; shoot "$step-${names[$step]}-summon"
                 again -tour-stress battle
                 sleep 40; shoot "$step-${names[$step]}-battle-mid"
                 await_stress 480; shoot "$step-${names[$step]}-battle"
@@ -608,7 +666,7 @@ jobs:
                 # a framework's cache or freed memory kept, whatever stays is
                 # held (PLAN.md, part four).
                 again -tour-stress summon -tour-stress-warn
-                await_stress 420; shoot "$step-${names[$step]}-warn" ;;
+                await_stress 500; shoot "$step-${names[$step]}-warn" ;;
               # An ordinary week's band, a week after the Festival Monday.
               events)
                 sleep 5; shoot_lit "$step-${names[$step]}"

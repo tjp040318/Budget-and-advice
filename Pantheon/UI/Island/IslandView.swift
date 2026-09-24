@@ -41,6 +41,10 @@ struct IslandView: View {
     @State private var pinchStart: IslandCamera?
     @State private var magnifying = false
     @State private var reaction: IslandReaction?
+    /// A finger on the island (Docs/FEEL.md W2.26): the living layer draws
+    /// at 60 until half a second after the last touch (`touchIsland`).
+    @State private var isInteracting = false
+    @State private var touchSerial = 0
     /// The figure named for a breath: its plate's place is kept clear of
     /// chips and bubbles from the moment it is set (`IslandKeepOut`)…
     @State private var named: NamedFigure?
@@ -213,6 +217,7 @@ struct IslandView: View {
                     zoom: camera.zoom,
                     reaction: reaction,
                     isActive: isActive,
+                    isInteracting: isInteracting,
                     onStir: { index in name(index) }
                 )
                 .frame(width: full.width, height: full.height)
@@ -305,7 +310,8 @@ struct IslandView: View {
                 social: store.social,
                 onAttack: { target in
                     showSocial = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { warBattle = .guildWar(target) }
+                    // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { BattleCover.open { warBattle = .guildWar(target) } }
                 },
                 onClaim: { grants in _ = store.receive(grants) }
             )
@@ -354,6 +360,7 @@ struct IslandView: View {
     private func panGesture(full: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 6)
             .onChanged { value in
+                touchIsland()
                 guard !magnifying else { return }
                 let start = dragStart ?? camera
                 if dragStart == nil { dragStart = start }
@@ -372,6 +379,7 @@ struct IslandView: View {
     private func pinchGesture(full: CGSize, shift: CGPoint) -> some Gesture {
         MagnifyGesture(minimumScaleDelta: 0.01)
             .onChanged { value in
+                touchIsland()
                 magnifying = true
                 let start = pinchStart ?? camera
                 if pinchStart == nil { pinchStart = start }
@@ -1033,8 +1041,28 @@ struct IslandView: View {
         Juice.haptic(.light)
         AudioLibrary.shared.play(.uiTap)
         reaction = IslandReaction(index: index)
+        // The hop or the victory clip plays at the touched rate (W2.26).
+        touchIsland(for: Self.reactionFrames)
         name(index)
     }
+
+    /// Keeps the island at its touched rate (`IslandSceneView.isInteracting`)
+    /// for `seconds` after this touch — a drag or a pinch calls it on every
+    /// change, so the rate falls back half a second after the last one, and a
+    /// gesture cancelled without an end still lets it fall.
+    private func touchIsland(for seconds: TimeInterval = 0.5) {
+        touchSerial &+= 1
+        let serial = touchSerial
+        if !isInteracting { isInteracting = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+            guard serial == touchSerial else { return }
+            isInteracting = false
+        }
+    }
+
+    /// How long a tapped figure's answer draws at the touched rate: its hop
+    /// or its victory clip, and the name over its head (1.6 s).
+    private static let reactionFrames: TimeInterval = 1.8
 
     /// Names a figure for a breath, in three beats so the plate and what it
     /// lands on are never drawn together: its place is kept clear at once

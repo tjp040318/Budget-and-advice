@@ -76,16 +76,26 @@ final class HitFeelTests: XCTestCase {
     }
 
     func testTripleSpeedHalvesTheShake() {
-        let single = Juice.shake(for: .heavy, speed: 1)
-        let double = Juice.shake(for: .heavy, speed: 2)
-        let triple = Juice.shake(for: .heavy, speed: 3)
-        let halved: Float = single.intensity * 0.5
-        let doubleLength: TimeInterval = single.duration / 2
-        let tripleLength: TimeInterval = single.duration / 3
-        XCTAssertEqual(double.intensity, single.intensity, "×2 shakes as hard as ×1, for half as long")
-        XCTAssertEqual(double.duration, doubleLength, accuracy: tolerance)
-        XCTAssertEqual(triple.intensity, halved, accuracy: 1e-6)
-        XCTAssertEqual(triple.duration, tripleLength, accuracy: tolerance)
+        // The shake is trauma SQUARED (Docs/FEEL.md W2.18): ×2 adds the same
+        // trauma, which the shaker lets fall twice as fast; ×3 adds √½ of it,
+        // so its shake is half ×1's, and its kick is half as far.
+        let single: Float = Juice.trauma(for: .heavy, speed: 1)
+        let double: Float = Juice.trauma(for: .heavy, speed: 2)
+        let triple: Float = Juice.trauma(for: .heavy, speed: 3)
+        let singleShake: Float = single * single
+        let tripleShake: Float = triple * triple
+        let halved: Float = singleShake * 0.5
+        XCTAssertEqual(double, single, "×2 shakes as hard as ×1, for half as long")
+        XCTAssertEqual(tripleShake, halved, accuracy: 1e-6, "×3 shakes half as hard")
+        let singleFall: Float = CameraShake.decayRate(speed: 1)
+        let doubleFall: Float = CameraShake.decayRate(speed: 2)
+        let twiceAsFast: Float = singleFall * 2
+        XCTAssertEqual(doubleFall, twiceAsFast, accuracy: 1e-6, "×2's trauma falls twice as fast")
+        let kickSingle: Float = Juice.kick(for: .heavy, speed: 1)
+        let kickTriple: Float = Juice.kick(for: .heavy, speed: 3)
+        let kickHalved: Float = kickSingle * 0.5
+        XCTAssertEqual(kickTriple, kickHalved, accuracy: 1e-6)
+        XCTAssertEqual(Juice.trauma(for: .light, speed: 1), 0, "a glance never shakes the camera")
     }
 
     func testTripleSpeedBuzzesOnlyForACritAKillOrAnUltimate() {

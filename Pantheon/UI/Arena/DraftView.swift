@@ -640,7 +640,8 @@ struct DraftView: View {
         let fighters = made.bout.playerTeam + made.bout.rivalTeam
         ModelLibrary.shared.warm(forms: fighters.map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }, crowded: true)
         fightEngine = made.engine
-        fightContext = .draft(made.bout)
+        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+        BattleCover.open { fightContext = .draft(made.bout) }
     }
 
     // MARK: - The week's chest

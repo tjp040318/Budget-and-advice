@@ -2170,15 +2170,17 @@ struct RelicDetailView: View {
         let attempts = "\(outcomes.count) attempt\(outcomes.count == 1 ? "" : "s")"
         runSummary = "\(head) in \(attempts), \(spent.formatted()) drachma"
             + (rolls.isEmpty ? "." : ": " + rolls.joined(separator: ", ") + ".")
+        // A run to +N rings or cracks once, with no drum roll: the roll is a
+        // single attempt's (Docs/FEEL.md W2.2).
         if reached {
-            AudioLibrary.shared.play(.uiConfirm)
+            AudioLibrary.shared.play(.relicRing, volume: 0.9)
             Juice.notify(.success)
             withAnimation(.easeOut(duration: 0.15)) { glow = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 withAnimation(.easeIn(duration: 0.5)) { glow = false }
             }
         } else {
-            AudioLibrary.shared.play(.uiTap)
+            AudioLibrary.shared.play(.relicCrack, volume: 0.9)
             Juice.notify(.warning)
         }
     }
@@ -2188,15 +2190,18 @@ struct RelicDetailView: View {
     private func attempt() {
         guard let outcome = store.powerUpRelic(relicID) else { return }
         lastOutcome = outcome
+        // A short drum roll, then the anvil's ring or a dull crack (Docs/FEEL.md
+        // W2.2), the verdict a quarter second behind the roll.
+        AudioLibrary.shared.play(.relicRoll, volume: 0.7)
         if outcome.succeeded {
-            AudioLibrary.shared.play(.uiConfirm)
+            AudioLibrary.shared.play(.relicRing, volume: 0.9, delay: AudioLibrary.Sound.rollLead)
             Juice.notify(.success)
             withAnimation(.easeOut(duration: 0.15)) { glow = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 withAnimation(.easeIn(duration: 0.5)) { glow = false }
             }
         } else {
-            AudioLibrary.shared.play(.uiTap)
+            AudioLibrary.shared.play(.relicCrack, volume: 0.9, delay: AudioLibrary.Sound.rollLead)
             Juice.notify(.error)
             withAnimation(.default.speed(4)) { shakeOffset = 7 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {

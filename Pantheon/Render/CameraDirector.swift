@@ -417,7 +417,19 @@ final class CameraDirector {
         }
     }
 
-    private let cameraNode: SCNNode
+    /// The RIG the director moves (Docs/FEEL.md W2.18): the home framing,
+    /// the skill zoom, the final blow's ease and the triumph's frame are all
+    /// written here, and the lens hangs under it at rest.
+    private let rig: SCNNode
+    /// The node that carries the camera — the grade, the lens's angle — and
+    /// takes the shake: `shaker`, written on it by the controller on the
+    /// render thread, in the rig's own frame, so the dolly and the shake
+    /// never fight over one node.
+    private let lens: SCNNode
+    /// The shake (`CameraShake`): hits, roars and rumbles add to it here
+    /// (`addTrauma`, `rumble`), the controller writes it on `lens` every
+    /// frame, and a skip or a forfeit stops it.
+    let shaker = CameraShake()
     private var field: FieldBounds?
     private var homePosition = SCNVector3(0, 9, 20)
     private var homeAim = SCNVector3(0, 1, 0)
@@ -437,14 +449,15 @@ final class CameraDirector {
     /// over it (a new run builds a new camera).
     private var draining = false
 
-    init(cameraNode: SCNNode) {
-        self.cameraNode = cameraNode
+    init(rig: SCNNode, lens: SCNNode) {
+        self.rig = rig
+        self.lens = lens
         // The realm's grade as `BattleSceneController.buildCamera` set it
         // from `StageBuilder.grade(for:)`: what the impact frame punches and
         // puts back exactly, and what a lost field drains from.
-        restSaturation = cameraNode.camera?.saturation ?? 1
-        restContrast = cameraNode.camera?.contrast ?? 0
-        restExposure = cameraNode.camera?.exposureOffset ?? 0
+        restSaturation = lens.camera?.saturation ?? 1
+        restContrast = lens.camera?.contrast ?? 0
+        restExposure = lens.camera?.exposureOffset ?? 0
         // The lens and the framing are one solve, so this class owns both
         // rather than reading a field of view off the node and hoping the two
         // agree. The projection direction is stated rather than assumed:
@@ -454,8 +467,8 @@ final class CameraDirector {
         // divides by a vertical half-angle and multiplies the horizontal one
         // out by the aspect ratio itself. Setting it here is what keeps the
         // solve right if the scene's camera is ever built with the other.
-        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
-        cameraNode.camera?.projectionDirection = .vertical
+        lens.camera?.fieldOfView = Self.lensFieldOfView
+        lens.camera?.projectionDirection = .vertical
         applySolve(for: FieldBounds.standard)
         // `buildCamera()` runs before `place(combatants:)`, so there is not a
         // single unit in the scene yet and there is nothing to measure. Both
@@ -508,7 +521,7 @@ final class CameraDirector {
     /// and the clips play on the model container rather than on this node, so
     /// a unit at rest has no action here to read.
     private func measureField() -> FieldBounds? {
-        guard let stage = cameraNode.parent else { return nil }
+        guard let stage = rig.parent else { return nil }
         var points: [FramePoint] = []
         var found = false
         var hasBoss = false
@@ -744,7 +757,7 @@ final class CameraDirector {
         // `look(at:)` frame by frame — but an old one left in place used to
         // turn the home framing into a stare at the last victim's chest, so
         // the clear stays as a guard.
-        cameraNode.constraints = []
+        rig.constraints = []
         let wasOffHome = isOffHome
         // Re-solve before returning, so a wave that has just walked on is in
         // the frame the camera comes back to.
@@ -767,11 +780,10 @@ final class CameraDirector {
 
     /// Puts the camera on the home framing this instant, lens and all.
     private func applyHome() {
-        cameraNode.removeAction(forKey: "shake")
-        cameraNode.removeAction(forKey: "fov")
-        cameraNode.position = homePosition
-        cameraNode.look(at: homeAim)
-        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
+        rig.removeAction(forKey: "fov")
+        rig.position = homePosition
+        rig.look(at: homeAim)
+        lens.camera?.fieldOfView = Self.lensFieldOfView
         isOffHome = false
     }
 
@@ -799,7 +811,7 @@ final class CameraDirector {
 
         shotGeneration += 1
         stopMoves()
-        cameraNode.constraints = []
+        rig.constraints = []
         isOffHome = true
 
         let casterPosition = focus.map { SCNVector3($0.x, $0.y + caster.spec.height * 0.6, $0.z) }
@@ -860,7 +872,7 @@ final class CameraDirector {
             // Start wide and behind, sweep around the caster, land facing them.
             let radius: Float = 4.2
             let start = SCNVector3(casterPosition.x - radius, casterPosition.y + 1.6, casterPosition.z + radius)
-            cameraNode.position = start
+            rig.position = start
             let generation = shotGeneration
             let orbit = SCNAction.customAction(duration: duration * 0.8) { node, elapsed in
                 let t = Float(elapsed / CGFloat(duration * 0.8))
@@ -876,7 +888,7 @@ final class CameraDirector {
                 node.look(at: casterPosition)
             }
             animateFOV(to: 42, duration: 0.25)
-            cameraNode.runAction(.sequence([orbit, .wait(duration: duration * 0.2)]), forKey: "shot") { [weak self] in
+            rig.runAction(.sequence([orbit, .wait(duration: duration * 0.2)]), forKey: "shot") { [weak self] in
                 self?.afterShot(generation, completion)
             }
         }
@@ -974,12 +986,12 @@ final class CameraDirector {
         shotGeneration += 1
         let generation = shotGeneration
         stopMoves()
-        cameraNode.constraints = []
+        rig.constraints = []
         // Orientation set once, from home, and never again during the shot:
         // the move below changes the position only.
-        cameraNode.position = homePosition
-        cameraNode.look(at: homeAim)
-        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
+        rig.position = homePosition
+        rig.look(at: homeAim)
+        lens.camera?.fieldOfView = Self.lensFieldOfView
         isOffHome = true
 
         let home = homePosition
@@ -1002,42 +1014,45 @@ final class CameraDirector {
                 destination.z + (home.z - destination.z) * t
             )
         }
-        cameraNode.runAction(.sequence([dollyIn, settle, dollyOut]), forKey: "shot") { [weak self] in
+        rig.runAction(.sequence([dollyIn, settle, dollyOut]), forKey: "shot") { [weak self] in
             self?.afterShot(generation, completion)
         }
     }
 
-    /// A short shake, used on critical hits and on the ultimate's landing frame.
-    /// Never under Reduce Motion (`MotionComfort`): the hit's flash and sound
-    /// carry it.
-    func shake(intensity: Float = 0.12, duration: TimeInterval = 0.3) {
-        guard !MotionComfort.isReduced else { return }
-        let origin = cameraNode.position
-        let shake = SCNAction.customAction(duration: duration) { node, elapsed in
-            let t = Float(elapsed / CGFloat(duration))
-            let decay = (1 - t)
-            // Deterministic wobble rather than random, so it reads as impact
-            // rather than as noise.
-            let phase = Float(elapsed) * 60
-            node.position = SCNVector3(
-                origin.x + sin(phase) * intensity * decay,
-                origin.y + cos(phase * 1.4) * intensity * decay * 0.6,
-                origin.z
-            )
-        }
-        // Eased back over a tenth of a second rather than snapped in a frame:
-        // the camera settles out of every move it makes.
-        let recover = SCNAction.move(to: origin, duration: 0.12)
-        recover.timingMode = .easeOut
-        cameraNode.runAction(.sequence([shake, recover]), forKey: "shake")
+    // MARK: - The shake (Docs/FEEL.md W2.18)
+
+    /// A hit's trauma at the player's speed (`Juice.trauma(for:speed:)`), and
+    /// its kick: `metres` along the line from `striker` to `victim` as the
+    /// screen sees it — the lens's own right and up, read off the rig, so a
+    /// blow into the frame jolts it up and one out of it jolts it down, and
+    /// a blow across it across. The shake itself is `CameraShake`, written
+    /// on the lens by the controller on the render thread; nothing here
+    /// moves a node. Never under Reduce Motion (the shaker's own guard): the
+    /// hit's flash and sound carry it.
+    func addTrauma(_ amount: Float, speed: Double, from striker: SCNVector3? = nil, to victim: SCNVector3? = nil,
+                   kick metres: Float = 0) {
+        shaker.add(amount, speed: speed)
+        guard metres > 0, let striker, let victim else { return }
+        let line = SCNVector3(victim.x - striker.x, victim.y - striker.y, victim.z - striker.z)
+        let right: Float = dot(line, rig.worldRight)
+        let up: Float = dot(line, rig.worldUp)
+        shaker.kick(right: right, up: up, metres: metres)
     }
 
-    /// Stops whatever is moving the camera — a shot, a shake, a lens change —
-    /// and nothing else: the grade's own action (`drainColour`) is not a
-    /// move, and a return home must not undo a field's colour draining.
+    /// Trauma held at `level` or over for `seconds`: a boss climbing over the
+    /// rim or sinking back under it rumbles the whole way.
+    func rumble(_ level: Float, for seconds: TimeInterval) {
+        shaker.rumble(level, for: seconds)
+    }
+
+    /// Stops whatever is moving the rig — a shot, a lens change — and
+    /// nothing else: the grade's own action (`drainColour`) is not a move,
+    /// and a return home must not undo a field's colour draining. The shake
+    /// is the lens's and runs on through a return home (W2.18): a blow that
+    /// ends a shot still lands.
     private func stopMoves() {
-        for key in ["shot", "shake", "fov"] {
-            cameraNode.removeAction(forKey: key)
+        for key in ["shot", "fov"] {
+            rig.removeAction(forKey: key)
         }
     }
 
@@ -1068,7 +1083,7 @@ final class CameraDirector {
     /// is still drawing. Never under Reduce Motion, and not over a field
     /// whose colour is draining; nil when there is nothing to punch.
     func impactFrame() -> (punch: () -> Void, restore: () -> Void)? {
-        guard !MotionComfort.isReduced, !draining, let camera = cameraNode.camera else { return nil }
+        guard !MotionComfort.isReduced, !draining, let camera = lens.camera else { return nil }
         let punchSaturation: CGFloat = Self.impactSaturation
         let punchContrast: CGFloat = restContrast + Self.impactContrast
         let punchExposure: CGFloat = restExposure + Self.impactExposure
@@ -1103,7 +1118,7 @@ final class CameraDirector {
     /// the white point. Never under Reduce Motion, never over a draining
     /// field; nil when there is nothing to punch.
     func exposurePunch() -> (punch: () -> Void, restore: () -> Void)? {
-        guard !MotionComfort.isReduced, !draining, let camera = cameraNode.camera else { return nil }
+        guard !MotionComfort.isReduced, !draining, let camera = lens.camera else { return nil }
         let pushed: CGFloat = restExposure + Self.splashExposure
         let exposure = restExposure
         let saturation = restSaturation
@@ -1125,7 +1140,7 @@ final class CameraDirector {
 
     /// The realm's grade, exactly.
     private func restoreGrade() {
-        guard let camera = cameraNode.camera else { return }
+        guard let camera = lens.camera else { return }
         camera.saturation = restSaturation
         camera.contrast = restContrast
         camera.exposureOffset = restExposure
@@ -1138,18 +1153,18 @@ final class CameraDirector {
     /// until a new run builds a new camera. An action on the camera under
     /// its own key (`stopMoves` leaves it), easing by smoothstep.
     func drainColour(to saturation: CGFloat, over duration: TimeInterval) {
-        guard let camera = cameraNode.camera else { return }
+        guard let camera = lens.camera else { return }
         draining = true
         restoreGrade()
         let from = restSaturation
         let span: TimeInterval = max(0.01, duration)
-        cameraNode.removeAction(forKey: "grade")
+        rig.removeAction(forKey: "grade")
         let drain = SCNAction.customAction(duration: span) { _, elapsed in
             let raw = min(1, CGFloat(elapsed) / CGFloat(span))
             let eased = raw * raw * (3 - 2 * raw)
             camera.saturation = from + (saturation - from) * eased
         }
-        cameraNode.runAction(drain, forKey: "grade")
+        rig.runAction(drain, forKey: "grade")
     }
 
     /// The final blow's camera (W1.7): from wherever the camera is — a
@@ -1171,13 +1186,13 @@ final class CameraDirector {
         guard depth > 3 else { return }
         let distance = min(wanted, depth * 0.85)
         let destination = SCNVector3(chest.x - dir.x * distance, chest.y - dir.y * distance, chest.z - dir.z * distance)
-        let start = cameraNode.position
+        let start = rig.position
         let home = homePosition
         shotGeneration += 1
         let generation = shotGeneration
         stopMoves()
-        cameraNode.constraints = []
-        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
+        rig.constraints = []
+        lens.camera?.fieldOfView = Self.lensFieldOfView
         isOffHome = true
         let inSpan: TimeInterval = max(0.01, easeIn)
         let outSpan: TimeInterval = max(0.01, easeOut)
@@ -1199,7 +1214,7 @@ final class CameraDirector {
                 destination.z + (home.z - destination.z) * t
             )
         }
-        cameraNode.runAction(.sequence([dollyIn, dollyOut]), forKey: "shot") { [weak self] in
+        rig.runAction(.sequence([dollyIn, dollyOut]), forKey: "shot") { [weak self] in
             self?.afterShot(generation, nil)
         }
     }
@@ -1218,7 +1233,7 @@ final class CameraDirector {
     /// Returns where the camera ends, so each figure can turn to face it.
     @discardableResult
     func frameTeam(_ team: [(position: SCNVector3, height: Float)], over duration: TimeInterval) -> SCNVector3 {
-        guard !team.isEmpty else { return cameraNode.position }
+        guard !team.isEmpty else { return rig.position }
         let sight = SCNVector3(homeAim.x - homePosition.x, homeAim.y - homePosition.y, homeAim.z - homePosition.z)
         let length = max(0.001, (sight.x * sight.x + sight.y * sight.y + sight.z * sight.z).squareRoot())
         let dir = SCNVector3(sight.x / length, sight.y / length, sight.z / length)
@@ -1250,7 +1265,7 @@ final class CameraDirector {
         }
         let forWidth = reach / (Self.teamSpread * tanH)
         let depth = dot(SCNVector3(chest.x - homePosition.x, chest.y - homePosition.y, chest.z - homePosition.z), dir)
-        guard depth > 3 else { return cameraNode.position }
+        guard depth > 3 else { return rig.position }
         let distance = min(max(forHeight, forWidth), depth * 0.85)
         // The team well under the centre: the frame's centre is set on a
         // point above the chest.
@@ -1258,11 +1273,11 @@ final class CameraDirector {
         let focus = SCNVector3(chest.x + up.x * lift, chest.y + up.y * lift, chest.z + up.z * lift)
         let full = SCNVector3(focus.x - dir.x * distance, focus.y - dir.y * distance, focus.z - dir.z * distance)
         let destination = MotionComfort.isReduced ? lerp(homePosition, full, MotionComfort.zoomReach) : full
-        let start = cameraNode.position
+        let start = rig.position
         shotGeneration += 1
         stopMoves()
-        cameraNode.constraints = []
-        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
+        rig.constraints = []
+        lens.camera?.fieldOfView = Self.lensFieldOfView
         isOffHome = true
         let span: TimeInterval = max(0.01, duration)
         let dolly = SCNAction.customAction(duration: span) { node, elapsed in
@@ -1275,7 +1290,7 @@ final class CameraDirector {
             )
         }
         // Held: no way back is queued. A new run builds a new camera.
-        cameraNode.runAction(dolly, forKey: "shot")
+        rig.runAction(dolly, forKey: "shot")
         return destination
     }
 
@@ -1323,7 +1338,7 @@ final class CameraDirector {
     ) {
         shotGeneration += 1
         let generation = shotGeneration
-        let start = cameraNode.position
+        let start = rig.position
         let move = SCNAction.customAction(duration: duration) { node, elapsed in
             let raw: Float = duration <= 0 ? 1 : Float(min(1, elapsed / CGFloat(duration)))
             // Smoothstep: the move eases out of rest and settles into its end
@@ -1341,7 +1356,7 @@ final class CameraDirector {
             node.look(at: aim())
         }
         animateFOV(to: fov, duration: max(0.12, duration))
-        cameraNode.runAction(.sequence([move, settle]), forKey: "shot") { [weak self] in
+        rig.runAction(.sequence([move, settle]), forKey: "shot") { [weak self] in
             self?.afterShot(generation, completion)
         }
     }
@@ -1362,13 +1377,13 @@ final class CameraDirector {
     }
 
     private func animateFOV(to value: CGFloat, duration: TimeInterval) {
-        guard let camera = cameraNode.camera else { return }
+        guard let camera = lens.camera else { return }
         let start = camera.fieldOfView
         let action = SCNAction.customAction(duration: duration) { _, elapsed in
             let t = CGFloat(elapsed) / CGFloat(duration)
             camera.fieldOfView = start + (value - start) * min(1, t)
         }
-        cameraNode.runAction(action, forKey: "fov")
+        rig.runAction(action, forKey: "fov")
     }
 
     private func lerp(_ a: SCNVector3, _ b: SCNVector3, _ t: Float) -> SCNVector3 {

@@ -710,7 +710,8 @@ struct ShrinesWing: View {
         piecesBefore = ShrineService.pieces(of: shrine.blueprintID, player: store.player)
         repeatRuns = max(1, runs)
         engine = start.engine
-        battle = .campaign(start.stage)
+        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+        BattleCover.open { battle = .campaign(start.stage) }
     }
 
     /// The battle cover closed: what the fight (or the auto session) paid

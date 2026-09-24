@@ -42,9 +42,11 @@ enum Juice {
         /// Seconds the world freezes on impact, before the blow's share of
         /// its victim's health adds to it (`freeze(for:share:early:speed:)`).
         var pause: TimeInterval
-        /// Camera shake amplitude in metres, and how long it decays.
-        var shake: Float
-        var shakeDuration: TimeInterval
+        /// The trauma the blow adds to the camera's shake, 0…1 — the shake is
+        /// its square (`CameraShake`, Docs/FEEL.md W2.18) — and how far, in
+        /// metres, it kicks the camera along the line of the blow.
+        var trauma: Float
+        var kick: Float
         /// Haptic, if any.
         var haptic: UIImpactFeedbackGenerator.FeedbackStyle?
         /// Size multiplier for the damage number.
@@ -53,11 +55,11 @@ enum Juice {
 
     static func profile(for weight: HitWeight) -> Profile {
         switch weight {
-        case .light:    return Profile(pause: 0.00, shake: 0.00, shakeDuration: 0.00, haptic: nil,     numberScale: 0.85)
-        case .normal:   return Profile(pause: 0.045, shake: 0.05, shakeDuration: 0.14, haptic: .light,  numberScale: 1.00)
-        case .heavy:    return Profile(pause: 0.075, shake: 0.12, shakeDuration: 0.24, haptic: .medium, numberScale: 1.15)
-        case .critical: return Profile(pause: 0.090, shake: 0.16, shakeDuration: 0.28, haptic: .medium, numberScale: 1.40)
-        case .lethal:   return Profile(pause: 0.150, shake: 0.22, shakeDuration: 0.40, haptic: .heavy,  numberScale: 1.60)
+        case .light:    return Profile(pause: 0.00, trauma: 0.00, kick: 0.00, haptic: nil,     numberScale: 0.85)
+        case .normal:   return Profile(pause: 0.045, trauma: 0.18, kick: 0.04, haptic: .light,  numberScale: 1.00)
+        case .heavy:    return Profile(pause: 0.075, trauma: 0.32, kick: 0.05, haptic: .medium, numberScale: 1.15)
+        case .critical: return Profile(pause: 0.090, trauma: 0.42, kick: 0.05, haptic: .medium, numberScale: 1.40)
+        case .lethal:   return Profile(pause: 0.150, trauma: 0.55, kick: 0.06, haptic: .heavy,  numberScale: 1.60)
         }
     }
 
@@ -121,14 +123,26 @@ enum Juice {
         return max(shortestFreeze, seconds / divisor)
     }
 
-    /// The camera's shake for a hit at the player's speed: its length divided
-    /// by the speed, as it always was, and its size halved at ×3.
-    static func shake(for weight: HitWeight, speed: Double) -> (intensity: Float, duration: TimeInterval) {
-        let p = profile(for: weight)
-        guard p.shake > 0 else { return (0, 0) }
-        let divisor: Double = max(1, speed)
-        let intensity: Float = isFast(speed) ? p.shake * 0.5 : p.shake
-        return (intensity, p.shakeDuration / divisor)
+    /// The trauma a hit adds to the camera's shake at the player's speed
+    /// (Docs/FEEL.md W2.18): its weight's, and at ×3 `fastTraumaShare` of it,
+    /// so the shake — trauma squared — is halved as the sine's size was. Its
+    /// length at ×2 and ×3 is the shaker's: trauma falls `CameraShake.decay`
+    /// times the speed a second (`CameraShake.add`), so ×2 shakes as hard
+    /// for half as long and ×3 half as hard for under a third as long.
+    static func trauma(for weight: HitWeight, speed: Double) -> Float {
+        let base: Float = profile(for: weight).trauma
+        return isFast(speed) ? base * fastTraumaShare : base
+    }
+
+    /// √½: the trauma whose square is half the shake.
+    static let fastTraumaShare: Float = 0.70710678
+
+    /// How far a hit kicks the camera along its line at the player's speed:
+    /// 4 cm for an ordinary blow, 5 for a heavy one or a crit, 6 for a kill,
+    /// half at ×3.
+    static func kick(for weight: HitWeight, speed: Double) -> Float {
+        let base: Float = profile(for: weight).kick
+        return isFast(speed) ? base * 0.5 : base
     }
 
     /// Whether a hit buzzes the thumb: every weight that has a haptic, and at
@@ -178,7 +192,8 @@ enum Juice {
     /// (it keeps its haptic at ×3). `freezeFor` replaces the computed freeze
     /// (the final blow's), and `shakes` false keeps the camera still (the
     /// final blow's camera is the slow motion's). `victim` trembles inside
-    /// the freeze — never under Reduce Motion.
+    /// the freeze — never under Reduce Motion — and `striker`, where the
+    /// blow came from, aims the camera's kick along it (W2.18).
     @discardableResult
     static func impact(
         _ weight: HitWeight,
@@ -189,6 +204,7 @@ enum Juice {
         freezeFor fixed: TimeInterval? = nil,
         shakes: Bool = true,
         victim: UnitNode? = nil,
+        striker: SCNVector3? = nil,
         scene: SCNScene,
         director: CameraDirector?,
         speed: Double
@@ -206,11 +222,15 @@ enum Juice {
             AudioLibrary.shared.play(colour.sound, volume: 0.55, delay: 0.02)
         }
 
-        let kick = shake(for: weight, speed: speed)
-        let shakesCamera: Bool = shakes && kick.intensity > 0
+        // The camera's trauma and its kick along the blow (W2.18), added on
+        // the release: a shake inside a freeze is held, not seen.
+        let trauma: Float = shakes ? Self.trauma(for: weight, speed: speed) : 0
+        let kick: Float = shakes ? Self.kick(for: weight, speed: speed) : 0
+        let shakesCamera: Bool = trauma > 0
+        let struck: SCNVector3? = victim?.chestWorldPosition
         let pause: TimeInterval = fixed ?? freeze(for: weight, share: share, early: early, speed: speed)
         guard pause > 0 else {
-            if shakesCamera { director?.shake(intensity: kick.intensity, duration: kick.duration) }
+            if shakesCamera { director?.addTrauma(trauma, speed: speed, from: striker, to: struck, kick: kick) }
             return 0
         }
 
@@ -237,7 +257,7 @@ enum Juice {
             stopTremor()
             scene.isPaused = false
             if shakesCamera {
-                director?.shake(intensity: kick.intensity, duration: kick.duration)
+                director?.addTrauma(trauma, speed: speed, from: striker, to: struck, kick: kick)
             }
         }
         return pause

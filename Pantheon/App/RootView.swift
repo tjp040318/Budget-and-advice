@@ -264,7 +264,8 @@ struct SettingsView: View {
                     social: store.social,
                     onAttack: { target in
                         showSocial = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { warBattle = .guildWar(target) }
+                        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { BattleCover.open { warBattle = .guildWar(target) } }
                     },
                     onClaim: { grants in _ = store.receive(grants) }
                 )

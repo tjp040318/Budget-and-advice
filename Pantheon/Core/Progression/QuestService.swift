@@ -306,6 +306,80 @@ enum QuestService {
         let gift = loginGifts[max(0, min(loginGifts.count - 1, streak.day - 1))]
         return ShopService.grant(gift, to: &player, rng: &rng)
     }
+
+    // MARK: - Claim All (Docs/FEEL.md W2.12)
+    //
+    // Summoners War: Chronicles added "Complete All"; our Codex has one. Each
+    // is the existing claims, looped until a pass claims nothing, so a claim
+    // that opens another — the eighth mission opens the Daily Tribute, the
+    // tier's last step its prize — is never missed, and each pays exactly
+    // what the same claims one at a time in the list's order would
+    // (`QuestTests.testClaimAllPaysWhatClaimingOneByOnePays`).
+
+    /// Every finished, unclaimed mission of the day in the table's order,
+    /// then the Daily Tribute once all eight are in. What the claims paid.
+    @discardableResult
+    static func claimAllMissions(player: inout Player, rng: inout SeededRandom, now: Date = Date()) -> [ShopService.Grant] {
+        var paid: [ShopService.Grant] = []
+        var claimedSome = true
+        while claimedSome {
+            claimedSome = false
+            for mission in missions where isMissionComplete(mission, player: player) && !isMissionClaimed(mission.id, player: player) {
+                if let grants = try? claimMission(mission.id, player: &player, rng: &rng, now: now) {
+                    paid += grants
+                    claimedSome = true
+                }
+            }
+            if allMissionsClaimable(player), let grants = try? claimMission(allMissionsID, player: &player, rng: &rng, now: now) {
+                paid += grants
+                claimedSome = true
+            }
+        }
+        return paid
+    }
+
+    /// Every finished, unclaimed feat, in the table's order.
+    @discardableResult
+    static func claimAllFeats(player: inout Player, rng: inout SeededRandom) -> [ShopService.Grant] {
+        var paid: [ShopService.Grant] = []
+        var claimedSome = true
+        while claimedSome {
+            claimedSome = false
+            for feat in feats where isFeatComplete(feat, player: player) && !isFeatClaimed(feat.id, player: player) {
+                if let grants = try? claimFeat(feat.id, player: &player, rng: &rng) {
+                    paid += grants
+                    claimedSome = true
+                }
+            }
+        }
+        return paid
+    }
+
+    /// Every finished, unclaimed step of the Counsel's CURRENT tier in
+    /// Athena's order, then the tier's prize once every step is in — the
+    /// tier the list shows and its prize card. It stops there: the next
+    /// tier's steps are rows the player has not been shown yet, and they
+    /// wait for the next Claim All.
+    @discardableResult
+    static func claimAllCounsel(player: inout Player, rng: inout SeededRandom) -> [ShopService.Grant] {
+        let tier: CounselService.Tier = CounselService.currentTier(for: player)
+        var paid: [ShopService.Grant] = []
+        for step in CounselService.steps(in: tier) where isReady(step, player: player) {
+            if let grants = try? CounselService.claim(step.id, player: &player, rng: &rng) {
+                paid += grants
+            }
+        }
+        if CounselService.isPrizeReady(tier, player: player),
+           let grants = try? CounselService.claim(tier.prizeID, player: &player, rng: &rng) {
+            paid += grants
+        }
+        return paid
+    }
+
+    /// A step of Athena's that is done and not yet claimed.
+    private static func isReady(_ step: CounselService.Step, player: Player) -> Bool {
+        CounselService.isComplete(step, player: player) && !CounselService.isClaimed(step.id, player: player)
+    }
 }
 
 /// Today's mission counters and what has been claimed. Rebuilt on a new day.

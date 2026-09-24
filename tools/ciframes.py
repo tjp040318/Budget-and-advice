@@ -10,8 +10,9 @@ sheet, so a session that cannot run the simulator can look at the game.
 The job also publishes each step's console (<step>-console.txt: the app's
 stdout and stderr, with the frameworks' os_log lines mirrored in) and the
 simulator's log for the process (system-log.txt). This prints the lines that
-matter from each — the [ModelLibrary] block and anything that says error or
-shader — and leaves the files in frames/.
+matter from each — the [ModelLibrary] block, anything that says error or
+shader, and each launch's frame pacing ([Frames], Docs/FEEL.md W2.26) — and
+leaves the files in frames/.
 
 The job (.github/workflows/build.yml) launches the app in a simulator once per
 screen with `-tour -tour-step N`, photographs it, and force-pushes small JPEGs
@@ -65,6 +66,40 @@ def crash_summary(path):
             k = f.get("imageIndex", -1)
             img = images[k].get("name", "?") if 0 <= k < len(images) else "?"
             out.append(f"  {j:2d} {str(img):28s} {f.get('symbol', '')} +{f.get('symbolLocation', f.get('imageOffset', 0))}")
+    return out
+
+
+def frames_summary(lines, hitches=8):
+    """The [Frames] lines worth printing from one console: per launch and
+    stage, the latest summary — the step's first launch and each relaunch the
+    workflow's `again` appended under "==== relaunched with: <args>", which
+    labels its lines — and the first `hitches` hitch lines."""
+    latest, order, hitch_lines = {}, [], []
+    label = ""
+    for l in lines:
+        if l.startswith("==== relaunched with:"):
+            label = l.split(":", 1)[1].strip()
+            continue
+        if "[Frames]" not in l:
+            continue
+        m = re.search(r"\[Frames\] (\S+) (.*)", l)
+        if not m:
+            continue
+        text = l[l.index("[Frames]") + 9:].strip()
+        if m.group(2).startswith("hitch"):
+            hitch_lines.append((label, text))
+            continue
+        key = (label, m.group(1))
+        if key not in latest:
+            order.append(key)
+        latest[key] = text
+    out = []
+    for key in order:
+        out.append("FRAMES " + (f"({key[0]}) " if key[0] else "") + latest[key])
+    for launch, text in hitch_lines[:hitches]:
+        out.append("FRAMES " + (f"({launch}) " if launch else "") + text)
+    if len(hitch_lines) > hitches:
+        out.append(f"FRAMES … {len(hitch_lines) - hitches} more hitch lines")
     return out
 
 
@@ -173,6 +208,13 @@ def main():
         wanted = [l for l in lines if "[ModelLibrary]" in l or "[Diagnostics]" in l
                   or any(k in l for k in ("rror", "SCNMetal", "shader", "Shader", "compile", "fatal", "Fatal"))]
         print(f"-- {os.path.basename(log)}: {len(lines)} lines, {len(wanted)} of interest")
+        # The step's frame pacing beside it (Docs/FEEL.md W2.26): each
+        # stage's latest [Frames] line — the governor prints one every three
+        # seconds of drawing under the tour and one as a stage goes, so the
+        # last before a relaunch is the nearest to its photographs — and
+        # every hitch line, a single frame over 100 ms with when it came.
+        for l in frames_summary(lines):
+            print("   " + l[:220])
         for l in wanted[:a.log_lines]:
             print("   " + l[:220])
         if len(wanted) > a.log_lines:

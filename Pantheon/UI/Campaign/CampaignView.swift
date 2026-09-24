@@ -265,7 +265,8 @@ struct CampaignView: View {
         guard let engine = store.startCampaignBattle(stage: stage) else { return }
         pendingEngines[stage.id] = engine
         pendingRuns[stage.id] = runs
-        battle = .campaign(stage)
+        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+        BattleCover.open { battle = .campaign(stage) }
     }
 
     /// Clears a mastered stage without a battle and shows what it paid.

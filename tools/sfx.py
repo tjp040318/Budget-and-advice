@@ -47,6 +47,7 @@ what each recording is for.
     python3 tools/sfx.py                     # write them all
     python3 tools/sfx.py status flow         # only the named sections
     python3 tools/sfx.py summon --vsco DIR   # the summon's (FEEL.md W2.7)
+    python3 tools/sfx.py spoils --vsco DIR   # the reward box's (FEEL.md W2.2)
     python3 tools/sfx.py flow --out /tmp/x   # somewhere else, to audition
     python3 tools/sfx.py --check             # measure what is on disk
 """
@@ -1864,6 +1865,234 @@ def build_summon():
         star_notes(); rite_awaken(); rite_evolve(); rite_relic_awaken()
         summon_mix_check()
 
+# ==============================================================================
+# The reward box by rarity (FEEL.md W2.2, 2026-09-24), `build_spoils`: the
+# chest's three rattles, each harder; its lid's creak, its thud on the hinge
+# and the beam's shimmer as ONE file, so the three stay in step with the lid
+# (`ChestTiming` in SpoilsBeats.swift); a crystal clink for every tile, one
+# step up D major's pentatonic a tile — twelve steps, D5 to E7 — so a big haul
+# plays a melody; a legend's rising three notes and its landing; and the
+# relic power-up's short drum roll and its verdict, an anvil's ring or a dull
+# crack of stone (`AudioLibrary.Sound.rollLead` after the roll).
+#
+# Levelled by role, a step under the rites: the rattles -17 rising to -14
+# (each played louder too, 0.8/0.9/1.0), the lid -12.5 at 0.9; the clinks
+# -18.5 rising to -16.5 at 0.7 (0.8 for an epic), over which a legend's
+# three notes land at -12 and full volume; the roll -15, the ring
+# -12.5 and the crack -15 at 0.9 (the roll at 0.7). `spoils_mix_check` sums the chest and a
+# twelve-spoil shelf with an epic and a legend at the box's own offsets, and
+# the power-up's roll into each verdict: every sum peaks at or under 0.90.
+# ==============================================================================
+
+# The box's clock, kept in step with SpoilsBeats.swift by hand.
+CHEST_RATTLES = [0.0, 0.26, 0.52]
+CHEST_LID = 0.8
+CHEST_FLASH_AFTER_LID = 1.1
+CHEST_FIRST_TILE = 0.2
+TILE_STEP = 0.14
+EPIC_PAUSE = 0.2
+LEGEND_PAUSE = 0.35
+LEGEND_LANDING = 0.3
+ROLL_LEAD = 0.26
+RATTLE_VOLUMES = [0.8, 0.9, 1.0]
+LID_VOLUME = 0.9
+TILE_VOLUME = 0.7
+EPIC_VOLUME = 0.8
+RING_VOLUME = 0.9
+CRACK_VOLUME = 0.9
+ROLL_VOLUME = 0.7
+
+# The shelf's scale: D major's pentatonic from D5, one step a tile.
+SPOIL_NOTES = ["D5", "E5", "F#5", "A5", "B5", "D6", "E6", "F#6", "A6", "B6", "D7", "E7"]
+
+def _knock(r, pitch_hz, g=1.0):
+    """A knock of wood with iron on it: a short body falling onto its pitch,
+    the contact's tick, and a bright scrape of the fittings."""
+    b = Bus()
+    b.add(drop(0.12, pitch_hz * 1.9, pitch_hz, 0.008, 0.035, attack=0.001), 0.0, 0.8 * g)
+    b.add(click(r, 0.004, 0.0014, 7000, 900), 0.0, 0.45 * g)
+    n = N(0.05)
+    b.add(bp(r.standard_normal(n), 1800, 5200) * fall(n, 0.012), 0.002, 0.18 * g)
+    return b.x
+
+def _jingle(r, g=1.0):
+    """The lock and the hinges shaking: small iron parts, inharmonic and
+    quick, a few of them a few milliseconds apart."""
+    b = Bus()
+    for i, base in enumerate((2250, 2780, 3370)):
+        b.add(modes(0.16, base * r.uniform(0.97, 1.03), (1, 2.76, 5.4), (0.07, 0.04, 0.02), (1, 0.4, 0.15), rng=r),
+              0.004 * i + r.uniform(0, 0.006), 0.22 * g)
+    return b.x
+
+def chest_rattles():
+    # Three rattles, each harder: two knocks and a jingle, then three, then
+    # four and the thump of the chest landing from its hop — in the rattle's
+    # 0.16 s, the four quarter moves `RewardChestView` shakes it through.
+    for i, (knocks, g) in enumerate(((2, 0.6), (3, 0.8), (4, 1.0))):
+        r = seeded(f"chest_rattle_{i + 1}")
+        b = Bus()
+        for k in range(knocks):
+            at = 0.04 * k + r.uniform(0, 0.008)
+            b.add(_knock(r, r.uniform(150, 210), g=g * (0.8 + 0.2 * r.random())), at, 1.0)
+            b.add(_jingle(r, g=g), at + 0.003, 0.9)
+        if i == 2:
+            b.add(drop(0.2, 120, 58, 0.02, 0.06, attack=0.002), 0.17, 0.5)
+            b.add(click(r, 0.005, 0.002, 4000, 400), 0.17, 0.3)
+        save(f"chest_rattle_{i + 1}", room(b.x, rt60=0.5, wet=0.12, seed="small")[:N(0.6)], -17 + 1.5 * i, tail=0.15)
+
+def chest_open():
+    r = seeded("chest_open")
+    # The lid (`ChestTiming.lid`): a creak as it swings — wood sticking and
+    # slipping on its hinge pin, a pulse train that speeds up as it goes,
+    # rung through the lid's resonances — its thud as it stops against the
+    # hinge 0.32 s on, with the iron band's clank, and the beam's shimmer
+    # from 0.18 s: the bell tree drawn in reverse into the light, then
+    # struck, the glockenspiel's A6 and D7 and air rising through it.
+    b = Bus()
+    n = N(0.34)
+    rate = np.interp(T(n), [0, 0.12, 0.3, 0.34], [34, 48, 62, 40])
+    phase = np.cumsum(rate / SR)
+    ticks = np.zeros(n)
+    edges = np.nonzero(np.diff(np.floor(phase + 0.13 * smooth_noise(r, n, 30))) > 0)[0]
+    ticks[edges] = r.uniform(0.6, 1.0, len(edges))
+    # Each slip is a few milliseconds of grinding, not a click.
+    grit = r.standard_normal(N(0.004)) * fall(N(0.004), 0.0015)
+    slips = np.convolve(ticks, grit)[:n]
+    wood = formants(slips, [(420, 60, 0), (980, 110, -3), (1850, 200, -6), (3100, 400, -10)])
+    wood = wood / (np.max(np.abs(wood)) + 1e-12)
+    b.add(wood * shape(n, [(0, 0.2), (0.06, 1.0), (0.26, 0.9), (0.34, 0.0)]), 0.0, 0.5)
+    b.add(bp(r.standard_normal(n), 900, 4000) * shape(n, [(0, 0), (0.08, 0.25), (0.3, 0.15), (0.34, 0)]), 0.0, 0.12)
+    thud = 0.32
+    b.add(drop(0.3, 150, 52, 0.018, 0.08, attack=0.002), thud, 0.6)
+    b.add(_knock(r, 130, g=1.0), thud, 0.55)
+    clank = fade_tail(hp(recording("anvil"), 900)[:N(0.35)], 0.2)
+    b.add(clank, thud + 0.004, 0.12)
+    tree = hp(recording("belltree"), 1500)
+    swell = tree[:N(0.3)][::-1] * shape(N(0.3), [(0, 0), (0.3, 1)]) ** 2
+    b.add(swell, 0.05, 0.3)
+    b.add(tree[:N(1.2)], 0.35, 0.3)
+    b.add(played("glock", "A6", dur=0.9, release=0.45), 0.36, 0.3)
+    b.add(played("glock", "D7", dur=0.9, release=0.45), 0.42, 0.26)
+    m = N(1.0)
+    b.add(travel(r.standard_normal(m), [(0, 2500), (0.4, 7000), (1, 5000)], q=1.1)
+          * shape(m, [(0, 0), (0.25, 1.0), (1.0, 0)]), 0.3, 0.08)
+    save("chest_open", room(b.x, rt60=1.2, wet=0.22, seed="hall")[:N(1.8)], -12.5, tail=0.4)
+
+def spoil_notes():
+    # A crystal clink for each tile: struck glass (modes at glass's ratios,
+    # each split into a slowly beating pair) with the glockenspiel's bar
+    # under it and a tick, a little brighter and louder a step as the shelf
+    # climbs. `spoil_1` … `spoil_12`.
+    for i, note in enumerate(SPOIL_NOTES):
+        r = seeded(f"spoil_{i + 1}")
+        f = pitch(note)
+        b = Bus()
+        b.add(modes(0.7, f, (1, 2.32, 4.25, 6.63), (0.5, 0.28, 0.16, 0.09), (1, 0.4, 0.18, 0.08), split=2.2, rng=r),
+              0.0, 0.8)
+        b.add(played("glock", note, dur=0.45, release=0.3), 0.0, 0.45)
+        b.add(click(r, 0.003, 0.001, 9500, 2500), 0.0, 0.2 + 0.01 * i)
+        save(f"spoil_{i + 1}", room(b.x, rt60=0.8, wet=0.16, seed="small")[:N(0.9)], -18.5 + 2.0 * i / 11, tail=0.3)
+
+def spoil_legend():
+    r = seeded("spoil_legend")
+    # A legend's landing: three notes rising (D6, A6, D7, 90 ms apart) in
+    # glass and bell over the bell tree, a soft breath of gong under them
+    # for the column of light, and the tile's own landing — a low thud and a
+    # triangle's ping — as it drops onto the shelf at 0.3 s.
+    b = Bus()
+    for i, note in enumerate(["D6", "A6", "D7"]):
+        f = pitch(note)
+        b.add(modes(1.2, f, (1, 2.32, 4.25, 6.63), (0.8, 0.45, 0.25, 0.14), (1, 0.42, 0.2, 0.1), split=2.6, rng=r),
+              0.09 * i, 0.5 + 0.1 * i)
+        b.add(played("glock", note, dur=0.8, release=0.4), 0.09 * i, 0.4 + 0.1 * i)
+    b.add(hp(recording("belltree"), 1500)[:N(1.2)], 0.18, 0.3)
+    b.add(lp(hp(recording("gong"), 60)[:N(1.8)], 2200), 0.0, 0.18)
+    land = LEGEND_LANDING
+    b.add(drop(0.28, 130, 55, 0.02, 0.07, attack=0.002), land, 0.45)
+    b.add(hp(recording("triangle"), 2500)[:N(1.0)], land, 0.25)
+    b.add(click(r, 0.005, 0.002, 9000, 1500), land, 0.2)
+    save("spoil_legend", room(b.x, rt60=1.6, wet=0.26, seed="hall")[:N(2.2)], -12, tail=0.5)
+
+def relic_roll():
+    # The power-up's drum roll: the timpani roll on D, steady from two
+    # seconds into the recording, in a quick crescendo that peaks just
+    # before `ROLL_LEAD` and falls away into the verdict landing on it — a
+    # roll into a strike, never the two at their loudest together.
+    n = N(ROLL_LEAD + 0.1)
+    roll = recording("timproll_D3")[N(2.0):N(2.0) + n]
+    b = Bus()
+    b.add(roll * shape(len(roll), [(0, 0.25), (ROLL_LEAD - 0.04, 1.0), (ROLL_LEAD + 0.02, 0.15),
+                                   (ROLL_LEAD + 0.1, 0.0)]), 0.0, 1.0)
+    save("relic_roll", room(b.x, rt60=0.7, wet=0.14, seed="small")[:N(0.6)], -15, tail=0.12)
+
+def relic_ring():
+    r = seeded("relic_ring")
+    # Success: the anvil struck and let ring, the stone's own glass a
+    # fifth over it (E6 and B6) and the triangle's shimmer.
+    b = Bus()
+    b.add(fade_tail(hp(recording("anvil"), 300)[:N(1.1)], 0.5), 0.0, 0.75)
+    b.add(modes(1.0, pitch("E6"), (1, 2.32, 4.25), (0.6, 0.35, 0.2), (1, 0.4, 0.18), split=2.0, rng=r), 0.01, 0.4)
+    b.add(modes(0.9, pitch("B6"), (1, 2.32, 4.25), (0.5, 0.3, 0.18), (1, 0.35, 0.15), split=2.4, rng=r), 0.05, 0.3)
+    b.add(hp(recording("triangle"), 2500)[:N(1.0)], 0.02, 0.22)
+    save("relic_ring", room(b.x, rt60=1.1, wet=0.2, seed="hall")[:N(1.5)], -12.5, tail=0.4)
+
+def relic_crack():
+    r = seeded("relic_crack")
+    # Failure: a dull crack of stone — a split of dry noise, low-passed so
+    # it never rings, a low thud under it, and a few chips crumbling off.
+    b = Bus()
+    n = N(0.16)
+    b.add(lp(bp(r.standard_normal(n), 300, 5000), 2400) * fall(n, 0.035, 0.001), 0.0, 0.7)
+    b.add(drop(0.3, 170, 62, 0.02, 0.1, attack=0.002), 0.0, 0.6)
+    b.add(click(r, 0.006, 0.002, 3500, 400), 0.0, 0.3)
+    b.add(lp(pops(r, 0.45, 26, 400, 3000, bias=1.2), 2500), 0.03, 0.5)
+    save("relic_crack", room(b.x, rt60=0.6, wet=0.14, seed="small")[:N(0.8)], -15, tail=0.2)
+
+def spoils_mix_check():
+    """The box plays its sounds on top of each other: the rattles, then the
+    lid, whose shimmer is still ringing when the tiles begin, and a tile
+    every 0.14 s with an epic's pause and a legend's. A phone's mixer sums
+    the players with no limiter, so a sum over full scale clips there.
+    Prints the chest's sum and a twelve-spoil shelf's (ten plain, an epic,
+    a legend: the fullest box), then the power-up's roll into each verdict."""
+    worst = 0.0
+    lid = _read("chest_open")
+    rattles = [_read(f"chest_rattle_{i + 1}") for i in range(3)]
+    b = Bus()
+    for at, x, g in zip(CHEST_RATTLES, rattles, RATTLE_VOLUMES):
+        b.add(x, at, g)
+    b.add(lid, CHEST_LID, LID_VOLUME)
+    first = CHEST_LID + CHEST_FLASH_AFTER_LID + CHEST_FIRST_TILE
+    tiers = ["plain"] * 10 + ["epic", "legend"]
+    at = 0.0
+    for i, tier in enumerate(tiers):
+        if i > 0: at += TILE_STEP
+        if tier == "epic": at += EPIC_PAUSE
+        if tier == "legend": at += LEGEND_PAUSE
+        if tier == "legend":
+            b.add(_read("spoil_legend"), first + at, 1.0)
+            at += LEGEND_LANDING
+        else:
+            b.add(_read(f"spoil_{i + 1}"), first + at, EPIC_VOLUME if tier == "epic" else TILE_VOLUME)
+    peak = float(np.max(np.abs(b.x))); worst = max(worst, peak)
+    print(f"  mix the box (3 rattles, the lid, 12 spoils)  peak {peak:.3f}  chest {loudness(b.x[:N(first)]):6.1f} LUFS"
+          f"  whole {loudness(b.x):6.1f} LUFS{'   ! over 0.95' if peak > 0.95 else ''}")
+    for verdict, g in (("relic_ring", RING_VOLUME), ("relic_crack", CRACK_VOLUME)):
+        b = Bus()
+        b.add(_read("relic_roll"), 0.0, ROLL_VOLUME)
+        b.add(_read(verdict), ROLL_LEAD, g)
+        peak = float(np.max(np.abs(b.x))); worst = max(worst, peak)
+        print(f"  mix roll into {verdict[6:]:5s}                    peak {peak:.3f}  whole {loudness(b.x):6.1f} LUFS"
+              f"{'   ! over 0.95' if peak > 0.95 else ''}")
+    print(f"  the loudest sum peaks at {worst:.3f}")
+
+def build_spoils():
+    _need()
+    if have_vsco("chest_*, spoil_*, relic_roll/ring/crack"):
+        chest_rattles(); chest_open(); spoil_notes(); spoil_legend()
+        relic_roll(); relic_ring(); relic_crack()
+        spoils_mix_check()
+
 def _read(name):
     with wave.open(os.path.join(OUT, f"{name}.wav"), "rb") as w:
         return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(float) / 32767.0
@@ -1994,7 +2223,8 @@ def main():
     VSCO_DIR = option("--vsco") or VSCO_DIR
     sections = {"hits": build_hits, "kinds": build_kinds, "elements": build_elements,
                 "defence": build_defence, "rest": build_rest,
-                "status": build_status, "flow": build_flow, "summon": build_summon}
+                "status": build_status, "flow": build_flow, "summon": build_summon,
+                "spoils": build_spoils}
     for name in args or list(sections):
         if name not in sections:
             sys.exit(f"no section {name!r}; the sections are {', '.join(sections)}")

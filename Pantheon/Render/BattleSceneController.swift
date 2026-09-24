@@ -199,10 +199,17 @@ final class BattleSceneController: NSObject {
     /// Metres off its mark at which a unit's plate is a visitor: a dash
     /// carries a unit metres, and nothing else moves one off it.
     private static let offMark: Float = 0.15
+    /// How far under the crown, in points, a head mark circles (W2.22), and
+    /// how much larger it is round a boss's head.
+    private static let markBelowCrown: CGFloat = 4
+    private static let bossMarkScale: CGFloat = 1.8
     /// Seconds a visiting plate takes to fade back in at a clear spot. It
     /// goes out at once: a fade out is a plate drawn over another.
     private static let visitorFade: CGFloat = 0.12
     private var cameraNode = SCNNode()
+    /// The rig the camera hangs under (Docs/FEEL.md W2.18): the director
+    /// moves it, and the shake moves only `cameraNode` inside it.
+    private var cameraRig = SCNNode()
     private var director: CameraDirector?
     private var queue: [BattleEvent] = []
     private var isPlaying = false
@@ -362,6 +369,14 @@ final class BattleSceneController: NSObject {
         buildSerial += 1
         stageIsShown = false
         stageShownActions.removeAll()
+        // The stage card's hold and its pre-draw are the first run's alone
+        // (Docs/FEEL.md W2.24): an auto-repeat's later builds neither hold
+        // their queue nor draw anything in advance.
+        cardHolds = holdsForStageCard
+        let plan: EffectPlan? = holdsForStageCard ? predrawPlan : nil
+        holdsForStageCard = false
+        predraw = nil
+        predrawLights.removeAll()
 
         // Where the build's main-thread seconds go (task #138): run 245's
         // arena fight kept the main thread about 4.3 s at its build, under
@@ -379,9 +394,12 @@ final class BattleSceneController: NSObject {
         let unitsBegan = Perf.begin()
         place(combatants: combatants)
         let unitsMs = Perf.end(unitsBegan, "battle units", over: .infinity)
+        if let plan { beginPredraw(plan) }
         startTourAreaDrill()
         startTourTriumph()
         startTourDissolve()
+        startTourStatusDrill()
+        startTourShakeDrill()
         awaitFirstFrames()
         let totalMs = Perf.end(began, "battle build", over: .infinity)
         Perf.note(String(format: "battle build: stage %.0f ms, light and camera %.0f ms, %d unit(s) %.0f ms, %.0f ms in all",
@@ -405,7 +423,11 @@ final class BattleSceneController: NSObject {
     /// holder that `dismiss` strips of its systems, hides this frame and
     /// removes half a second of frames later, on the main thread.
     private func retirePreviousStage() {
-        cameraNode.removeFromParentNode()
+        // The rig, with the camera inside it.
+        cameraRig.removeFromParentNode()
+        firstFramesLock.lock()
+        shakeTarget = nil
+        firstFramesLock.unlock()
         let leaving = scene.rootNode.childNodes
         guard !leaving.isEmpty else { return }
         let previous = SCNNode()
@@ -768,13 +790,28 @@ final class BattleSceneController: NSObject {
         // swing trail and the dash already carry the speed.
         camera.motionBlurIntensity = 0
 
+        // The camera HANGS UNDER A RIG (Docs/FEEL.md W2.18): the director's
+        // framing, zoom and eases move the rig, and the camera node sits at
+        // rest inside it, moved only by the shake on the render thread
+        // (`renderUpdate`) in the rig's own frame — so a shake in the middle
+        // of a dolly no longer pulls the camera back to where the dolly
+        // began, and it jolts along the lens's own axes, never toward it.
+        cameraRig = SCNNode()
+        cameraRig.name = "camera_rig"
+        cameraRig.position = SCNVector3(0, 7.2, 11.0)
+        cameraRig.eulerAngles = SCNVector3(-0.524, 0, 0)
         cameraNode = SCNNode()
+        cameraNode.name = "camera"
         cameraNode.camera = camera
-        cameraNode.position = SCNVector3(0, 7.2, 11.0)
-        cameraNode.eulerAngles = SCNVector3(-0.524, 0, 0)
-        scene.rootNode.addChildNode(cameraNode)
+        cameraRig.addChildNode(cameraNode)
+        scene.rootNode.addChildNode(cameraRig)
 
-        director = CameraDirector(cameraNode: cameraNode)
+        let made = CameraDirector(rig: cameraRig, lens: cameraNode)
+        director = made
+        firstFramesLock.lock()
+        shakeTarget = (made.shaker, cameraNode)
+        firstFramesLock.unlock()
+        onCameraBuilt?(cameraNode)
     }
 
     /// Positions both teams. The camera sits on the +Z side, so the player's
@@ -903,9 +940,12 @@ final class BattleSceneController: NSObject {
                 plate.setLevel(combatant.level)
                 plate.setHealth(combatant.healthFraction, animated: false)
                 plate.setAttackBar(combatant.attackBar, animated: false)
-                plate.setStatuses(combatant.statuses)
                 if entering { plate.enter(over: beat(0.45)) }
             }
+            // Its statuses on its plate, and a mark round its head while it
+            // cannot act — a boss's too, which wears no plate (W2.22).
+            node.markOverlay = plates
+            node.setStatuses(combatant.statuses)
             if combatant.isBoss {
                 // A boss is LIT: a warm spot from its front, riding with it,
                 // aimed at its chest. The owner, with the Coils of Apep on
@@ -1136,8 +1176,10 @@ final class BattleSceneController: NSObject {
         guard !isPlaying else { return }
         // A beat still holding the field (a CI frame's hold over an idle
         // turn) keeps a new turn waiting for it rather than playing it
-        // under the held world.
-        if queueHeldOpen || queueHeldUntil > CACurrentMediaTime() {
+        // under the held world; so does the stage card (W2.24), under which
+        // the fight's opening — its horn call, a boss's rise — would be
+        // spent on nobody.
+        if queueHeldOpen || cardHolds || queueHeldUntil > CACurrentMediaTime() {
             isPlaying = true
             continueWhenFree(playbackGeneration)
         } else {
@@ -1168,6 +1210,7 @@ final class BattleSceneController: NSObject {
         endSlowMotion()
         cancelBeats()
         Juice.release(scene)
+        director?.shaker.stop()
         hitLedger = MultiHitLedger()
         sync(combatants: combatants)
         delegate?.battleSceneDidFinishPlayback(self)
@@ -1193,6 +1236,7 @@ final class BattleSceneController: NSObject {
         endSlowMotion()
         cancelBeats()
         Juice.release(scene)
+        director?.shaker.stop()
         hitLedger = MultiHitLedger()
         returnEveryoneHome()
         director?.returnHome()
@@ -1284,7 +1328,7 @@ final class BattleSceneController: NSObject {
     /// once. With nothing holding it, it is the plain `playNext` it always
     /// was.
     private func continueWhenFree(_ generation: Int) {
-        let wait: TimeInterval = queueHeldOpen ? Self.queuePoll : queueHeldUntil - CACurrentMediaTime()
+        let wait: TimeInterval = queueHeldOpen || cardHolds ? Self.queuePoll : queueHeldUntil - CACurrentMediaTime()
         guard wait > 0.005 else {
             playNext()
             return
@@ -1330,6 +1374,19 @@ final class BattleSceneController: NSObject {
         if spotlightAwaitsBlow {
             spotlightAwaitsBlow = false
             releaseSpotlight(over: beat(Spotlight.releaseAfterBlow))
+        }
+        // What came just before, for the push chips (W2.22): the unit a hit
+        // struck, and whose turn is opening. A relic's quiet top-up is read
+        // off them (`BarPush`).
+        let struckBefore: UUID? = lastStruck
+        if case .damage(_, let struck, _, _, _, _, _, _, _) = event { lastStruck = struck } else { lastStruck = nil }
+        switch event {
+        case .turnBegan(let actor, _):
+            openingActor = actor
+        case .battleStart, .skillCast, .turnSkipped, .counterattack, .waveStarted, .battleEnded:
+            openingActor = nil
+        default:
+            break
         }
         switch event {
         case .battleStart:
@@ -1562,6 +1619,7 @@ final class BattleSceneController: NSObject {
             guard finalBlow else {
                 return Juice.impact(weight, colour: lastCastColour, share: damageShare(amount, of: target),
                                     early: early, ultimate: lastCastWasUltimate, victim: node,
+                                    striker: unitNodes[source]?.chestWorldPosition,
                                     scene: scene, director: director, speed: speedMultiplier)
             }
             // The final blow: a fifth of a second held with the impact frame,
@@ -1606,11 +1664,32 @@ final class BattleSceneController: NSObject {
                       colour: UIColor(hex: immune ? Self.immuneHex : Self.resistHex) ?? .white)
             if speedMultiplier < 3 { AudioLibrary.shared.play(.block, volume: 0.6) }
 
-        case .statusExpired(let target, let kind), .statusRemoved(let target, let kind, _):
+        case .statusExpired(let target, let kind):
             unitNodes[target]?.removeStatus(kind)
 
-        case .attackBarChanged(let target, _, let newValue):
-            unitNodes[target]?.plate?.setAttackBar(newValue, animated: true)
+        case .statusRemoved(let target, let kind, let byStrip):
+            // A debuff taken off by a cleanse is WIPED off its plate
+            // (Docs/FEEL.md W2.22); a buff stripped by an enemy, a shield
+            // broken, an endure spent or a bomb gone off shrink away.
+            let cleansed: Bool = !byStrip && !kind.isBuff && kind != .bomb
+            unitNodes[target]?.removeStatus(kind, cleansed: cleansed)
+
+        case .attackBarChanged(let target, let delta, let newValue):
+            guard let node = unitNodes[target] else { return 0 }
+            node.plate?.setAttackBar(newValue, animated: true)
+            // A push READS (W2.22): "+25%" in blue or "−50%" in red floats
+            // over its unit and stops under the bar it moved (`floatPush`).
+            // It used to move the bar and nothing else, so "push back 50%"
+            // read as nothing happening. A relic's quiet top-up — Ichor's as
+            // its wearer's turn opens, Nemesis's on every blow its wearer
+            // takes — moves the bar alone (review, 2026-09-24: a chip every
+            // turn, and one per hit of a multi-hit on the same spot).
+            let percent: Int? = BarPush.chipPercent(
+                delta: delta,
+                ichorTopUp: target == openingActor && ichorWearers.contains(target),
+                nemesisGain: target == struckBefore && nemesisWearers.contains(target)
+            )
+            if let percent, !node.isDefeated { floatPush(percent, on: node) }
 
         case .cooldownStarted:
             break
@@ -2057,12 +2136,13 @@ final class BattleSceneController: NSObject {
         }
         let rim = SCNVector3(home.x, 0, home.z)
         VFXLibrary.rimDust(at: rim, in: scene, tint: rimDustTint, width: node.spec.height * 0.6)
-        // The ground rumbles under the team as it climbs: a hop behind the
-        // wave's re-framing (`.waveStarted` measures the field with the boss
-        // on it once it is placed, and a camera put home drops its shake).
+        // The ground rumbles under the team as it climbs: trauma held at a
+        // floor for the climb (W2.18), on the lens, so the wave's re-framing
+        // (`.waveStarted` measures the field with the boss on it once it is
+        // placed) moves the rig under it without cutting it short.
         DispatchQueue.main.async { [weak self] in
             guard let self, self.playbackGeneration == generation, self.entranceSerial == serial else { return }
-            self.director?.shake(intensity: BossEntrance.rumble, duration: roarAt)
+            self.director?.rumble(BossEntrance.rumbleTrauma, for: roarAt)
         }
         // SceneKit runs these blocks on its render thread: they only hop.
         let roars = SCNAction.run { [weak self, weak node] _ in
@@ -2086,7 +2166,7 @@ final class BattleSceneController: NSObject {
     private func roar(_ node: UnitNode, serial: Int) {
         guard serial == entranceSerial, !node.isDefeated else { return }
         node.play(.attackHeavy)
-        director?.shake(intensity: BossEntrance.roarShake, duration: BossEntrance.roarShakeLength)
+        director?.addTrauma(BossEntrance.roarTrauma, speed: speedMultiplier)
         Juice.haptic(.heavy)
         AudioLibrary.shared.play(.hitHeavy, volume: 0.9)
         if let home = homeMarks[node.combatantID] {
@@ -2155,7 +2235,7 @@ final class BattleSceneController: NSObject {
             node.sinkBelowRim(over: sink)
             VFXLibrary.rimDust(at: SCNVector3(feet.x, 0, feet.z), in: scene, tint: rimDustTint,
                                width: node.spec.height * 0.6, strength: 0.8)
-            director?.shake(intensity: BossEntrance.rumble * 1.4, duration: sink * 0.7)
+            director?.rumble(BossEntrance.rumbleTrauma * 1.2, for: sink * 0.7)
             AudioLibrary.shared.play(.hitBlunt, volume: 0.6)
             return
         }
@@ -2223,6 +2303,10 @@ final class BattleSceneController: NSObject {
     /// `-tour-dissolve`: an enemy falls three seconds after the stage is
     /// seen, the scene's picture only, and is held half dissolved.
     private static let touringDissolve = tourArguments.contains("-tour") && tourArguments.contains("-tour-dissolve")
+    /// `-tour-status`: statuses landing and bars pushed, held at the pop.
+    private static let touringStatus = tourArguments.contains("-tour") && tourArguments.contains("-tour-status")
+    /// `-tour-shake`: the camera held at the shake's peak.
+    private static let touringShake = tourArguments.contains("-tour") && tourArguments.contains("-tour-shake")
 
     /// Holds the world `seconds` for a CI frame, and the queue with it —
     /// the event now playing keeps what was left of its hold after the
@@ -2320,6 +2404,74 @@ final class BattleSceneController: NSObject {
         #endif
     }
 
+    /// `-tour-status` (Docs/FEEL.md W2.22): three seconds after the stage is
+    /// seen, the leftmost enemy takes a Defence Down and a stun, the enemy
+    /// beside it is pushed back 50%, and the first of the team takes an
+    /// Attack Up and is pushed forward 25%, as the engine's events would put
+    /// them; the plates are held at the top of the tiles' pop, the chips at
+    /// rest under their plates and the stun's stars round the head, and
+    /// `[TourCue] status` says so.
+    private func startTourStatusDrill() {
+        #if DEBUG
+        guard Self.touringStatus else { return }
+        let serial = buildSerial
+        whenStageShown { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                guard let self, self.buildSerial == serial else { return }
+                self.tourStatusBeat()
+            }
+        }
+        #endif
+    }
+
+    #if DEBUG
+    private func tourStatusBeat() {
+        let enemies = unitNodes.values.filter { $0.side == .opponent && !$0.isBoss && !$0.isDefeated }
+        let team = unitNodes.values.filter { $0.side == .player && !$0.isDefeated }
+        let row = enemies.sorted { $0.position.x < $1.position.x }
+        guard let enemy = row.first else { return }
+        enemy.applyStatus(.defenseDown, turns: 2)
+        enemy.applyStatus(.stun, turns: 1)
+        // The push on the NEXT enemy where there is one: a chip rests under
+        // its plate, over the head, and on the stunned one it would lie over
+        // the stars the frame is there to judge.
+        let pushed = row.count > 1 ? row[1] : enemy
+        floatPush(-50, on: pushed, hold: Self.tourHold)
+        if let ally = team.min(by: { $0.position.x < $1.position.x }) {
+            ally.applyStatus(.attackUp, turns: 3)
+            floatPush(25, on: ally, hold: Self.tourHold)
+        }
+        // The tiles grow to 1.28 over 0.11 s: held a beat into it. The
+        // chips are floats, placed from their age every frame: they rise to
+        // rest under their plates through the hold (`hold`). The stun's
+        // stars are held at full strength (`holdForTour` settles a mark's
+        // fade-in, which the hold would have caught half way).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
+            guard let self else { return }
+            self.plates.holdForTour(Self.tourHold)
+            self.freezeForTour(Self.tourHold, cue: "status")
+        }
+    }
+    #endif
+
+    /// `-tour-shake` (Docs/FEEL.md W2.18): three seconds after the stage is
+    /// seen the camera stands at the shake's PEAK — the most roll, yaw,
+    /// pitch and shift full trauma can reach, all at once — held for the
+    /// frame, `[TourCue] shake`: the frame the owner judges "slanted" on.
+    private func startTourShakeDrill() {
+        #if DEBUG
+        guard Self.touringShake else { return }
+        let serial = buildSerial
+        whenStageShown { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                guard let self, self.buildSerial == serial else { return }
+                self.director?.shaker.pinPeak(for: Self.tourHold)
+                self.freezeForTour(Self.tourHold, cue: "shake")
+            }
+        }
+        #endif
+    }
+
     private func holdDissolveForTour(_ node: UnitNode, fade: TimeInterval) {
         #if DEBUG
         guard tourDissolveVictim == node.combatantID else { return }
@@ -2352,8 +2504,23 @@ final class BattleSceneController: NSObject {
     /// own geometry, so the caller converts. Kept in one place to avoid drift.
     private var maxHealthByUnit: [UUID: Double] = [:]
 
+    /// The units wearing the two sets that top a bar up on their own clock
+    /// (Docs/FEEL.md W2.22, `BarPush`): Ichor as each of the wearer's turns
+    /// opens, Nemesis on every blow the wearer takes.
+    private var ichorWearers: Set<UUID> = []
+    private var nemesisWearers: Set<UUID> = []
+    /// What the event just presented was, for the push chips: the unit a hit
+    /// struck, and the unit whose turn is opening — from its `.turnBegan`
+    /// until its cast or its skip. Main thread.
+    private var lastStruck: UUID?
+    private var openingActor: UUID?
+
     func registerMaxHealth(_ combatants: [Combatant]) {
-        for combatant in combatants { maxHealthByUnit[combatant.id] = combatant.maxHealth }
+        for combatant in combatants {
+            maxHealthByUnit[combatant.id] = combatant.maxHealth
+            if combatant.hasRelicSet(.ichor) { ichorWearers.insert(combatant.id) }
+            if combatant.hasRelicSet(.nemesis) { nemesisWearers.insert(combatant.id) }
+        }
     }
 
     private func healthFraction(remaining: Double, node: UnitNode) -> Double {
@@ -2477,6 +2644,9 @@ final class BattleSceneController: NSObject {
 
         // Each plate where it would stand on its own.
         var standing: [(plate: UnitPlate, id: UUID, point: CGPoint, roof: CGFloat, blocks: Bool, visiting: Bool)] = []
+        // Each head a mark may circle (W2.22): the crown as the plate reads
+        // it, before the declutter lifts the plate off it.
+        var markPlaces: [UUID: (point: CGPoint, scale: CGFloat)] = [:]
         for (plate, node, headJoint) in targets {
             // Over the head: the top of the figure, projected, and the
             // track's bottom edge a little above it (the genre's place;
@@ -2538,7 +2708,21 @@ final class BattleSceneController: NSObject {
             // A plate on its way out (its unit has fallen) or off the frame
             // stands in nobody's way.
             standing.append((plate, key, point, roof, onScreen && !node.isDefeated, visiting))
+            if onScreen, !node.isDefeated {
+                markPlaces[key] = (point: CGPoint(x: CGFloat(projected.x),
+                                                  y: height - CGFloat(projected.y) - Self.markBelowCrown),
+                                   scale: 1)
+            }
         }
+        // A boss wears no plate, but a stun still circles its head, larger.
+        for boss in bosses where !boss.isDefeated {
+            let feet = boss.worldPosition
+            let crown = renderer.projectPoint(SCNVector3(feet.x, feet.y + boss.spec.height * 0.95, feet.z))
+            guard crown.z > 0, crown.z < 1 else { continue }
+            markPlaces[boss.combatantID] = (point: CGPoint(x: CGFloat(crown.x), y: height - CGFloat(crown.y)),
+                                            scale: Self.bossMarkScale)
+        }
+        plates.placeHeadMarks(markPlaces)
 
         // The declutter (run 217's arena: four challengers abreast put each
         // plate's level badge on its neighbour's health bar, so the row read
@@ -2751,6 +2935,23 @@ final class BattleSceneController: NSObject {
     /// waited out a stall, and a restore written on the render thread could
     /// land before a punch still waiting in the main thread's transaction.
     static let impactFrames = 2
+    /// The shake and the lens it moves (Docs/FEEL.md W2.18), for the
+    /// renderer's thread under `firstFramesLock`: set with each camera
+    /// (`buildCamera`), dropped with it.
+    private var shakeTarget: (shaker: CameraShake, lens: SCNNode)?
+    /// Told on the main thread of each camera a build makes: it hangs under
+    /// a rig now, so the view makes it the point of view by name rather
+    /// than trusting SceneKit's search for the first camera in the graph.
+    var onCameraBuilt: ((SCNNode) -> Void)?
+    /// The camera the last build made, for a view made after it.
+    var currentLens: SCNNode? { cameraNode.camera == nil ? nil : cameraNode }
+    /// A still of the field from the view (Docs/FEEL.md W2.2): set by
+    /// `BattleSceneView` to the view's own `snapshot()`, nil without a view.
+    var snapshotter: (() -> UIImage?)?
+
+    /// The field as the view last drew it, for the reward box's backdrop.
+    /// Main thread.
+    func snapshotField() -> UIImage? { snapshotter?() }
     private var impactPunch: (() -> Void)?
     private var impactRestore: (() -> Void)?
     private var impactFramesLeft = 0
@@ -2782,9 +2983,13 @@ final class BattleSceneController: NSObject {
 
     /// The renderer's thread, before each frame's animations
     /// (`BattleSceneView.Coordinator`, `renderer(_:updateAtTime:)`): the
-    /// impact frame's punch goes on, or its restore once it is due.
-    func renderUpdate() {
+    /// impact frame's punch goes on, or its restore once it is due; and the
+    /// camera's shake is written on the lens for this frame (W2.18), before
+    /// the plates are laid out from it (`layoutPlates`, in
+    /// `willRenderScene`), so the bars shake with the world they hang over.
+    func renderUpdate(at time: TimeInterval) {
         firstFramesLock.lock()
+        let shake = shakeTarget
         let punch = impactPunch
         impactPunch = nil
         var restore: (() -> Void)?
@@ -2820,6 +3025,7 @@ final class BattleSceneController: NSObject {
         punch?()
         restore?()
         if let rig, let shares { rig.apply(shares, grade: grades) }
+        if let shake { shake.shaker.apply(to: shake.lens, at: time, paused: scene.isPaused) }
     }
 
     /// The renderer's thread, after every frame (`BattleSceneView`).
@@ -2833,7 +3039,17 @@ final class BattleSceneController: NSObject {
         if let left {
             framesToShow = left > 1 ? left - 1 : nil
         }
+        // The pre-draw's next step, once its frames are drawn (W2.24).
+        var step: PredrawStep?
+        if predrawing {
+            framesSinceBuild += 1
+            step = PredrawStep.step(afterFrame: framesSinceBuild, laterBoss: predrawBoss)
+            if step == .retire { predrawing = false }
+        }
         firstFramesLock.unlock()
+        if let step {
+            DispatchQueue.main.async { [weak self] in self?.stepPredraw(step) }
+        }
         guard let left, left <= 1 else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -2842,23 +3058,125 @@ final class BattleSceneController: NSObject {
                 told()
             }
             // And whatever waited for this build's stage to be seen: an
-            // opening boss's entrance, a CI lab (W2.11).
-            self.runStageShownActions()
+            // opening boss's entrance, a CI lab (W2.11) — at once with no
+            // card over the stage, and as the card leaves when there is one
+            // (`revealField`).
+            if !self.cardHolds { self.runStageShownActions() }
         }
     }
 
     private func awaitFirstFrames() {
         firstFramesLock.lock()
-        framesToShow = Self.framesBeforeShown
+        // A build drawing its effects in advance is seen once they have been
+        // drawn and taken off (W2.24): its steps, then the frames every
+        // build waits.
+        let predrawFrames: Int = predraw == nil ? 0 : PredrawStep.frames(laterBoss: predrawLaterBoss)
+        framesToShow = Self.framesBeforeShown + predrawFrames
+        framesSinceBuild = 0
+        predrawing = predraw != nil
+        predrawBoss = predrawLaterBoss
         firstFramesLock.unlock()
-        // Never later than the veil's own limit: a renderer that draws
+        // Never later than the stage card's own limit: a renderer that draws
         // nothing must not hold an opening boss's entrance, and the fight
-        // behind it, for good.
+        // behind it, for good. Under a card the card's own limit reveals the
+        // field (`revealField`, `StageCardTiming.limit`), and that is when
+        // what waits begins.
         let serial = buildSerial
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.stageShownLimit) { [weak self] in
-            guard let self, self.buildSerial == serial else { return }
+            guard let self, self.buildSerial == serial, !self.cardHolds else { return }
             self.runStageShownActions()
         }
+    }
+
+    // MARK: - The stage card (Docs/FEEL.md W2.24)
+
+    /// Set by the battle view before its first `begin()`: that build holds
+    /// its queue for the stage card and draws `predrawPlan` under it. A
+    /// build takes it and clears it, so an auto-repeat's later runs neither
+    /// hold nor draw anything in advance.
+    var holdsForStageCard = false
+    /// What the fight can draw (`BattleViewModel.effectPlan`), for the
+    /// pre-draw under the card.
+    var predrawPlan: EffectPlan?
+    /// This build's queue waits for the card to leave (`revealField`).
+    private var cardHolds = false
+    /// The pre-draw's holder while it is on the stage, the lights its step
+    /// has standing, and whether a later wave brings a boss (whose warm spot
+    /// is a light of its own to compile).
+    private var predraw: SCNNode?
+    private var predrawLights: [SCNNode] = []
+    private var predrawLaterBoss = false
+    /// The renderer's thread, under `firstFramesLock`: frames drawn since the
+    /// build, whether the pre-draw's steps are still to come, and its boss.
+    private var framesSinceBuild = 0
+    private var predrawing = false
+    private var predrawBoss = false
+
+    /// Draws the fight's effects once under the stage card, at the middle of
+    /// the field in front of the camera, and the plates' additive sprites
+    /// with them; the lights a fight adds come in steps as frames are drawn
+    /// (`stepPredraw`).
+    private func beginPredraw(_ plan: EffectPlan) {
+        let spot = SCNVector3(0, 1.2, StageBuilder.arenaCentre.z)
+        predraw = VFXLibrary.predraw(plan, in: scene, at: spot)
+        predrawLaterBoss = plan.laterBoss
+        plates.predraw()
+    }
+
+    /// Main thread: the pre-draw's next step. Each stands the light count it
+    /// names over the field (the effects' own stay quiet under a pre-draw),
+    /// and the last takes the holder off through `retire`.
+    private func stepPredraw(_ step: PredrawStep) {
+        guard let holder = predraw, holder.parent != nil else { return }
+        for light in predrawLights { light.removeFromParentNode() }
+        predrawLights.removeAll()
+        let middle = SCNVector3(0, 3, StageBuilder.arenaCentre.z)
+        // Fourteen metres × 1.5 reaches the team, the enemy row and a boss
+        // on the far rim from the middle of the field.
+        let reach: Float = 14
+        switch step {
+        case .lights(let count):
+            for index in 0..<count {
+                let offset: Float = Float(index) * 1.5
+                let at = SCNVector3(middle.x + offset, middle.y, middle.z)
+                predrawLights.append(VFXLibrary.predrawLight(at: at, radius: reach, in: holder))
+            }
+        case .spot(let withFlash):
+            let category: Int? = StageBuilder.lightLayers ? StageBuilder.figureLights : nil
+            let aim = SCNVector3(0, 1.5, StageBuilder.arenaCentre.z)
+            predrawLights.append(VFXLibrary.predrawSpot(aimedAt: aim, in: holder, category: category))
+            if withFlash {
+                predrawLights.append(VFXLibrary.predrawLight(at: middle, radius: reach, in: holder))
+            }
+        case .retire:
+            predraw = nil
+            plates.endPredraw()
+            VFXLibrary.retire(holder, after: 0, reportsLive: false)
+        }
+    }
+
+    /// Main thread: whatever is still drawn in advance goes this frame — the
+    /// card is leaving before its steps ended (its limit, a slow renderer).
+    private func finishPredraw() {
+        firstFramesLock.lock()
+        predrawing = false
+        firstFramesLock.unlock()
+        predrawLights.removeAll()
+        guard let holder = predraw else { return }
+        predraw = nil
+        plates.endPredraw()
+        VFXLibrary.dismiss(holder, reportsLive: false)
+    }
+
+    /// Main thread: the stage card is leaving (W2.24). Whatever is still
+    /// drawn in advance goes, the queue the card held plays on — the fight's
+    /// horn call sounds as the field appears — and what waited for the stage
+    /// to be seen (an opening boss's entrance, a CI lab) begins as the card
+    /// dissolves.
+    func revealField() {
+        finishPredraw()
+        cardHolds = false
+        runStageShownActions()
     }
 
     /// The field's chrome — the plates and the floating words — faded out
@@ -3100,6 +3418,28 @@ final class BattleSceneController: NSObject {
         // multi-hit reads as a burst rather than a column.
         let scatter: CGFloat = pop ? CGFloat.random(in: -14...14) : 0
         plates.addFloat(image: image, over: node, lift: tall * 0.55, pop: pop, scatter: scatter, rise: 30)
+    }
+
+    /// An attack-bar push over its unit (Docs/FEEL.md W2.22): the chip
+    /// (`PlateArt.pushChip`) as one of the unit's floats — popping at the
+    /// chest and rising to stop under its plate, just under the attack bar
+    /// it moved — so a second push, or a number or a status's name landing
+    /// with it, stacks over it newest-lowest rather than on it, and it keeps
+    /// off every other plate and the HUD as every float does
+    /// (`layoutFloats`). Off the plate's right end, where it stood first, it
+    /// lay across the next unit's level badge (review, 2026-09-24). A boss's
+    /// stands beside its head, as its words do. Under Reduce Motion it fades
+    /// in rather than pops. `hold` keeps it at rest longer, for a CI frame.
+    private func floatPush(_ percent: Int, on node: UnitNode, hold: TimeInterval = 0) {
+        let chip = PlateArt.pushChip(percent: percent)
+        let tall = node.spec.height
+        let pop = !MotionComfort.isReduced
+        if node.isBoss {
+            plates.addFloat(image: chip, over: node, lift: tall * 0.9, side: -tall * 0.16, align: -1,
+                            pop: pop, scatter: 0, rise: 24, hold: hold)
+        } else {
+            plates.addFloat(image: chip, over: node, lift: tall * 0.55, pop: pop, scatter: 0, rise: 30, hold: hold)
+        }
     }
 
     // MARK: - The numbers that read (Docs/FEEL.md W1.2)
@@ -3602,7 +3942,7 @@ extension BattleSceneController {
         let team = survivors.map { node in
             (position: homeMarks[node.combatantID] ?? node.position, height: node.spec.height)
         }
-        let lens = director?.frameTeam(team, over: Self.triumphFraming) ?? cameraNode.position
+        let lens = director?.frameTeam(team, over: Self.triumphFraming) ?? cameraRig.position
         // The plates stand through the beat (the reckoning takes them).
         plates.setFieldHidden(false)
         let posePace = Self.triumphPosePace

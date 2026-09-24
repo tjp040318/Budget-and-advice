@@ -1074,7 +1074,8 @@ struct LabyrinthView: View {
         guard let engine = store.startRaid(raid) else { return }
         raidEngine = engine
         openRaid = raid
-        raidBattle = .campaign(raid.stage)
+        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+        BattleCover.open { raidBattle = .campaign(raid.stage) }
     }
 
     /// A raid is a campaign battle as far as the plumbing is concerned — the
@@ -1099,7 +1100,8 @@ struct LabyrinthView: View {
         guard let stage = TowerService.nextStage(player: store.player) else { return }
         guard let engine = store.startTowerBattle() else { return }
         towerEngine = engine
-        towerBattle = .campaign(stage)
+        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+        BattleCover.open { towerBattle = .campaign(stage) }
     }
 
     /// A floor is a campaign battle: the same view model, the same result
@@ -2362,7 +2364,8 @@ struct DungeonLevelsView: View {
         pendingEngines[stage.id] = engine
         pendingRuns[stage.id] = runs
         shrinesBefore = Set(store.openShrines.map { $0.id })
-        battle = .campaign(stage)
+        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+        BattleCover.open { battle = .campaign(stage) }
     }
 
     @ViewBuilder

@@ -24,6 +24,10 @@ struct TourView: View {
     @State private var dungeonModel: BattleViewModel?
     /// The victory step's real fight (`-tour-victory field`).
     @State private var victoryModel: BattleViewModel?
+    /// The demo victory's still (Docs/FEEL.md W2.2): the Duat's painting
+    /// softened as `BattleStill` softens a fight's, so the chest and the box
+    /// stand over a place, as a real win's do, rather than over black.
+    @State private var victoryStill: UIImage?
     @State private var seeded = false
     /// Ticks since the step appeared, for its `[Mem]` curve. Not `@State`:
     /// a state change re-renders the tour every tick, and several steps
@@ -133,6 +137,12 @@ struct TourView: View {
     /// and spoils.
     static var pinnedVictory: String? { argument(after: "-tour-victory") }
     static var pinnedVictoryField: Bool { pinnedVictory == "field" || pinnedVictory == "defeat" }
+    /// `-tour-spoils legend` (Docs/FEEL.md W2.2): the plain victory step's
+    /// shelf with a tier of every kind on it — a Pantheon scroll (rare), a
+    /// Divine scroll (epic) and the relic made a Legend — landing plain first
+    /// and the legend last in its column of gold, which prints
+    /// `[TourCue] spoils-legend` for the job's `20-victory-legend`.
+    static var pinnedSpoils: String? { argument(after: "-tour-spoils") }
 
     /// `-tour-labyrinth-wing halls|tower|raids` opens the building on that
     /// wing. Neither the Halls wing nor the Tower had ever been photographed
@@ -164,6 +174,33 @@ struct TourView: View {
     /// `-tour-chapter-scroll` (no value) opens the chapter map with its
     /// scroll unrolled: the story, the yields and the terms.
     static var pinnedChapterScroll: Bool { ProcessInfo.processInfo.arguments.contains("-tour-chapter-scroll") }
+
+
+    /// `-tour-map-clear [road]` (Docs/FEEL.md W2.5) opens the Duat's map as a
+    /// clear comes back to it (`GameStore.seedTourClear`, never saved): the
+    /// boss felled for the first time with three stars, over the walked copy
+    /// (`ChapterMapView.tourClearWalk`) — the medallion turning gold, its
+    /// stars stamping, the gate's chest, CHAPTER CONQUERED and Hard's seal
+    /// breaking — or, with `road`, the third stage cleared over the tour's
+    /// own save, the leader walking on to the fourth and its lock breaking.
+    /// Each beat holds for its frame and prints its `[TourCue]`.
+    static var pinnedMapClear: String? {
+        guard ProcessInfo.processInfo.arguments.contains("-tour-map-clear") else { return nil }
+        return argument(after: "-tour-map-clear") == "road" ? "road" : "boss"
+    }
+
+    /// `-tour-road-ignite` (W2.5) opens the world road as the Duat's boss has
+    /// just opened the next chapter (`GameStore.seedTourIgnition`): the road
+    /// into its city drawn in gold and the city lighting, held at the flare
+    /// with `[TourCue] road-ignite`.
+    static var pinnedRoadIgnite: Bool { ProcessInfo.processInfo.arguments.contains("-tour-road-ignite") }
+
+    /// `-tour-missions-ready` (Docs/FEEL.md W2.12) opens the Daily list
+    /// seeded for Claim All (`GameStore.seedTourMissions`): two rows ready
+    /// under the CLAIM ALL plate, their bars full and breathing, and the
+    /// other six claimed in the COMPLETED group under them, each wearing its
+    /// DONE seal; the tribute's pills six ticked and two ready.
+    static var pinnedMissionsReady: Bool { ProcessInfo.processInfo.arguments.contains("-tour-missions-ready") }
 
     /// `-tour-tier hard|hell` opens the Duat's map on that tier, on the
     /// walked copy (`CampaignView.tourWalk`), which has the easier tiers
@@ -707,7 +744,28 @@ struct TourView: View {
             // which is how the phone measures the map. `-tour-chapter-scroll`
             // unrolls the scroll; `-tour-tier hell` is Hell on the walked
             // copy, which clears Normal and Hard so Hell is open.
-            if let tier = Self.pinnedTier {
+            //
+            // `-tour-map-clear [road]` plays a clear on the map (Docs/FEEL.md
+            // W2.5): the boss's first fall over the walked copy, or the third
+            // stage's over the tour's own save; `-tour-road-ignite` is the
+            // world road lighting the Duat's second city. The seeds are the
+            // store's unsaved beats (`seedTourClear`, `seedTourIgnition`),
+            // which the map and the road play whichever appears first.
+            if let clear = Self.pinnedMapClear {
+                if clear == "road" {
+                    tabbed(.campaign, CampaignView(openingChapter: "duat_1"))
+                        .onAppear { store.seedTourClear(boss: false) }
+                } else {
+                    tabbed(.campaign, CampaignView(
+                        openingChapter: "duat_1",
+                        previewPlayer: ChapterMapView.tourClearWalk(store.player)
+                    ))
+                    .onAppear { store.seedTourClear(boss: true) }
+                }
+            } else if Self.pinnedRoadIgnite {
+                tabbed(.campaign, CampaignView())
+                    .onAppear { store.seedTourIgnition() }
+            } else if let tier = Self.pinnedTier {
                 tabbed(.campaign, CampaignView(
                     openingChapter: "duat_1",
                     openingDifficulty: tier,
@@ -733,8 +791,16 @@ struct TourView: View {
                 previewPlayer: CampaignView.tourWalk(store.player, chapterIndex: Self.pinnedChapter)
             ))
         case "missions":
-            // The Daily list, or the one `-tour-missions-tab` names.
-            MissionsView(opening: Self.pinnedMissionsTab ?? .missions)
+            // The Daily list, or the one `-tour-missions-tab` names;
+            // `-tour-missions-ready` is the Daily list seeded for Claim All
+            // (Docs/FEEL.md W2.12, `GameStore.seedTourMissions`): the list
+            // re-freezes its order when the seed lands after it appears.
+            if Self.pinnedMissionsReady {
+                MissionsView(opening: .missions)
+                    .onAppear { store.seedTourMissions() }
+            } else {
+                MissionsView(opening: Self.pinnedMissionsTab ?? .missions)
+            }
         case "victory":
             if Self.pinnedVictoryField {
                 // A real win's end (`-tour-victory field`): the beat on the
@@ -749,7 +815,10 @@ struct TourView: View {
                 // The two acts of a win without fighting one: the reckoning,
                 // then the chest opening on its spoils. `autoplay` taps
                 // through for the camera.
-                BattleResultView(summary: Self.demoVictory(relic: bestRelic), onDismiss: {}, autoplay: true, store: store)
+                BattleResultView(summary: Self.pinnedSpoils == "legend" ? Self.demoLegendVictory(relic: bestRelic)
+                                                                        : Self.demoVictory(relic: bestRelic),
+                                 onDismiss: {}, autoplay: true, store: store, fieldStill: victoryStill)
+                    .onAppear { BattleStill.painting("duat_gate_bg") { victoryStill = $0 } }
                     .background(Color.black.ignoresSafeArea())
             }
         case "raid_grade":
@@ -1037,8 +1106,9 @@ struct TourView: View {
     /// A 5★ reveal without spending a scroll, so the stage is caught with a
     /// real model on it.
     private static func demoReveal(awakened: Bool = false) -> [SummonResult] {
-        // `-tour-reveal ten` (Docs/FEEL.md W2.23): the ten-pull whose first
-        // pull's Skip reads "Skip to ★★★★★" (`SummonRevealView.tourTenPull`).
+        // `-tour-reveal ten` (Docs/FEEL.md W2.3, W2.23): the ten-pull whose
+        // board's Skip reads "Skip to ★★★★★" (`SummonRevealView.tourTenPull`);
+        // `-tour-reveal board` is the same ten, turned with no card lifted.
         if let ten = SummonRevealView.tourTenPull() { return ten }
         // Awakened: Ares in light, the owner's own frame, on the shipped
         // `ares_awakened` mesh; otherwise the fire Sekhmet as before.
@@ -1113,6 +1183,30 @@ struct TourView: View {
             loot: loot,
             isFirstClear: true
         )
+    }
+
+    /// The demo win with a tier of every kind on its shelf, for `-tour-spoils
+    /// legend` (Docs/FEEL.md W2.2): the plain spoils, a Pantheon scroll (a
+    /// rare), a Divine scroll (an epic) and the relic made a Legend — the
+    /// Light & Dark scroll when the save holds no relic — which the panel
+    /// lands last, after the row has stopped for a breath.
+    private static func demoLegendVictory(relic: Relic? = nil) -> BattleSummary {
+        var summary = demoVictory(relic: relic)
+        var loot = summary.loot.filter { $0.relic == nil }
+        loot.append(.init(glyph: ScrollType.pantheonic.glyph, title: ScrollType.pantheonic.displayName, amount: "+1",
+                          tint: .scroll(.pantheonic), key: ItemArt.key(scroll: .pantheonic)))
+        loot.append(.init(glyph: ScrollType.divine.glyph, title: ScrollType.divine.displayName, amount: "+1",
+                          tint: .scroll(.divine), key: ItemArt.key(scroll: .divine)))
+        if var legend = relic {
+            legend.quality = .legend
+            loot.append(.init(glyph: legend.set.glyph, title: legend.displayName, amount: nil,
+                              tint: .gold, stars: legend.grade, relic: legend))
+        } else {
+            loot.append(.init(glyph: ScrollType.lightDark.glyph, title: ScrollType.lightDark.displayName, amount: "+1",
+                              tint: .scroll(.lightDark), key: ItemArt.key(scroll: .lightDark)))
+        }
+        summary.loot = loot
+        return summary
     }
 
     /// The serpent's raid as its result screen reads it: the demo win's cast,
@@ -1244,13 +1338,14 @@ private struct TourSweepScene: View {
 ///
 /// `-tour-stress summon`: thirty singles, then three ten-pulls, on the
 /// Endless Scroll (every family, so the most different models), through the
-/// summon screen's own calls — `GameStore.summon`, the first figure warmed,
-/// the 0.45 s wind-up, the reveal in a full-screen cover over the summon
-/// screen. A reveal advances only on a tap, which a tour cannot make, so each
-/// pull of a ten-pull is the reveal of the pulls from it onwards, rebuilt as
-/// a tap would have moved it on (its stage is keyed by the pull and was
-/// rebuilt on a tap too), and it warms the next pull itself; the ten-card
-/// grid a tap on Skip opens is the one screen the loop does not reach.
+/// summon screen's own calls — `GameStore.summon`, the lead figure warmed
+/// (`SummonBoard.firstStage`), the 0.35 s wind-up, the reveal in a
+/// full-screen cover over the summon screen. A single stands `singleHold`
+/// and closes, as a tap would close it. A ten-pull is ONE reveal since
+/// 2026-09-24 (Docs/FEEL.md W2.3) — its charge, the board, every featured
+/// card lifted off for its reveal on the beam, the summary — which plays
+/// itself (`SummonRevealView.autoAdvance`, `boardHold` a name) and closes,
+/// so the loop reaches every screen a ten-pull shows.
 ///
 /// `-tour-stress battle`: three stages the tour's save has cleared, each on
 /// auto-repeat for two runs (`BattleViewModel(repeatCount:)`, the path the
@@ -1297,7 +1392,14 @@ private struct TourStressView: View {
         if let cover = driver.cover {
             switch cover {
             case .reveal(let results, let serial):
-                SummonRevealView(results: results, scroll: TourStressDriver.banner.scroll) {
+                // A pull of several plays itself (Docs/FEEL.md W2.3): each
+                // lifted card's name stands `boardHold`, the summary as long,
+                // and then it closes.
+                SummonRevealView(
+                    results: results,
+                    scroll: TourStressDriver.banner.scroll,
+                    autoAdvance: results.count > 1 ? TourStressDriver.boardHold : nil
+                ) {
                     driver.cover = nil
                 }
                 .id(serial)
@@ -1326,11 +1428,16 @@ private final class TourStressDriver: ObservableObject {
     static let banner = Banner.standard
     static let singles = 30
     static let tenPulls = 3
-    /// How long a reveal stands before the tap that moves it on: long enough
-    /// for the stage to build, the charge (0.8–1.25 s) to play and the figure
-    /// to be drawn on its beam.
+    /// How long a single's reveal stands before the tap that closes it: long
+    /// enough for the stage to build, the charge (1.25–1.4 s) to play and the
+    /// figure to be drawn on its beam.
     static let singleHold: Double = 2.8
-    static let pullHold: Double = 2.4
+    /// A pull of several's board (Docs/FEEL.md W2.3): how long each lifted
+    /// card's name stands, and the summary, before the reveal moves itself
+    /// on (`SummonRevealView.autoAdvance`), and the longest a board is
+    /// waited for before the loop closes it and says so.
+    static let boardHold: Double = 1.5
+    static let boardLimit: Double = 120
     /// A full-screen cover's dismissal, before the next is presented.
     static let dismissal: Double = 1.0
     /// Stages the tour's save has cleared (`GameStore.grantTourRoster`), so
@@ -1399,20 +1506,36 @@ private final class TourStressDriver: ObservableObject {
     }
 
     /// One press of the summon button, as `SummonView.perform` makes it, and
-    /// its reveal played through.
+    /// its reveal played through: a single stood `singleHold` and closed, as a
+    /// tap would close it; a pull of several — ONE ceremony since 2026-09-24
+    /// (Docs/FEEL.md W2.3): its charge, the board, every featured card lifted
+    /// off for its reveal, the summary — played by itself
+    /// (`SummonRevealView.autoAdvance`) until it closes.
     private func summon(_ game: GameStore, count: Int, label: String) async {
         let results = game.summon(banner: Self.banner, count: count)
         guard let first = results.first else {
             print("[Tour] stress: \(label) summoned nothing (\(game.lastError ?? "no error given"))")
             return
         }
-        // `SummonView.warmFirstFigure`, then the circle's wind-up.
-        ModelLibrary.shared.warm([first.blueprint.model])
-        await pause(0.45)
-        for position in results.indices {
-            serial += 1
-            cover = .reveal(Array(results[position...]), serial)
-            await pause(count == 1 ? Self.singleHold : Self.pullHold)
+        // `SummonView.warmLead` — a single's figure, a ten's first featured
+        // card — then the circle's wind-up.
+        if let lead = SummonBoard.firstStage(in: results) {
+            ModelLibrary.shared.warm([lead.blueprint.model])
+        }
+        await pause(0.35)
+        serial += 1
+        cover = .reveal(results, serial)
+        if count == 1 {
+            await pause(Self.singleHold)
+        } else {
+            var waited: Double = 0
+            while cover != nil, waited < Self.boardLimit {
+                await pause(0.5)
+                waited += 0.5
+            }
+            if cover != nil {
+                print("[Tour] stress: \(label)'s board did not close in \(Int(Self.boardLimit)) s")
+            }
         }
         cover = nil
         await pause(Self.dismissal)
@@ -1450,7 +1573,7 @@ private final class TourStressDriver: ObservableObject {
         }
         let what = count == 1
             ? "\(first.stars)★ \(first.blueprint.id)"
-            : "\(results.filter { $0.stars >= 4 }.count) of \(results.count) at 4★ or better"
+            : "\(results.filter { $0.stars >= 4 }.count) of \(results.count) at 4★ or better, \(results.filter { SummonBoard.isFeatured($0) }.count) lifted off the board"
         MemoryProbe.log("stress summon \(label) (\(what))")
     }
 

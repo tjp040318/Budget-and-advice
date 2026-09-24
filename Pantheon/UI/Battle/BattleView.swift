@@ -126,21 +126,46 @@ struct BattleView: View {
     private static let tourTriumphHold: TimeInterval = 24
     private static let tourFallenHold: TimeInterval = 16
 
-    /// A dark veil over the stage until the renderer has drawn the built
-    /// stage (2026-09-24; `BattleSceneController.onStageShown`): run 243's
-    /// first battle frame was white under the HUD while the stage built and
-    /// its shaders compiled. It lifts on those first frames, or `veilLimit`
-    /// after the build at the latest, and an auto-repeat's later runs never
-    /// bring it back.
-    @State private var stageShown = false
-    private static let veilLimit: TimeInterval = 5
-    private static let veilLift: Animation = .easeOut(duration: 0.35)
+    // MARK: The way in and out (Docs/FEEL.md W2.24)
 
-    /// Under the CI tour, `[TourCue] shown` when the veil lifts, and why:
-    /// a step that photographs the first seconds of a fight waits on it
-    /// (build.yml's aoe relaunches, whose frames at launch + 8 s were the
-    /// veil in run 245 — the build settled at seven and the main thread
-    /// was busy again after it).
+    /// Where the stage card stands. It is up over the fight from the first
+    /// frame — the cover opens with no slide, straight onto it — while the
+    /// stage is built and everything the fight can draw is drawn once under
+    /// it; it dissolves onto the field once the stage has been drawn and
+    /// `StageCardTiming.minimumHold` has passed; and it comes back over the
+    /// reckoning on the way out, before the cover closes with no slide. It
+    /// replaces the black veil of 2026-09-24, whose job it keeps: run 243's
+    /// first battle frame was white under the HUD while the stage built and
+    /// its shaders compiled. An auto-repeat's later runs never bring it back.
+    private enum EntryPhase { case card, field, leaving }
+    @State private var entry: EntryPhase = .card
+    /// The card is dissolving onto the field.
+    @State private var cardDissolving = false
+    /// When the card went up (its floor counts from here), whether the
+    /// fight has been started under it, and whether the stage has been
+    /// drawn (`BattleSceneController.onStageShown`) or the limit ran out.
+    @State private var cardShownAt = Date()
+    @State private var cardStarted = false
+    @State private var stageDrawn = false
+    /// Why the card lifted, for the tour's cue.
+    @State private var revealReason = "drawn"
+    /// The field as the reckoning began, softened (Docs/FEEL.md W2.2,
+    /// `BattleStill`): the chest and the reward box stand over it.
+    @State private var fieldStill: UIImage?
+
+    #if DEBUG
+    /// `-tour-card` (build.yml's battle step): the card stands
+    /// `StageCardTiming.tourHold` once the stage has been drawn, and
+    /// `[TourCue] card` says when, for `6-battle-card`.
+    private static let touringCard = ProcessInfo.processInfo.arguments.contains("-tour")
+        && ProcessInfo.processInfo.arguments.contains("-tour-card")
+    #endif
+
+    /// Under the CI tour, `[TourCue] shown` when the card lifts off the
+    /// field, and why: a step that photographs the first seconds of a fight
+    /// waits on it (build.yml's aoe relaunches, whose frames at launch + 8 s
+    /// were the veil in run 245 — the build settled at seven and the main
+    /// thread was busy again after it).
     private static func cueStageShown(_ why: String) {
         #if DEBUG
         guard ProcessInfo.processInfo.arguments.contains("-tour") else { return }
@@ -154,11 +179,6 @@ struct BattleView: View {
                 model.tapUnit(id)
             }
             .ignoresSafeArea()
-
-            Color.black
-                .ignoresSafeArea()
-                .opacity(stageShown ? 0 : 1)
-                .allowsHitTesting(false)
 
             // The genre's HUD and nothing else on the field (2026-09-15): a
             // boss's bar across the very top, the stage's name small under
@@ -306,10 +326,21 @@ struct BattleView: View {
             // rather than ticking in a second time.
             if beat == .reckoning, let summary {
                 BattleResultView(
-                    summary: summary, onDismiss: { dismiss() }, autoplay: Self.touringVictory,
-                    store: model.store, scrim: Self.reckoningScrim, starsLanded: fieldOutcome == .victory
+                    summary: summary, onDismiss: { leaveFight() }, autoplay: Self.touringVictory,
+                    store: model.store, scrim: Self.reckoningScrim, starsLanded: fieldOutcome == .victory,
+                    fieldStill: fieldStill
                 )
                 .transition(.opacity)
+            }
+
+            // THE STAGE CARD (W2.24), over everything while it stands.
+            if entry != .field {
+                StageCardView(
+                    info: model.stageCard, reversed: entry == .leaving, dissolving: cardDissolving,
+                    dissolve: StageCardTiming.dissolve(speed: model.speed, calm: MotionComfort.isReduced)
+                )
+                .ignoresSafeArea()
+                .transition(.identity)
             }
         }
         .preferredColorScheme(.dark)
@@ -329,21 +360,32 @@ struct BattleView: View {
                 Self.receive(cue, splash: splashCue, stamp: stampCue, entrance: entranceCue,
                              ribbon: ribbon, reveal: reveal)
             }
-            let shown = $stageShown
-            model.sceneController.onStageShown = {
-                withAnimation(Self.veilLift) { shown.wrappedValue = true }
-                Self.cueStageShown("drawn")
+            // The stage card (W2.24): the fight is built a beat after the
+            // card is up — its first frame committed, its entrance running on
+            // the render server — and the card dissolves once the stage has
+            // been drawn (`scheduleReveal`), or `StageCardTiming.limit` after
+            // the build at the latest (the build holds the main thread, so
+            // the limit is counted from its end, not from here).
+            let drawn = $stageDrawn
+            model.sceneController.onStageShown = { drawn.wrappedValue = true }
+            if !cardStarted {
+                cardStarted = true
+                cardShownAt = Date()
+                let fight = model
+                let reason = $revealReason
+                DispatchQueue.main.asyncAfter(deadline: .now() + StageCardTiming.buildDelay) {
+                    fight.beginUnderCard()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + StageCardTiming.limit) {
+                        guard !drawn.wrappedValue else { return }
+                        reason.wrappedValue = "the \(Int(StageCardTiming.limit)) s limit"
+                        drawn.wrappedValue = true
+                    }
+                }
             }
-            model.begin()
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.veilLimit) {
-                guard !shown.wrappedValue else { return }
-                withAnimation(Self.veilLift) { shown.wrappedValue = true }
-                Self.cueStageShown("the \(Int(Self.veilLimit)) s limit")
-            }
-            // A chapter boss or a raid says its one line as the fight opens;
-            // every other stage returns from this without doing anything.
-            model.announceBoss(ifPresentIn: model.displayedCombatants)
             AudioLibrary.shared.playMusic(.battle)
+        }
+        .onChange(of: stageDrawn) { _, isDrawn in
+            if isDrawn { scheduleReveal() }
         }
         .onDisappear {
             model.sceneController.onBossMatchups = nil
@@ -465,11 +507,85 @@ struct BattleView: View {
         beatSequence += 1
         model.sceneController.setPlatesHidden(true)
         withAnimation(.easeOut(duration: 0.35)) { beat = .reckoning }
+        // The field's still for the reward box, once the plates have faded
+        // (they go over 0.25 s) and while the team still stands (W2.2).
+        let mine = beatSequence
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            guard mine == beatSequence else { return }
+            takeStill()
+        }
+    }
+
+    /// The field as it stands, softened off the main thread for the reward
+    /// box (`BattleStill`); taken once a fight.
+    private func takeStill() {
+        guard fieldStill == nil, let shot = model.sceneController.snapshotField() else { return }
+        let still = $fieldStill
+        BattleStill.soften(shot) { soft in
+            // Faded in, with the scrim lifting to its own, should a quick
+            // tap have put the chest up before the still was ready.
+            withAnimation(.easeInOut(duration: 0.45)) { still.wrappedValue = soft }
+        }
     }
 
     private func hurryToReckoning() {
         guard let began = beatBegan, Date().timeIntervalSince(began) >= Self.beatTapGrace else { return }
         reckon()
+    }
+
+    // MARK: - The way in and out (Docs/FEEL.md W2.24)
+
+    /// The stage has been drawn (or the limit ran out): the card stands out
+    /// its floor — and under `-tour-card` its frame's hold — then goes.
+    private func scheduleReveal() {
+        guard entry == .card, !cardDissolving else { return }
+        let held: TimeInterval = Date().timeIntervalSince(cardShownAt)
+        var wait: TimeInterval = max(0, StageCardTiming.minimumHold - held)
+        #if DEBUG
+        if Self.touringCard {
+            wait = max(wait, StageCardTiming.tourHold)
+            print("[TourCue] card")
+        }
+        #endif
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+            revealField()
+        }
+    }
+
+    /// The card dissolves onto the field, and the fight's opening plays as
+    /// it goes: the queue the card held, the realm's horn call, an opening
+    /// boss's rise, a chapter boss's line (`announceBoss`, which used to be
+    /// spoken under the veil).
+    private func revealField() {
+        guard entry == .card, !cardDissolving else { return }
+        cardDissolving = true
+        model.sceneController.revealField()
+        Self.cueStageShown(revealReason)
+        model.announceBoss(ifPresentIn: model.displayedCombatants)
+        let dissolve: TimeInterval = StageCardTiming.dissolve(speed: model.speed, calm: MotionComfort.isReduced)
+        DispatchQueue.main.asyncAfter(deadline: .now() + dissolve + 0.05) {
+            guard entry == .card else { return }
+            entry = .field
+            cardDissolving = false
+        }
+    }
+
+    /// The way out: the same card rises over the reckoning, holds a breath,
+    /// and the cover closes with no slide (`BattleCover.close`).
+    private func leaveFight() {
+        guard entry == .field else {
+            BattleCover.close { dismiss() }
+            return
+        }
+        var instantly = Transaction()
+        instantly.disablesAnimations = true
+        withTransaction(instantly) { entry = .leaving }
+        // Never before the card has arrived: the canvas fades up over the
+        // same `arrivalOut(calm:)` this waits out (under Reduce Motion too).
+        let hold: TimeInterval = StageCardTiming.leaveWait(calm: MotionComfort.isReduced)
+        DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
+            BattleCover.close { dismiss() }
+        }
     }
 
     // MARK: - The beats over the field (Docs/FEEL.md W2.1, W2.10, W2.11)
@@ -1787,6 +1903,10 @@ struct BattleResultView: View {
     /// The stars have already slammed in over the field (`VictoryStamp`):
     /// the verdict shows them lit rather than ticking them in a second time.
     var starsLanded: Bool = false
+    /// A soft still of the fight (Docs/FEEL.md W2.2, `BattleStill`): the
+    /// chest and the reward box stand over it instead of over black. Nil
+    /// over black, as the tour's demo reckoning stands.
+    var fieldStill: UIImage? = nil
 
     private enum Phase { case reckoning, levelUp, chest, opened }
 
@@ -1812,6 +1932,11 @@ struct BattleResultView: View {
     @State private var continueShown = false
     @State private var pulse = false
     @State private var sequence = 0
+    /// Bumped as each legend lands, for the panel's jolt (W2.2).
+    @State private var legendLandings = 0
+    /// The legends whose beat has played, so a tap that lands the rest at
+    /// once still gives an unplayed one its own.
+    @State private var legendsPlayed = 0
     /// The relic whose drop card is up.
     @State private var openedRelic: Relic?
 
@@ -1825,12 +1950,21 @@ struct BattleResultView: View {
     private var hasLevelUp: Bool { summary.levelUp != nil }
     /// The stars the verdict shows lit.
     private var litStars: Int { starsLanded && won ? summary.stars : shownStars }
+    /// The fight's soft still stands under the chest and the box, never under
+    /// the reckoning or the level-up, which stand on the field (W2.2).
+    private var stillShown: Bool { fieldStill != nil && (phase == .chest || phase == .opened) }
 
     /// The scrim under the level-up and the chest, whatever the reckoning's.
     private static let stageScrim: Double = 0.84
+    /// The scrim over the fight's soft still under the chest and the box
+    /// (W2.2): the still is darkened already, and the field should read.
+    private static let stillScrim: Double = 0.5
     /// How long the tour holds the level-up before the chest, so the CI
     /// job's frame lands on it (`[TourCue] levelup`).
     private static let tourLevelUpHold: TimeInterval = 16
+    /// How long the tour's chest stands shut before it opens: the 2.2 s it
+    /// always stood, less the rattles' lead before the lid (W2.2).
+    private static let tourChestWait: TimeInterval = max(0.8, 2.2 - (ChestTiming.lid - 0.32))
 
     var body: some View {
         ZStack {
@@ -1840,8 +1974,28 @@ struct BattleResultView: View {
             // or marble, never ink — the panels carry the ink. Over the live
             // field the reckoning's is lighter (`scrim`), and it deepens as
             // the reckoning gives way.
+            // The fight's soft still under the chest and the box (W2.2): a
+            // `Color.clear` at the space given with the picture as an overlay,
+            // which is never measured (CLAUDE.md's fill-image gotcha).
+            if let fieldStill, stillShown {
+                Color.clear
+                    .overlay {
+                        Image(uiImage: fieldStill)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    }
+                    .clipped()
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+            // The still's lighter scrim only where the still is drawn: the
+            // level-up stands on the live field at `stageScrim`, as it always
+            // did, whether or not the still has been taken by then (review,
+            // 2026-09-24: at 0.5 its shafts and gold words washed out on the
+            // pale sets).
             Color.black
-                .opacity(phase == .reckoning ? scrim : max(scrim, Self.stageScrim))
+                .opacity(phase == .reckoning ? scrim : (stillShown ? Self.stillScrim : max(scrim, Self.stageScrim)))
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.45), value: phase)
             // Over the live field the verdict's gold and marble words stand
@@ -2377,6 +2531,7 @@ struct BattleResultView: View {
                     loot: summary.loot,
                     shown: lootShown,
                     continueShown: continueShown,
+                    landings: legendLandings,
                     tapAction: tapAction(for:),
                     onContinue: onDismiss
                 )
@@ -2385,7 +2540,7 @@ struct BattleResultView: View {
                 VStack(spacing: 14) {
                     Spacer(minLength: 0)
 
-                    RewardChestView(open: lidOpen, gone: chestGone)
+                    RewardChestView(open: lidOpen, gone: chestGone, rattles: true)
                         .frame(width: 300, height: 170)
                         .contentShape(Rectangle())
                         .onTapGesture { openChest() }
@@ -2482,7 +2637,7 @@ struct BattleResultView: View {
                         guard levelSequence == sequence, hasSpoils else { return }
                         advanceToChest()
                         let chestSequence = sequence
-                        after(2.2) {
+                        after(Self.tourChestWait) {
                             guard chestSequence == sequence else { return }
                             openChest()
                         }
@@ -2494,9 +2649,10 @@ struct BattleResultView: View {
                 // second step must guard on the NEW number: guarding on
                 // `mine` here is what left the tour's chest shut.
                 // Two seconds closed, so the tour photographs the chest
-                // on its beat before the lid goes.
+                // on its beat before the lid goes — less the rattles' lead
+                // (W2.2), so the lid still rises when 20-victory-b is taken.
                 let chestSequence = sequence
-                after(2.2) {
+                after(Self.tourChestWait) {
                     guard chestSequence == sequence else { return }
                     openChest()
                 }
@@ -2561,6 +2717,12 @@ struct BattleResultView: View {
         withAnimation(.linear(duration: 22).repeatForever(autoreverses: false)) { rays = 360 }
     }
 
+    /// The chest opens (Docs/FEEL.md W2.2): three rattles, each harder, a
+    /// thumb's tap on each; the lid creaks up and thuds on its hinge as the
+    /// beam shimmers out (`chest_open`, one file so the three stay in step
+    /// with the lid); the flash takes the chest a second later; and the
+    /// spoils land plain first and the best last, each on its own beat
+    /// (`SpoilsTimeline`) with its own note (`landTile`).
     private func openChest() {
         guard phase == .chest else { return }
         sequence += 1
@@ -2568,14 +2730,27 @@ struct BattleResultView: View {
         phase = .opened
         Juice.haptic(.medium)
         // The chest shakes, the lid swings back and the light stands up out
-        // of it (`RewardChestView`, about a second); then the flash, under
-        // which the chest lifts away, and the spoils rise onto the shelf.
+        // of it (`RewardChestView`, on `ChestTiming`'s numbers); then the
+        // flash, under which the chest lifts away, and the spoils rise onto
+        // the shelf.
         lidOpen = true
-        after(0.3) {
-            guard mine == sequence else { return }
-            AudioLibrary.shared.play(.summonBurst, volume: 0.9)
+        let calm = MotionComfort.isReduced
+        if !calm {
+            for (index, at) in ChestTiming.rattles.enumerated() {
+                after(at) {
+                    guard mine == sequence else { return }
+                    AudioLibrary.shared.play(AudioLibrary.Sound.rattle(index), volume: 0.8 + 0.1 * Float(index))
+                    Juice.haptic(index == ChestTiming.rattles.count - 1 ? .medium : .light)
+                }
+            }
         }
-        after(1.4) {
+        let lid: TimeInterval = ChestTiming.lidTime(calm: calm)
+        after(lid) {
+            guard mine == sequence else { return }
+            AudioLibrary.shared.play(.chestOpen, volume: 0.9)
+        }
+        let flashAt: TimeInterval = lid + ChestTiming.flashAfterLid
+        after(flashAt) {
             guard mine == sequence else { return }
             Juice.haptic(.heavy)
             flash = 1
@@ -2584,29 +2759,64 @@ struct BattleResultView: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) { chestGone = true }
         }
 
-        let count = min(SpoilsPanel.capacity, summary.loot.count)
-        for i in 0..<count {
-            after(1.6 + Double(i) * 0.14) {
+        let tiers = SpoilsShelf.tiers(summary.loot, capacity: SpoilsPanel.capacity)
+        let landings = SpoilsTimeline.delays(for: tiers)
+        let first: TimeInterval = flashAt + ChestTiming.firstTile
+        for (index, landing) in landings.enumerated() {
+            after(first + landing) {
                 guard mine == sequence else { return }
-                lootShown = i + 1
-                AudioLibrary.shared.play(.starTick, volume: 0.7)
-                Juice.haptic(.light)
+                lootShown = index + 1
+                landTile(tiers[index], at: index)
             }
         }
-        after(1.6 + Double(count) * 0.14 + 0.35) {
+        after(first + SpoilsTimeline.length(of: tiers) + 0.35) {
             guard mine == sequence else { return }
             withAnimation(.easeOut(duration: 0.3)) { continueShown = true }
         }
     }
 
-    /// A tap during the opening lands everything at once.
+    /// A tile's landing (W2.2): a crystal clink one step up the pentatonic
+    /// scale a tile (`AudioLibrary.Sound.spoil`), a tap for a plain or a rare
+    /// spoil and a firmer one for an epic; a legend's rising three notes, a
+    /// heavy thump and the panel's jolt instead.
+    private func landTile(_ tier: RewardTier, at index: Int) {
+        switch tier {
+        case .legend:
+            legendsPlayed += 1
+            AudioLibrary.shared.play(.spoilLegend, volume: 1.0)
+            Juice.haptic(.heavy)
+            if !MotionComfort.isReduced { legendLandings += 1 }
+            #if DEBUG
+            // `-tour-spoils legend` (the victory step): the frame is taken
+            // as the legend lands, its column and rays standing after it.
+            if autoplay { print("[TourCue] spoils-legend") }
+            #endif
+        case .epic:
+            AudioLibrary.shared.play(AudioLibrary.Sound.spoil(index), volume: 0.8)
+            Juice.haptic(.medium)
+        case .plain, .rare:
+            AudioLibrary.shared.play(AudioLibrary.Sound.spoil(index), volume: 0.7)
+            Juice.haptic(.light)
+        }
+    }
+
+    /// A tap during the opening lands everything at once — and a legend on
+    /// the shelf that has not landed yet still gets its beat (W2.2).
     private func finishOpeningNow() {
         sequence += 1
         lidOpen = true
         withAnimation(.easeOut(duration: 0.25)) { chestGone = true }
         raysShown = true
         flash = 0
-        lootShown = min(SpoilsPanel.capacity, summary.loot.count)
+        let tiers = SpoilsShelf.tiers(summary.loot, capacity: SpoilsPanel.capacity)
+        let legends = tiers.filter { $0 == .legend }.count
+        lootShown = tiers.count
+        if legends > legendsPlayed {
+            legendsPlayed = legends
+            AudioLibrary.shared.play(.spoilLegend, volume: 1.0)
+            Juice.haptic(.heavy)
+            if !MotionComfort.isReduced { legendLandings += 1 }
+        }
         withAnimation(.easeOut(duration: 0.2)) { continueShown = true }
     }
 
@@ -2639,13 +2849,17 @@ struct SpoilsPanel: View {
     /// How many tiles have popped in so far.
     let shown: Int
     let continueShown: Bool
+    /// Bumped as each legend lands: the panel takes a jolt (Docs/FEEL.md W2.2).
+    var landings: Int = 0
     var tapAction: (BattleSummary.Loot) -> (() -> Void)? = { _ in nil }
     let onContinue: () -> Void
 
     /// Two rows of six; a longer haul says how many more.
     static let capacity = 12
 
-    private var items: [BattleSummary.Loot] { Array(loot.prefix(Self.capacity)) }
+    /// The shelf as it lands (W2.2): plain first and the best last, the
+    /// twelve best of a longer haul (`SpoilsShelf.ordered`).
+    private var items: [BattleSummary.Loot] { SpoilsShelf.ordered(loot, capacity: Self.capacity) }
     /// Up to six in one row; more than six splits into two rows as even as
     /// they come.
     private var columns: Int { items.count <= 6 ? max(1, items.count) : min(6, (items.count + 1) / 2) }
@@ -2673,6 +2887,24 @@ struct SpoilsPanel: View {
         .panelBackground()
         .overlay(alignment: .top) {
             ribbon.offset(y: -14)
+        }
+        // A legend's landing jolts the whole box, down and back with a shiver
+        // across (W2.2).
+        .keyframeAnimator(initialValue: LandingJolt(), trigger: landings) { content, jolt in
+            content.offset(x: jolt.x, y: jolt.y)
+        } keyframes: { _ in
+            KeyframeTrack(\.y) {
+                MoveKeyframe(0)
+                LinearKeyframe(5, duration: 0.05)
+                SpringKeyframe(0, duration: 0.36, spring: Motion.settleSpring.spring)
+            }
+            KeyframeTrack(\.x) {
+                MoveKeyframe(0)
+                LinearKeyframe(-3, duration: 0.04)
+                LinearKeyframe(3, duration: 0.05)
+                LinearKeyframe(-1.5, duration: 0.05)
+                LinearKeyframe(0, duration: 0.07)
+            }
         }
     }
 
@@ -2728,12 +2960,15 @@ struct SpoilsPanel: View {
     }
 
     private var grid: some View {
-        let rows = stride(from: 0, to: items.count, by: columns).map { Array(items[$0..<min($0 + columns, items.count)]) }
+        let shelf = items
+        let rows = stride(from: 0, to: shelf.count, by: columns).map { Array(shelf[$0..<min($0 + columns, shelf.count)]) }
         return VStack(spacing: 8) {
             ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
                 HStack(alignment: .top, spacing: 10) {
                     ForEach(Array(row.enumerated()), id: \.element.id) { column, item in
                         let index = rowIndex * columns + column
+                        let tier = SpoilsShelf.tier(of: item)
+                        let landed: Bool = index < shown
                         RewardTile(
                             key: item.key ?? "",
                             title: item.title,
@@ -2744,20 +2979,46 @@ struct SpoilsPanel: View {
                             stars: item.relic == nil ? item.stars : nil,
                             relic: item.relic,
                             size: tileSize,
+                            onGlass: true,
                             onTap: tapAction(item)
                         )
-                        .opacity(index < shown ? 1 : 0)
-                        .scaleEffect(index < shown ? 1 : 0.4)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.62), value: shown)
+                        // The tier's light behind the socket, lit as the
+                        // tile lands (W2.2).
+                        .background(alignment: .top) {
+                            RewardTierAura(tier: tier, size: tileSize)
+                                .frame(width: tileSize, height: tileSize)
+                                .opacity(landed ? 1 : 0)
+                                .animation(.easeOut(duration: 0.35), value: landed)
+                        }
+                        .opacity(landed ? 1 : 0)
+                        // A legend DROPS in from 1.4; every other spoil pops
+                        // up from 0.4.
+                        .scaleEffect(landed ? 1 : (tier == .legend ? 1.4 : 0.4))
+                        .animation(tier == .legend
+                                   ? .spring(response: 0.32, dampingFraction: 0.72)
+                                   : .spring(response: 0.4, dampingFraction: 0.62), value: shown)
                     }
                 }
             }
-            if loot.count > items.count {
-                Text("+\(loot.count - items.count) more in the inventory")
+            if loot.count > shelf.count {
+                Text("+\(loot.count - shelf.count) more in the inventory")
                     .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Theme.onGlassDim)
             }
         }
+        // The tray the spoils stand on: dark glass, so every tier's light
+        // reads on it — added light on the cream marble was a wash.
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .fill(Theme.socketFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .strokeBorder(Theme.glassRim, lineWidth: 1)
+                )
+        )
     }
 }
 
@@ -2778,6 +3039,13 @@ struct SpoilsPanel: View {
 struct RewardChestView: UIViewRepresentable {
     var open: Bool
     var gone: Bool
+    /// The reward box's build-up (Docs/FEEL.md W2.2): three rattles before
+    /// the lid, which `BattleResultView.openChest` sounds on `ChestTiming`'s
+    /// clock. Off by default, so a chest with no such sounds and its grants
+    /// listed the moment it is claimed — the tribute card's — keeps the four
+    /// quick jolts and the lid a third of a second in (review, 2026-09-24: it
+    /// shook in silence for most of a second before opening).
+    var rattles: Bool = false
 
     /// Where the split put the lid's origin: the middle of its back-bottom
     /// edge, in metres of a 1 m chest. `prop.py` prints it as it ships; a
@@ -3087,7 +3355,14 @@ struct RewardChestView: UIViewRepresentable {
         if gone, !coordinator.vanished { vanish(coordinator) }
     }
 
-    /// The shake, the lid, the light. About a second; the flash follows.
+    /// The rattles, the lid, the light (Docs/FEEL.md W2.2, `ChestTiming`):
+    /// three rattles, each harder, a hop in the last; the lid swings back
+    /// past open and settles; the beam stands up a fifth of a second into
+    /// its swing. `BattleResultView.openChest` sounds them on the same
+    /// numbers; the flash follows. Under Reduce Motion the chest does not
+    /// rattle and the lid goes at once. A chest that does not `rattles`
+    /// jolts four times and lifts its lid at `ChestTiming.plainLid`, as
+    /// every chest did before W2.2.
     private func openSequence(_ coordinator: Coordinator) {
         guard !coordinator.opened, let lid = coordinator.lid else { return }
         coordinator.opened = true
@@ -3098,14 +3373,39 @@ struct RewardChestView: UIViewRepresentable {
         square.timingMode = .easeOut
         chest.runAction(square)
 
-        // Four quick jolts, a third of a second.
-        var jolts: [SCNAction] = []
-        for index in 0..<4 {
-            let dx: CGFloat = index % 2 == 0 ? 0.06 : -0.06
-            jolts.append(.moveBy(x: dx, y: 0.02, z: 0, duration: 0.04))
-            jolts.append(.moveBy(x: -dx, y: -0.02, z: 0, duration: 0.04))
+        let calm = MotionComfort.isReduced
+        let lidAt: TimeInterval
+        if rattles {
+            if !calm {
+                // Three rattles, each a pair of jolts across and a lift,
+                // harder each time; the last hops the chest off its shadow.
+                var steps: [SCNAction] = []
+                var clock: TimeInterval = 0
+                for (index, at) in ChestTiming.rattles.enumerated() {
+                    if at > clock { steps.append(.wait(duration: at - clock)) }
+                    let swing: CGFloat = ChestTiming.rattleSwing[min(index, ChestTiming.rattleSwing.count - 1)]
+                    let lift: CGFloat = index == ChestTiming.rattles.count - 1 ? 0.05 : 0.015
+                    let quarter: TimeInterval = ChestTiming.rattleLength / 4
+                    steps.append(.moveBy(x: swing, y: lift, z: 0, duration: quarter))
+                    steps.append(.moveBy(x: -2 * swing, y: 0, z: 0, duration: quarter))
+                    steps.append(.moveBy(x: swing * 1.4, y: -lift, z: 0, duration: quarter))
+                    steps.append(.moveBy(x: -swing * 0.4, y: 0, z: 0, duration: quarter))
+                    clock = at + ChestTiming.rattleLength
+                }
+                chest.runAction(.sequence(steps), forKey: "shake")
+            }
+            lidAt = ChestTiming.lidTime(calm: calm)
+        } else {
+            // Four quick jolts, a third of a second.
+            var jolts: [SCNAction] = []
+            for index in 0..<4 {
+                let dx: CGFloat = index % 2 == 0 ? 0.06 : -0.06
+                jolts.append(.moveBy(x: dx, y: 0.02, z: 0, duration: 0.04))
+                jolts.append(.moveBy(x: -dx, y: -0.02, z: 0, duration: 0.04))
+            }
+            chest.runAction(.sequence(jolts), forKey: "shake")
+            lidAt = ChestTiming.plainLid
         }
-        chest.runAction(.sequence(jolts), forKey: "shake")
 
         // The lid swings back past open and settles. Its origin is its back
         // edge, so a negative turn about X is what lifts the front.
@@ -3113,13 +3413,13 @@ struct RewardChestView: UIViewRepresentable {
         swing.timingMode = .easeOut
         let settle = SCNAction.rotateTo(x: -1.85, y: 0, z: 0, duration: 0.2, usesShortestUnitArc: false)
         settle.timingMode = .easeInEaseOut
-        lid.runAction(.sequence([.wait(duration: 0.32), swing, settle]))
+        lid.runAction(.sequence([.wait(duration: lidAt), swing, settle]))
 
         // The light standing up out of the box, and a flare at its mouth —
         // this frame's own (the coordinator's `burst()`), built on the main
-        // thread half a second in, not in an action's block on the render
-        // thread.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak coordinator] in
+        // thread a fifth of a second into the lid's swing, not in an action's
+        // block on the render thread.
+        DispatchQueue.main.asyncAfter(deadline: .now() + lidAt + ChestTiming.beamAfterLid) { [weak coordinator] in
             coordinator?.burst()
         }
     }

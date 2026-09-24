@@ -99,6 +99,33 @@ final class AudioLibrary {
         case riteAwaken = "rite_awaken"
         case riteEvolve = "rite_evolve"
         case riteRelicAwaken = "rite_relic_awaken"
+        // The reward box by rarity (FEEL.md W2.2), built by `tools/sfx.py`
+        // `build_spoils()`: the chest's three rattles, each harder; its lid's
+        // creak, its thud on the hinge and the beam's shimmer, as one file in
+        // step with the lid; a crystal clink for each tile, one step up a
+        // pentatonic scale a tile, so a big haul plays a melody; a legend's
+        // rising three notes; and the relic power-up's short drum roll and
+        // its anvil ring or dull crack.
+        case chestRattle1 = "chest_rattle_1"
+        case chestRattle2 = "chest_rattle_2"
+        case chestRattle3 = "chest_rattle_3"
+        case chestOpen = "chest_open"
+        case spoil1 = "spoil_1"
+        case spoil2 = "spoil_2"
+        case spoil3 = "spoil_3"
+        case spoil4 = "spoil_4"
+        case spoil5 = "spoil_5"
+        case spoil6 = "spoil_6"
+        case spoil7 = "spoil_7"
+        case spoil8 = "spoil_8"
+        case spoil9 = "spoil_9"
+        case spoil10 = "spoil_10"
+        case spoil11 = "spoil_11"
+        case spoil12 = "spoil_12"
+        case spoilLegend = "spoil_legend"
+        case relicRoll = "relic_roll"
+        case relicRing = "relic_ring"
+        case relicCrack = "relic_crack"
 
         /// The cue for a status landing on a unit. The barriers ring as
         /// crystal, the five that change how a fight plays have their own,
@@ -166,6 +193,39 @@ final class AudioLibrary {
             }
         }
 
+        /// How long the relic power-up's drum roll runs before its verdict —
+        /// the ring or the crack — lands (`relic_roll` is built to it).
+        static let rollLead: TimeInterval = 0.26
+
+        /// The chest's rattle `index` (from 0): each harder than the last.
+        static func rattle(_ index: Int) -> Sound {
+            switch min(2, max(0, index)) {
+            case 0: return .chestRattle1
+            case 1: return .chestRattle2
+            default: return .chestRattle3
+            }
+        }
+
+        /// The note tile `index` (from 0) lands on: the pentatonic scale
+        /// climbs one step a tile, twelve steps, and a longer haul keeps
+        /// ringing the top note.
+        static func spoil(_ index: Int) -> Sound {
+            switch min(11, max(0, index)) {
+            case 0: return .spoil1
+            case 1: return .spoil2
+            case 2: return .spoil3
+            case 3: return .spoil4
+            case 4: return .spoil5
+            case 5: return .spoil6
+            case 6: return .spoil7
+            case 7: return .spoil8
+            case 8: return .spoil9
+            case 9: return .spoil10
+            case 10: return .spoil11
+            default: return .spoil12
+            }
+        }
+
         /// The loudest this sound may play, whatever the caller asks. The
         /// turn chime rings on every one of the player's turns, so it stays
         /// a murmur under the fight (FEEL.md W1.4). Nil lets the caller's
@@ -186,8 +246,13 @@ final class AudioLibrary {
         var voices: Int? {
             switch self {
             case .waveEgypt, .waveGreece, .waveNorse, .waveRome, .waveJade, .bossArrival, .levelUp,
-                 .riteAwaken, .riteEvolve, .riteRelicAwaken:
+                 .riteAwaken, .riteEvolve, .riteRelicAwaken,
+                 .chestRattle1, .chestRattle2, .chestRattle3, .chestOpen,
+                 .spoil1, .spoil2, .spoil3, .spoil4, .spoil5, .spoil6, .spoil7, .spoil8, .spoil9, .spoil10,
+                 .spoil11, .spoil12, .spoilLegend:
                 return 1
+            case .relicRoll, .relicRing, .relicCrack:
+                return 2
             case .revive, .death, .extraTurn, .counter, .turnChime,
                  .summonIgnite, .summonChargeBase, .summonChargeRise, .summonChargeTell, .summonChargeLightDark,
                  .summonBurst3, .summonBurst4, .summonBurst5,

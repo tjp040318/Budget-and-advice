@@ -31,6 +31,32 @@ struct MissionsView: View {
     /// What the last claim paid, as tiles, and which claim showed them.
     @State private var receipt: [ShopService.Grant] = []
     @State private var receiptID = UUID()
+    /// The order each list's rows stand in, FROZEN between settles
+    /// (Docs/FEEL.md W2.12: never reorder under a pressed finger): ready rows
+    /// first when the list opens and whenever it settles, and a claimed row
+    /// stamps its seal where it stands, joining the Completed group only
+    /// when the list settles — a beat after the last claim, with no finger
+    /// on a claim.
+    @State private var order: [Tab: [String]] = [:]
+    /// The rows that stood in the Completed group when the order was frozen.
+    @State private var settled: [Tab: Set<String>] = [:]
+    @State private var settleSerial = 0
+    /// A settle is on its way (`scheduleSettle`): the list's own claims move
+    /// nothing until it lands.
+    @State private var settlePending = false
+    /// The claim plates under a finger, by the plate — a row's id, or
+    /// `claimAllPlate` (`TrackedPress`): the list waits for them. A plate's
+    /// own claim takes it off here at once (`claim`, `claimAll`), since a
+    /// button's action runs only once the finger has lifted, and that same
+    /// claim REMOVES the plate — a stamped row loses its plate, CLAIM ALL
+    /// goes with the rows it took — in the update that lifts the finger,
+    /// whose release a removed view may never report (review, 2026-09-24).
+    /// A counter left at 1 there held every settle, and the midnight
+    /// re-freeze, for good.
+    @State private var pressedPlates: Set<String> = []
+    /// Rows Claim All has claimed whose seals have not stamped yet: they
+    /// stamp 70 ms apart, down the list.
+    @State private var pendingStamps: Set<String> = []
 
     /// Which list the screen opens on. The island's scroll and More both want
     /// Daily; the CI tour wants the Counsel, which is the only way to
@@ -113,6 +139,17 @@ struct MissionsView: View {
                 }
             }
         }
+        .onAppear { freeze(tab) }
+        // A settle still waiting goes with the screen: its retry loop ends
+        // (`settleSerial`), and the list freezes afresh if it comes back.
+        .onDisappear {
+            settleSerial += 1
+            settlePending = false
+            pressedPlates = []
+            pendingStamps = []
+        }
+        .onChange(of: tab) { _, now in freeze(now) }
+        .onChange(of: standingKey) { _, _ in refreezeIfIdle() }
     }
 
     // MARK: - Strip
@@ -215,7 +252,7 @@ struct MissionsView: View {
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    segmentTrack(filled: claimed, total: total)
+                    TributePills(states: tributeStates)
                 }
             }
             prizeRow(QuestService.allMissionsBonus, status: claimStatus(claimed: done, ready: ready),
@@ -360,6 +397,18 @@ struct MissionsView: View {
         }
     }
 
+    /// The Daily Tribute's eight (W2.12), one a mission in the table's
+    /// order: claimed (its seal stamped), ready, or still to do.
+    private var tributeStates: [ClaimStatus] {
+        let player = store.player
+        return QuestService.missions.map { (mission: QuestService.Mission) -> ClaimStatus in
+            let claimed: Bool = QuestService.isMissionClaimed(mission.id, player: player)
+                && !pendingStamps.contains(mission.id)
+            if claimed { return .done }
+            return QuestService.isMissionComplete(mission, player: player) ? .ready : .waiting
+        }
+    }
+
     /// One segment per step, gold when claimed.
     private func segmentTrack(filled: Int, total: Int) -> some View {
         HStack(spacing: 3) {
@@ -416,8 +465,16 @@ struct MissionsView: View {
     /// Daily list on a ten-point sliver of its sixth row under the fade, and
     /// the Counsel on five. A row that would show as a sliver is not drawn,
     /// and the chevron at the foot says the list goes on.
+    ///
+    /// Since 2026-09-24 (Docs/FEEL.md W2.12) the list leads with a line that
+    /// says how many rows are ready and, from two, a CLAIM ALL plate; its
+    /// rows stand in an order frozen between settles (`standing`), so a
+    /// claim never moves a row under the finger; claimed rows gather under
+    /// a COMPLETED header at its foot once the list settles.
     private var list: some View {
-        let rows = entries
+        let rows: [Entry] = standing(tab)
+        let items: [MissionListItem] = listItems(rows, list: tab)
+        let ready: Int = rows.filter { $0.complete && !$0.claimed }.count
         // What the list's tightest row carries — its widest reward — and its
         // longest count, which every row's bar is measured against (`row`).
         let widestReward: CGFloat = rows.map { Self.rewardWidth($0.grant) }.max() ?? Self.rewardTile
@@ -425,9 +482,18 @@ struct MissionsView: View {
         let widestCount: String = "\(longestGoal) / \(longestGoal)"
         return RestingList {
             LazyVStack(spacing: 5) {
-                ForEach(rows) { entry in
-                    row(entry, widestReward: widestReward, widestCount: widestCount)
-                        .restingRow()
+                ForEach(items) { item in
+                    switch item {
+                    case .lead:
+                        leadRow(ready: ready)
+                            .restingRow(goneBelow: 0.9, wholeFrom: 0.995)
+                    case .completed(let count):
+                        completedHeader(count)
+                            .restingRow(goneBelow: 0.9, wholeFrom: 0.995)
+                    case .row(let entry):
+                        row(entry, widestReward: widestReward, widestCount: widestCount)
+                            .restingRow()
+                    }
                 }
             }
             // Room for a lit row's glow, which the scroll view would clip,
@@ -438,8 +504,164 @@ struct MissionsView: View {
         }
     }
 
-    private var entries: [Entry] {
+    /// One place in the list: the lead line, a row, or the Completed group's
+    /// header. Every place has a stable id, so a settle MOVES a row (W2.12).
+    private enum MissionListItem: Identifiable {
+        case lead
+        case completed(Int)
+        case row(Entry)
+
+        var id: String {
+            switch self {
+            case .lead: return "list.lead"
+            case .completed: return "list.completed"
+            case .row(let entry): return entry.id
+            }
+        }
+    }
+
+    private func listItems(_ rows: [Entry], list: Tab) -> [MissionListItem] {
+        let done: Set<String> = settled[list] ?? []
+        let active: [Entry] = rows.filter { !done.contains($0.id) }
+        let completed: [Entry] = rows.filter { done.contains($0.id) }
+        var items: [MissionListItem] = [.lead]
+        items += active.map { MissionListItem.row($0) }
+        if !completed.isEmpty {
+            items.append(.completed(completed.count))
+            items += completed.map { MissionListItem.row($0) }
+        }
+        return items
+    }
+
+    /// The list's rows in their frozen order; any the order does not know
+    /// (the Counsel's next tier, once its prize is taken) after them, sorted.
+    private func standing(_ list: Tab) -> [Entry] {
+        let rows: [Entry] = entries(for: list)
+        guard let frozen = order[list] else { return rows }
+        var byID: [String: Entry] = [:]
+        for entry in rows { byID[entry.id] = entry }
+        let known: Set<String> = Set(frozen)
+        return frozen.compactMap { byID[$0] } + rows.filter { !known.contains($0.id) }
+    }
+
+    /// Freezes a list's order where it stands now: ready first, then in
+    /// progress, then claimed (the rows' own sort), the claimed ones the
+    /// Completed group.
+    private func freeze(_ list: Tab) {
+        let rows: [Entry] = entries(for: list)
+        order[list] = rows.map(\.id)
+        settled[list] = Set(rows.filter(\.claimed).map(\.id))
+    }
+
+    /// Lets the list settle a beat after the last claim: ready rows first,
+    /// the claimed ones sliding into the Completed group. Never while a
+    /// finger is on a claim or seals are still stamping — it waits for them.
+    private func scheduleSettle(after delay: TimeInterval) {
+        settleSerial += 1
+        settlePending = true
+        let mine: Int = settleSerial
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            settle(mine)
+        }
+    }
+
+    private func settle(_ mine: Int) {
+        guard mine == settleSerial else { return }
+        guard pressedPlates.isEmpty, pendingStamps.isEmpty else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleRetry) {
+                settle(mine)
+            }
+            return
+        }
+        settlePending = false
+        withAnimation(Motion.panel) { freeze(tab) }
+    }
+
+    /// What the open list's rows ARE — which are ready, which claimed — so
+    /// that a change this screen did not make (a new day at midnight, the
+    /// CI's seed landing after the list first froze) re-freezes the order
+    /// at once, while a claim's own change waits for its settle.
+    private var standingKey: String {
+        entries(for: tab).map { entry in
+            "\(entry.id):\(entry.complete ? 1 : 0)\(entry.claimed ? 1 : 0)"
+        }.joined(separator: ",")
+    }
+
+    /// Re-freezes the list after a change from outside it — never with a
+    /// finger on a claim, a seal still to stamp or a settle on its way.
+    private func refreezeIfIdle() {
+        guard !settlePending, pressedPlates.isEmpty, pendingStamps.isEmpty else { return }
+        withAnimation(Motion.panel) { freeze(tab) }
+    }
+
+    /// Claim plate `plate` going down or up under a finger.
+    private func pressChanged(_ plate: String, _ down: Bool) {
+        if down {
+            pressedPlates.insert(plate)
+        } else {
+            _ = pressedPlates.remove(plate)
+        }
+    }
+
+    /// CLAIM ALL's key among the pressed plates: no row's id.
+    private static let claimAllPlate = "plate.claim-all"
+
+    /// The list's lead line: how many rows wait to be claimed and, from two,
+    /// CLAIM ALL. Always the same height, so the plate appearing or going
+    /// moves no row.
+    private func leadRow(ready: Int) -> some View {
+        HStack(spacing: 8) {
+            Text(leadWords(ready: ready))
+                .font(Theme.title(13))
+                .tracking(1.2)
+                .foregroundStyle(ready > 0 ? Theme.goldDim : Theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 6)
+            if ready >= 2 {
+                ClaimAllPlate(count: ready, onPress: { down in pressChanged(Self.claimAllPlate, down) }) {
+                    claimAll()
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+        }
+        .padding(.horizontal, 6)
+        .frame(height: Self.leadHeight)
+        .animation(Motion.pop, value: ready >= 2)
+    }
+
+    private func leadWords(ready: Int) -> String {
+        if ready == 1 { return "1 READY TO CLAIM" }
+        if ready > 1 { return "\(ready) READY TO CLAIM" }
         switch tab {
+        case .missions: return "TODAY'S EIGHT"
+        case .counsel: return "ATHENA'S STEPS"
+        case .feats: return "FEATS OF A LIFETIME"
+        }
+    }
+
+    /// The Completed group's header: a rule, COMPLETED and the count, a rule.
+    private func completedHeader(_ count: Int) -> some View {
+        HStack(spacing: 8) {
+            Rectangle()
+                .fill(Theme.stroke.opacity(0.9))
+                .frame(height: 1)
+            Text("COMPLETED · \(count)")
+                .font(Theme.body(11).weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+            Rectangle()
+                .fill(Theme.stroke.opacity(0.9))
+                .frame(height: 1)
+        }
+        .padding(.horizontal, 6)
+        .frame(height: 26)
+    }
+
+    private func entries(for list: Tab) -> [Entry] {
+        switch list {
         case .missions: return missionEntries
         case .counsel: return counselEntries
         case .feats: return featEntries
@@ -564,16 +786,25 @@ struct MissionsView: View {
     /// count a slot as wide as the list's longest ("30 / 30"). On that phone
     /// the Daily bars are 168, the first Counsel's 145, the Feats' 115; a
     /// wide phone reaches `barCeiling`.
+    ///
+    /// Since 2026-09-24 (W2.12) the bar is 6 points of gold that breathes
+    /// once it is full and waiting (`MissionBar`), and a claim stamps a gold
+    /// DONE seal onto the row with a thud and a small shake, the row dimming
+    /// under it (`DoneSeal`); a row Claim All took stamps in its turn, 70 ms
+    /// after the one above it (`pendingStamps`).
     private func row(_ entry: Entry, widestReward: CGFloat, widestCount: String) -> some View {
-        let lit = entry.complete && !entry.claimed
-        let status = claimStatus(claimed: entry.claimed, ready: entry.complete)
+        let stamped: Bool = entry.claimed && !pendingStamps.contains(entry.id)
+        let lit = entry.complete && !stamped
+        let status = claimStatus(claimed: stamped, ready: entry.complete)
         let fraction = "\(min(entry.progress, entry.goal)) / \(entry.goal)"
+        let calm: Bool = MotionComfort.isReduced
+        let swing: CGFloat = stamped && !calm ? 4 : 0
         let art = Self.rowArt(for: entry.icon, id: entry.id)
         let claimRoom: CGFloat = status == .waiting ? Self.claimColumn + Self.rowSpacing : 0
         let rewardRoom: CGFloat = widestReward - Self.rewardWidth(entry.grant)
         let barInset: CGFloat = claimRoom + rewardRoom
         return HStack(spacing: Self.rowSpacing) {
-            if entry.claimed {
+            if stamped {
                 MedallionIcon(key: "", glyph: "checkmark", size: 38)
             } else {
                 MedallionIcon(key: art.door, glyph: entry.icon, size: 38, isOn: lit, itemKey: art.item)
@@ -585,11 +816,10 @@ struct MissionsView: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
-                    StatBar(
-                        value: Double(entry.progress),
-                        maximum: Double(max(1, entry.goal)),
-                        tint: entry.complete ? Theme.success : Theme.gold,
-                        height: 7
+                    MissionBar(
+                        fraction: Double(entry.progress) / Double(max(1, entry.goal)),
+                        breathing: lit,
+                        calm: calm
                     )
                     .frame(maxWidth: Self.barCeiling)
                     // The list's longest count, unseen, holds the slot open,
@@ -615,10 +845,8 @@ struct MissionsView: View {
             // waiting one (run 224, 33-counsel). A row that comes ready gains
             // its plate without its reward moving.
             if status != .waiting {
-                claimSlot(status: status, waitingNote: fraction) {
-                    claim(entry)
-                }
-                .frame(width: Self.claimColumn)
+                rowClaimSlot(entry, stamped: stamped, calm: calm)
+                    .frame(width: Self.claimColumn)
             }
             rewardTiles(entry.grant)
         }
@@ -626,7 +854,37 @@ struct MissionsView: View {
         .padding(.vertical, 5)
         .frame(minHeight: 54)
         .background(MarbleRowPlate(isLit: lit))
-        .opacity(entry.claimed ? 0.62 : 1)
+        .opacity(stamped ? 0.62 : 1)
+        .animation(.easeOut(duration: 0.3).delay(stamped ? Self.sealLands : 0), value: stamped)
+        // The seal's thud shakes the row, a few points and gone.
+        .keyframeAnimator(initialValue: RowShake(), trigger: stamped) { content, frame in
+            content.offset(x: frame.x)
+        } keyframes: { _ in
+            KeyframeTrack(\.x) {
+                MoveKeyframe(0)
+                LinearKeyframe(0, duration: Self.sealLands)
+                CubicKeyframe(-swing, duration: 0.05)
+                CubicKeyframe(swing, duration: 0.07)
+                CubicKeyframe(-swing / 2, duration: 0.06)
+                CubicKeyframe(0, duration: 0.06)
+            }
+        }
+    }
+
+    /// A row's claim: the gold plate while there is something to take — a
+    /// plate the list knows is under a finger (`TrackedPress`) — and the
+    /// DONE seal, there all along and stamped when the claim lands.
+    private func rowClaimSlot(_ entry: Entry, stamped: Bool, calm: Bool) -> some View {
+        ZStack {
+            if !stamped {
+                MissionClaimPlate(onPress: { down in pressChanged(entry.id, down) }) {
+                    claim(entry)
+                }
+                .disabled(entry.claimed)
+                .transition(.opacity)
+            }
+            DoneSeal(stamped: stamped, calm: calm)
+        }
     }
 
     /// A reward as its painting: one tile, or a two-part bundle (a chapter's
@@ -706,16 +964,75 @@ struct MissionsView: View {
 
     // MARK: - Claiming
 
+    /// A row's claim: the store's, then the seal's thud as it lands, the
+    /// receipt, and the list's settle a beat later.
     private func claim(_ entry: Entry) {
+        // The finger is off this plate — the action runs on the lift — and
+        // the claim takes the plate away before it could say so.
+        _ = pressedPlates.remove(entry.id)
+        let grants: [ShopService.Grant]?
         switch entry.source {
         case .mission:
-            if let grants = store.claimMission(entry.id) { paid(grants) }
+            grants = store.claimMission(entry.id)
         case .counsel:
-            claimCounsel(entry.id)
+            grants = store.claimCounsel(entry.id)
         case .feat:
-            if let grants = store.claimFeat(entry.id) { paid(grants) }
+            grants = store.claimFeat(entry.id)
+        }
+        guard let grants else { return }
+        sealThud(after: Self.sealLands, last: true)
+        paid(grants)
+        scheduleSettle(after: Self.settleDelay)
+    }
+
+    /// CLAIM ALL (W2.12): every ready row of this list claimed at once —
+    /// the store loops the claims, so the tribute or the tier's prize a
+    /// claim opens is taken too — the seals stamping down the list 70 ms
+    /// apart, one receipt for all of it, and the list settling after.
+    private func claimAll() {
+        // As `claim`: the finger is off the plate the claim takes away.
+        _ = pressedPlates.remove(Self.claimAllPlate)
+        let waiting: [String] = standing(tab).filter { $0.complete && !$0.claimed }.map(\.id)
+        guard waiting.count >= 2 else { return }
+        let grants: [ShopService.Grant]
+        switch tab {
+        case .missions: grants = store.claimAllMissions()
+        case .counsel: grants = store.claimAllCounsel()
+        case .feats: grants = store.claimAllFeats()
+        }
+        guard !grants.isEmpty else { return }
+        let claimedNow: Set<String> = Set(entries(for: tab).filter(\.claimed).map(\.id))
+        let stamping: [String] = waiting.filter { claimedNow.contains($0) }
+        pendingStamps = Set(stamping)
+        for (place, id) in stamping.enumerated() {
+            let delay: TimeInterval = Double(place) * Self.stampStagger
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                _ = pendingStamps.remove(id)
+            }
+            sealThud(after: delay + Self.sealLands, last: place == stamping.count - 1)
+        }
+        paid(CodexService.merged(grants))
+        scheduleSettle(after: Double(stamping.count) * Self.stampStagger + Self.settleDelay)
+    }
+
+    /// The seal's thud as it lands: a dull knock and a touch, firmer on the
+    /// last of a Claim All.
+    private func sealThud(after delay: TimeInterval, last: Bool) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            AudioLibrary.shared.play(.hitBlunt, volume: last ? 0.5 : 0.35)
+            Juice.haptic(last ? .medium : .light)
         }
     }
+
+    /// The seal lands this far into its stamp; Claim All's seals stamp this
+    /// far apart; the list settles this long after the last; and a settle a
+    /// finger is holding off looks again this often.
+    private static let sealLands: TimeInterval = 0.14
+    private static let stampStagger: TimeInterval = 0.07
+    private static let settleDelay: TimeInterval = 1.1
+    private static let settleRetry: TimeInterval = 0.4
+    /// The lead line's height, the same with CLAIM ALL or without.
+    private static let leadHeight: CGFloat = 40
 
     private func claimCounsel(_ id: String) {
         if let grants = store.claimCounsel(id) { paid(grants) }
@@ -740,6 +1057,277 @@ struct MissionsView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
             guard receiptID == id else { return }
             withAnimation(.easeIn(duration: 0.25)) { receipt = [] }
+        }
+    }
+}
+
+// MARK: - Claims that stamp (Docs/FEEL.md W2.12)
+
+/// The game's press on a claim plate, telling the list while a finger is on
+/// it: the list never re-sorts under one (W2.12). A cancelled press (the
+/// list's scroll taking the finger) goes up as well.
+private struct TrackedPress: ButtonStyle {
+    let onPress: (Bool) -> Void
+
+    func makeBody(configuration: Configuration) -> some View {
+        TrackedPressBody(configuration: configuration, onPress: onPress)
+    }
+}
+
+/// `TrackedPress`'s plate: the game's press, and the finger reported down
+/// and up. A plate taken out of the list while a finger was on it — its own
+/// claim stamps its row, CLAIM ALL goes with the rows it took, a switch of
+/// tab — hears no `onChange` for the lift, since a view being removed is
+/// not updated; it says so as it leaves instead (review, 2026-09-24).
+private struct TrackedPressBody: View {
+    let configuration: ButtonStyleConfiguration
+    let onPress: (Bool) -> Void
+    /// What this plate last told the list.
+    @State private var reportedDown = false
+
+    var body: some View {
+        GamePressStyle(.primary).makeBody(configuration: configuration)
+            .onChange(of: configuration.isPressed) { _, down in
+                reportedDown = down
+                onPress(down)
+            }
+            .onDisappear {
+                guard reportedDown else { return }
+                reportedDown = false
+                onPress(false)
+            }
+    }
+}
+
+/// A row's gold claim plate, `ClaimPlate`'s ready face, pressed through
+/// `TrackedPress`.
+private struct MissionClaimPlate: View {
+    let onPress: (Bool) -> Void
+    let action: () -> Void
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        return Button {
+            // The press is the tap and the firm tick; the claim's confirm is
+            // the "done".
+            AudioLibrary.shared.play(.uiConfirm)
+            action()
+        } label: {
+            Text("CLAIM")
+                .font(Theme.title(13))
+                .tracking(1.2)
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity)
+                .frame(height: 34)
+                .background(shape.fill(Theme.goldPlate))
+                .overlay(
+                    shape.fill(LinearGradient(colors: [Color.white.opacity(0.35), .clear],
+                                              startPoint: .top, endPoint: .center))
+                        .allowsHitTesting(false)
+                )
+                .overlay(shape.strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1))
+                .shadow(color: Theme.gold.opacity(0.35), radius: 6, y: 2)
+        }
+        .buttonStyle(TrackedPress(onPress: onPress))
+    }
+}
+
+/// CLAIM ALL, at the head of the list from two rows ready (W2.12): the
+/// gold plate with its seal and the count it will take.
+private struct ClaimAllPlate: View {
+    let count: Int
+    let onPress: (Bool) -> Void
+    let action: () -> Void
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        return Button {
+            AudioLibrary.shared.play(.uiConfirm)
+            action()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 13, weight: .black))
+                Text("CLAIM ALL")
+                    .font(Theme.title(13))
+                    .tracking(1.2)
+                Text("\(count)")
+                    .font(Theme.numeric(12))
+                    .padding(.horizontal, 6)
+                    .frame(height: 18)
+                    .background(Capsule().fill(Theme.ink.opacity(0.16)))
+            }
+            .foregroundStyle(Theme.ink)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 14)
+            .frame(height: 34)
+            .background(shape.fill(Theme.goldPlate))
+            .overlay(
+                shape.fill(LinearGradient(colors: [Color.white.opacity(0.35), .clear],
+                                          startPoint: .top, endPoint: .center))
+                    .allowsHitTesting(false)
+            )
+            .overlay(shape.strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1))
+            .shadow(color: Theme.gold.opacity(0.4), radius: 7, y: 2)
+        }
+        .buttonStyle(TrackedPress(onPress: onPress))
+        .accessibilityLabel(Text("Claim all \(count)"))
+    }
+}
+
+/// The gold DONE seal a claim stamps onto its row (W2.12): struck in from
+/// nearly twice its size, turned, landing with a small overshoot. It stands
+/// in the row from the start, clear until `stamped`, because a stamp is an
+/// animation of something already there; its resting value is the stamped
+/// one, so a row claimed before the screen opened simply wears it.
+private struct DoneSeal: View {
+    let stamped: Bool
+    let calm: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+        return Text("DONE")
+            .font(Theme.title(13))
+            .tracking(2)
+            .foregroundStyle(Theme.goldDeep)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(shape.fill(Theme.gold.opacity(0.16)))
+            .overlay(shape.strokeBorder(Theme.goldDim, lineWidth: 2))
+            .overlay(shape.inset(by: 3).strokeBorder(Theme.goldDim.opacity(0.6), lineWidth: 0.8))
+            .keyframeAnimator(initialValue: SealFrame(), trigger: stamped) { content, frame in
+                content
+                    .scaleEffect(frame.scale)
+                    .rotationEffect(.degrees(frame.tilt))
+                    .opacity(stamped ? frame.opacity : 0)
+            } keyframes: { _ in
+                KeyframeTrack(\.scale) {
+                    MoveKeyframe(calm ? 1 : 1.9)
+                    CubicKeyframe(calm ? 1 : 0.92, duration: 0.14)
+                    SpringKeyframe(1, duration: 0.3, spring: Motion.settleSpring.spring)
+                }
+                KeyframeTrack(\.tilt) {
+                    MoveKeyframe(calm ? -8 : -18)
+                    CubicKeyframe(-8, duration: 0.14)
+                }
+                KeyframeTrack(\.opacity) {
+                    MoveKeyframe(0)
+                    LinearKeyframe(1, duration: calm ? 0.2 : 0.1)
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(!stamped)
+    }
+}
+
+/// The seal's animated value (`DoneSeal`): at rest, stamped.
+private struct SealFrame {
+    var scale: Double = 1
+    var tilt: Double = -8
+    var opacity: Double = 1
+}
+
+/// A stamped row's shake (`MissionsView.row`): at rest, still.
+private struct RowShake {
+    var x: CGFloat = 0
+}
+
+/// A row's bar (W2.12): 6 points of gold on a groove, and once it is full
+/// and waiting a slow breath of light, the island's ambient beat; still
+/// under Reduce Motion.
+private struct MissionBar: View {
+    let fraction: Double
+    let breathing: Bool
+    let calm: Bool
+
+    var body: some View {
+        if breathing && !calm {
+            track
+                .phaseAnimator([false, true]) { content, lit in
+                    content
+                        .brightness(lit ? 0.14 : 0)
+                        .shadow(color: Theme.gold.opacity(lit ? 0.75 : 0.2), radius: lit ? 4 : 1)
+                } animation: { _ in
+                    Motion.ambient
+                }
+        } else {
+            track
+        }
+    }
+
+    private var track: some View {
+        GeometryReader { proxy in
+            let width: CGFloat = proxy.size.width
+            let filled: CGFloat = width * CGFloat(min(1, max(0, fraction)))
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Theme.ink.opacity(0.14))
+                if filled > 0 {
+                    Capsule()
+                        .fill(Theme.goldPlate)
+                        .frame(width: max(6, filled))
+                }
+            }
+        }
+        .frame(height: 6)
+    }
+}
+
+/// The Daily Tribute's eight (W2.12): one pill a mission, gold with a tick
+/// that pops in as it is claimed (`Motion.pop`, a short ease under Reduce
+/// Motion), ringed gold while it waits to be, grey while its work is still
+/// to do.
+private struct TributePills: View {
+    let states: [ClaimStatus]
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(Array(states.enumerated()), id: \.offset) { _, state in
+                TributePill(state: state)
+            }
+        }
+    }
+}
+
+private struct TributePill: View {
+    let state: ClaimStatus
+
+    var body: some View {
+        ZStack {
+            Capsule()
+                .fill(fill)
+            Capsule()
+                .strokeBorder(rim, lineWidth: state == .ready ? 1.2 : 0.8)
+            if state == .done {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 7, weight: .black))
+                    .foregroundStyle(Theme.ink)
+                    .transition(.scale(scale: 0.3).combined(with: .opacity))
+            }
+        }
+        .frame(height: 12)
+        .animation(Motion.pop, value: state)
+    }
+
+    private var fill: AnyShapeStyle {
+        switch state {
+        case .done: return AnyShapeStyle(Theme.goldPlate)
+        case .ready: return AnyShapeStyle(Theme.gold.opacity(0.22))
+        case .waiting: return AnyShapeStyle(Theme.stroke.opacity(0.6))
+        }
+    }
+
+    private var rim: Color {
+        switch state {
+        case .done: return Theme.goldDim
+        case .ready: return Theme.gold
+        case .waiting: return Theme.stroke
         }
     }
 }

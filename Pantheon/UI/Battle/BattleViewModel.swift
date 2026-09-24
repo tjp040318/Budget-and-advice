@@ -398,6 +398,95 @@ final class BattleViewModel: ObservableObject {
         consume(engine.start())
     }
 
+    // MARK: - The way in (Docs/FEEL.md W2.24)
+
+    /// The fight's first build, under the stage card: it holds its queue
+    /// until the card leaves (`BattleSceneController.revealField`) and draws
+    /// everything the fight can play once under it (`effectPlan`). Guarded
+    /// as `begin()` is, so a second call cannot leave the hold set for an
+    /// auto-repeat's next build.
+    func beginUnderCard() {
+        guard !hasBegun else { return }
+        sceneController.holdsForStageCard = true
+        sceneController.predrawPlan = effectPlan
+        begin()
+    }
+
+    /// What the stage card says, read once as the fight opens: the realm
+    /// and the place over the stage's name (or the rival's), the waves and
+    /// the tier, and the field's power beside the team's.
+    private(set) lazy var stageCard: StageCardInfo = makeStageCard()
+
+    private func makeStageCard() -> StageCardInfo {
+        let place: String = context.environment.displayName.uppercased()
+        let painting: String = context.environment.backdropName
+        let team: Int = engine.combatants.filter { $0.side == .player }.reduce(0) { total, fighter in
+            guard let id = fighter.sourceUnitID, let unit = store.resolved(id) else { return total }
+            return total + unit.power
+        }
+        let ours: Int? = team > 0 ? team : nil
+        switch context {
+        case .campaign(let stage):
+            var eyebrow = place
+            if let chapter = StageDatabase.chapter(stage.chapterID) {
+                eyebrow = "\(chapter.realmName.uppercased()) · \(place)"
+            }
+            var details: [String] = [waveCount == 1 ? "1 WAVE" : "\(waveCount) WAVES"]
+            let tier = CampaignDifficulty.split(stage.id).difficulty
+            if tier != .normal { details.append(tier.displayName.uppercased()) }
+            if stage.isBoss { details.append("BOSS") }
+            return StageCardInfo(
+                eyebrow: eyebrow, title: stage.name, detail: details.joined(separator: "  ·  "),
+                theirLabel: "STAGE POWER", theirPower: stage.recommendedPower > 0 ? stage.recommendedPower : nil,
+                ourPower: ours, painting: painting
+            )
+        case .arena(let opponent):
+            return StageCardInfo(
+                eyebrow: "THE ARENA · \(place)", title: opponent.name,
+                detail: "\(opponent.tier.displayName.uppercased())  ·  \(opponent.points.formatted()) POINTS",
+                theirLabel: "RIVAL POWER", theirPower: opponent.power > 0 ? opponent.power : nil,
+                ourPower: ours, painting: painting
+            )
+        case .guildWar(let target):
+            let theirs: Int = target.opponentTeam.reduce(0) { $0 + $1.power }
+            return StageCardInfo(
+                eyebrow: "GUILD WAR · \(place)", title: target.profile.name,
+                detail: "LEVEL \(target.profile.level)  ·  \(target.pointsForWin) POINTS FOR A WIN",
+                theirLabel: "RIVAL POWER", theirPower: theirs > 0 ? theirs : nil,
+                ourPower: ours, painting: painting
+            )
+        case .draft(let bout):
+            let theirs: Int = bout.rivalTeam.reduce(0) { $0 + $1.power }
+            let drafted: Int = bout.playerTeam.reduce(0) { $0 + $1.power }
+            return StageCardInfo(
+                eyebrow: "THE DRAFT ARENA · \(place)", title: bout.rivalName,
+                detail: "RATING \(bout.rivalRating.formatted())",
+                theirLabel: "RIVAL POWER", theirPower: theirs > 0 ? theirs : nil,
+                ourPower: drafted > 0 ? drafted : ours, painting: painting
+            )
+        }
+    }
+
+    /// Everything this fight can draw — every wave's fighters, the later
+    /// waves' read off their blueprints — for the pre-draw under the stage
+    /// card (`EffectPlan`, `VFXLibrary.predraw`).
+    var effectPlan: EffectPlan {
+        var fighters: [PlannedFighter] = engine.combatants.map { fighter in
+            PlannedFighter(element: fighter.element, melee: fighter.model.melee, boss: fighter.isBoss,
+                           auraHex: fighter.model.auraHex, effects: fighter.skills.map(\.vfx))
+        }
+        if case .campaign(let stage) = context {
+            for spawn in stage.laterWaves.flatMap({ $0 }) {
+                guard let blueprint = UnitDatabase.blueprint(spawn.blueprintID) else { continue }
+                let boss: Bool = blueprint.archetype == .primordial || blueprint.model.height >= 3.0
+                fighters.append(PlannedFighter(element: blueprint.element, melee: blueprint.model.melee, boss: boss,
+                                               laterWave: true, auraHex: blueprint.model.auraHex,
+                                               effects: blueprint.skills.map(\.vfx)))
+            }
+        }
+        return EffectPlan.of(fighters)
+    }
+
     /// Every later wave's figures and clips — the walk its arrivals take
     /// onto their marks among them (Docs/FEEL.md W2.10) — parsed off the
     /// main thread while the first wave fights, as the briefing's warm pass

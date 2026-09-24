@@ -1067,6 +1067,68 @@ struct MedallionIcon: View {
     }
 }
 
+/// A spoil's tier in the reward box (Docs/FEEL.md W2.2): the shelf lands
+/// plain first and the best last, and each tier has its own light and its
+/// own beat — a rare glows blue under its socket, an epic is lit from
+/// behind in violet after a short pause, a legend stops the row, stands in
+/// a column of gold with rays turning behind it and drops in from 1.4 with
+/// a landing jolt and a rising three-note sound. Raid's shard colours and
+/// the Genshin and Star Rail colour tells are the model; ours landed a Hero
+/// relic on the same beat as drachma (run 245's `20-victory-c`).
+enum RewardTier: Int, Comparable, CaseIterable {
+    case plain = 0, rare, epic, legend
+
+    static func < (lhs: RewardTier, rhs: RewardTier) -> Bool { lhs.rawValue < rhs.rawValue }
+
+    /// The tier of a spoil from what it is. A relic by its quality (Normal
+    /// and Magic plain, Rare, Hero epic, Legend) and an awakened one a
+    /// legend whatever it rolled; a scroll by what it summons (the Light &
+    /// Dark a legend, the Divine an epic, the Unknown and the Mystical
+    /// plain); a stone by its tier's quality; an awakening cache epic, a 6★
+    /// boon cache epic and any other rare; pure aether epic and an
+    /// element's rare; a high essence rare; divinity and a relic cache rare;
+    /// a unit by its stars; every other currency plain.
+    static func of(key: String, relic: Relic?, stars: Int?) -> RewardTier {
+        if let relic {
+            if relic.isAwakened { return .legend }
+            return of(quality: relic.resolvedQuality)
+        }
+        if key.hasPrefix("scroll_") {
+            switch key {
+            case "scroll_light_dark": return .legend
+            case "scroll_divine": return .epic
+            case "scroll_unknown", "scroll_mystical": return .plain
+            default: return .rare
+            }
+        }
+        if key.hasPrefix("awakening_cache_") { return .epic }
+        if key.hasPrefix("boon_cache_") { return (stars ?? 0) >= 6 ? .epic : .rare }
+        if key == Aether.pure { return .epic }
+        if Aether.isAether(key) { return .rare }
+        if key.hasPrefix("essence_") { return key.hasSuffix("_high") ? .rare : .plain }
+        if let stone = RelicStone.from(id: key) { return of(quality: stone.tier.quality) }
+        switch key {
+        case "divinity", "relic_cache": return .rare
+        case "unit":
+            let grade = stars ?? 0
+            if grade >= 5 { return .legend }
+            return grade >= 4 ? .epic : .rare
+        default:
+            return .plain
+        }
+    }
+
+    /// A relic's (or a stone's) quality as a tier.
+    static func of(quality: RelicQuality) -> RewardTier {
+        switch quality {
+        case .normal, .magic: return .plain
+        case .rare: return .rare
+        case .hero: return .epic
+        case .legend: return .legend
+        }
+    }
+}
+
 /// One reward, the genre's way: a socket with the item painted large in it,
 /// its count printed bold on the socket's corner, its stars under it when it
 /// has a grade, and its name in small type below. A relic is its own stone.
@@ -1159,6 +1221,9 @@ struct RewardTile: View {
         if let stars { return Rarity(stars: stars) }
         return nil
     }
+
+    /// Its tier in the reward box (`RewardTier`, Docs/FEEL.md W2.2).
+    var tier: RewardTier { RewardTier.of(key: key, relic: relic, stars: stars) }
 
     var body: some View {
         VStack(spacing: max(2, size * 0.05)) {

@@ -577,3 +577,109 @@ enum TributeService {
         return Receipt(grants: granted, relic: relic)
     }
 }
+
+// MARK: - What a clear changed on the map (Docs/FEEL.md W2.5)
+
+/// What one settled run changed on its chapter's road, for the chapter map
+/// to play once when the player is back on it: the medallion that turned
+/// gold, the stars it gained, the stage it opened, the chests it earned —
+/// and on a first fall of the road's last stage, the chapter conquered, the
+/// harder tier it opened and the next chapter whose city now burns on the
+/// world road. AFK Arena returns to its world map on a clear and walks the
+/// hero to the next node; ours was the same map before and after (run
+/// `13-chapter_map`). Never saved (`GameStore.lastClear`).
+struct StageClear: Equatable, Sendable {
+    /// Which clear this is, so a map can tell a new one from the one it is
+    /// playing and a finished beat is never played again.
+    let serial: Int
+    let stageID: String
+    /// The road at the tier the run was fought on (`duat_1@hard`).
+    let chapterID: String
+    /// The stage's place on its road, from 0.
+    let stageIndex: Int
+    let firstClear: Bool
+    let starsBefore: Int
+    let starsAfter: Int
+    /// The tribute chests the run earned that were not earned before it.
+    let chestsEarned: [TributeMilestone]
+    /// The road's last stage fallen for the first time at this tier.
+    let conquered: Bool
+    /// The tier this clear opened on the chapter: Normal's end opens Hard,
+    /// Hard's opens Hell.
+    let tierOpened: CampaignDifficulty?
+    /// The next chapter this clear opened (a Normal road's end), by id.
+    let chapterOpened: String?
+
+    /// Whether the map has anything to play: a first clear or new stars.
+    var hasBeat: Bool { firstClear || starsAfter > starsBefore }
+
+    /// Two runs of one stage as one beat, the first's before and the
+    /// second's after: an auto-repeat that cleared a stage and then bettered
+    /// its stars plays once, from bronze to its best.
+    func merged(with later: StageClear) -> StageClear {
+        let chests: [TributeMilestone] = chestsEarned + later.chestsEarned.filter { !chestsEarned.contains($0) }
+        return StageClear(
+            serial: later.serial,
+            stageID: stageID,
+            chapterID: chapterID,
+            stageIndex: stageIndex,
+            firstClear: firstClear || later.firstClear,
+            starsBefore: min(starsBefore, later.starsBefore),
+            starsAfter: max(starsAfter, later.starsAfter),
+            chestsEarned: chests,
+            conquered: conquered || later.conquered,
+            tierOpened: tierOpened ?? later.tierOpened,
+            chapterOpened: chapterOpened ?? later.chapterOpened
+        )
+    }
+
+    /// What the run from `before` to `after` changed on `stage`'s road, or
+    /// nil when it changed nothing the map shows: a repeat, a loss, a floor
+    /// of the Labyrinth or the Halls, a raid.
+    static func between(before: Player, after: Player, stage: Stage, serial: Int) -> StageClear? {
+        let (baseID, tier) = CampaignDifficulty.split(stage.chapterID)
+        guard let order = StageDatabase.chapters.firstIndex(where: { $0.id == baseID }) else { return nil }
+        let base: Chapter = StageDatabase.chapters[order]
+        let road: Chapter = base.at(tier)
+        guard let place = road.stages.firstIndex(where: { $0.id == stage.id }) else { return nil }
+        let firstClear: Bool = !CampaignService.isCleared(stage, player: before)
+            && CampaignService.isCleared(stage, player: after)
+        let starsBefore: Int = before.stageStars?[stage.id] ?? 0
+        let starsAfter: Int = after.stageStars?[stage.id] ?? 0
+        guard firstClear || starsAfter > starsBefore else { return nil }
+        let chests: [TributeMilestone] = TributeService.tributes(for: road).filter { tribute in
+            !TributeService.isEarned(tribute, chapter: road, player: before)
+                && TributeService.isEarned(tribute, chapter: road, player: after)
+        }.map(\.milestone)
+        let conquered: Bool = firstClear && place == road.stages.count - 1
+        var opened: CampaignDifficulty?
+        for harder in CampaignDifficulty.allCases where harder.easier == tier {
+            if !CampaignService.isOpen(harder, of: base, player: before),
+               CampaignService.isOpen(harder, of: base, player: after) {
+                opened = harder
+            }
+        }
+        var nextChapter: String?
+        if tier == .normal, order + 1 < StageDatabase.chapters.count {
+            let next: Chapter = StageDatabase.chapters[order + 1]
+            if let first = next.stages.first,
+               !CampaignService.isUnlocked(first, player: before),
+               CampaignService.isUnlocked(first, player: after) {
+                nextChapter = next.id
+            }
+        }
+        return StageClear(
+            serial: serial,
+            stageID: stage.id,
+            chapterID: road.id,
+            stageIndex: place,
+            firstClear: firstClear,
+            starsBefore: starsBefore,
+            starsAfter: max(starsBefore, starsAfter),
+            chestsEarned: chests,
+            conquered: conquered,
+            tierOpened: opened,
+            chapterOpened: nextChapter
+        )
+    }
+}

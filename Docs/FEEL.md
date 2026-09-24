@@ -1082,6 +1082,68 @@ the middle for 16 s (`[TourCue] cutin`, frame `6-battle-cutin`).
   - A tap must still land everything at once (`finishOpeningNow`).
   - Keep the drum roll off bulk power-ups.
 
+**As built (2026-09-24):** `RewardTier` (plain, rare, epic, legend) and
+`RewardTile.tier` (Components.swift) read a spoil's tier off what it is: a
+relic by its quality (Normal and Magic plain, Rare, Hero epic, Legend) and
+an awakened relic a legend whatever it rolled; a scroll by what it summons
+(Light & Dark a legend, Divine an epic, Unknown and Mystical plain, the rest
+rare); a stone by its tier's quality; an awakening cache and a 6★ boon cache
+epic; pure aether epic and an element's rare; a high essence, divinity and a
+relic cache rare; a unit by its stars; every other currency plain — and an
+auto-repeat's scroll, which carries no key, by its tint
+(`SpoilsShelf.tier`). The rest is Pantheon/UI/Battle/SpoilsBeats.swift's.
+`SpoilsShelf.ordered` lands the shelf plain first and the best last, in the
+order won within a tier, and keeps the twelve BEST of a longer haul (it kept
+the first twelve). `SpoilsTimeline` lands a tile every 0.14 s, an epic 0.2 s
+later than that and a legend after the row has stopped 0.35 s, with 0.3 s
+for its drop before the next. `ChestTiming` rattles the chest at 0, 0.26 and
+0.52 s (3, 4.5 and 6.5 cm, the last a hop), lifts the lid at 0.8 s (at 0.2
+with no rattle under Reduce Motion), stands the beam 0.18 s into its swing,
+flashes 1.1 s after the lid and lands the first tile 0.2 s after the flash:
+`RewardChestView.openSequence` plays the motion and `BattleResultView.
+openChest` the sounds and the haptics on the same numbers, 2.1 s from the
+tap to the first tile where it was 1.6. The rattles are the battle's box's
+alone (`RewardChestView(…, rattles: true)`): the tribute card's chest, whose
+grants are listed the moment it is claimed and which sounds none of this,
+keeps the four quick jolts and its lid at `ChestTiming.plainLid` 0.32 s, as
+every chest did before (a review caught it shaking in silence for most of a
+second). `RewardTierAura` lights a tile as it lands — a blue pool under a
+rare's socket, a violet light behind an epic, and for a legend a column of
+gold with `AngularGradient` rays turning once in 12 s (still under Reduce
+Motion), all `.plusLighter` — and the tiles stand `onGlass` on a dark tray
+(`Theme.socketFill` in `glassRim`): added light on the cream marble was a
+wash. A legend drops in from 1.4 where the rest pop up from 0.4, and the
+whole panel takes a `keyframeAnimator` jolt (`LandingJolt`: 5 points down, a
+shiver across). The sounds are `tools/sfx.py spoils` (the pinned VSCO CC0
+library): `chest_rattle_1`–`3`, `chest_open` (the creak, the thud on the
+hinge at 0.32 s, a clank and the beam's shimmer as one file, so they cannot
+drift from the lid), `spoil_1`–`12` (D major's pentatonic from D5 to E7 in
+glass and glockenspiel, a step a tile, the top note past twelve) and
+`spoil_legend` (three rising notes, with a heavy haptic); every file peaks
+at or under 0.89 and the fullest box sums to 0.887. **The backdrop:**
+`BattleView.reckon` takes `SCNView.snapshot()` (`BattleSceneController.
+snapshotField`) 0.35 s into the reckoning, once the plates have faded,
+rather than as the result arrives, and `BattleStill.soften` scales it to 720
+pixels, blurs it (σ 1.2% of the long side, the edge clamped), darkens and
+desaturates it off the main thread; the chest and the box stand over it
+under a 0.5 scrim, where they stood on black at 0.84. The still and its
+lighter scrim belong to the chest's phases alone (`stillShown`): the
+level-up between the reckoning and the chest keeps its 0.84 over the live
+field, which a review caught washing out its shafts at 0.5, and a still
+that is ready only after a quick tap has put the chest up fades in. **The
+relic power-up:** one attempt plays `relic_roll`, then `relic_ring` or
+`relic_crack` `AudioLibrary.Sound.rollLead` (0.26 s) later; a run to +N
+rings or cracks once with no roll. The glow and the shake still land at the
+tap — the screen's picture was outside this lane — so the verdict's sound
+trails its picture by a quarter second until both are moved onto
+`rollLead`. A tap lands everything at once (`finishOpeningNow`) and still
+plays a legend's beat once if it had not played. `-tour-spoils legend` gives
+the demo win a Pantheon scroll, a Divine scroll and its relic as a Legend,
+over the Duat's painting softened (`BattleStill.painting`): `[TourCue]
+spoils-legend`, frame `20-victory-legend`. The tour's closed chest waits
+1.72 s where it waited 2.2, so its lid still rises when `20-victory-b` is
+taken.
+
 **W2.3 The ten-pull as one ceremony.**
 - **What:**
   1. One charge on the W1.5 ladder, climbing to the BEST grade in the ten.
@@ -1108,6 +1170,81 @@ the middle for 16 s (`[TourCue] cutin`, frame `6-battle-cutin`).
 - **Cost:** free, two to three days. An optional painted card back is 6 credits.
 - **Risk:** "Summon again" makes spending faster. It spends in-game scrolls only;
   read it against `Docs/STORE.md`'s review notes.
+
+
+**As built (2026-09-24):** `Pantheon/UI/Summon/SummonBoard.swift` (the rules:
+`SummonBoard`, `SummonBoardLayout`, `SummonBoardClock`, `SummonAgainOffer`,
+`RevealLift`; the views: `SummonBoardView`, `SummonBoardCard`,
+`SummonCardBack`, `SummonTallyLine`) and `SummonRevealView`'s `RevealPhase`
+— `single`, `tenCharge`, `board`, `featured(N)`, `summary`, `replay(N)` — in
+place of the old index and grid. A pull of several opens on ONE charge
+(`startTenCharge`) on the W1.5 ladder, climbing to the best grade in it
+(`SummonBoard.headline`: the most stars; among equals a Light or Dark form,
+whose charge parts at the top, then a new one, then the earliest), its stems
+and rungs read off that pull's stars alone, on the middle of the frame
+(`RevealGeometry.boardLine`) with no stage mounted and its clock running from
+the first frame; a tap lands it, never past it. The flash is the best grade's
+burst, and the ten fly out face down from where the light was (0.42 s each,
+20 ms apart) onto a 5 × 2 board (`SummonBoardLayout.make`: the largest card
+up to 96 points that fits two rows of five with their names between Skip's
+66-point band and a 46-point foot — 96 on the CI's phone and an SE, 91 on a
+13 mini, never a scroll). They turn left to right 90 ms apart, 0.32 s each on
+the vertical axis, a tick each; a card whose face is a 4★, a 5★ or a unit
+never owned lands with a rim flare in its grade's glow (a ring swelling off
+it, a glow that stays, a 5★'s rays), its step of the glockenspiel and a
+touch, and the board STOPS on it: the turns still waiting wait, the turns
+already under way finish (a turn cut short would tell), and 0.55 s later the
+card lifts off (`RevealLift`: 0.45 s, eased out, growing 1.45×) to the
+figure's line while the board steps aside. The figure lands as soon as its
+stage is ready and the card has arrived — no second ladder: the charge
+stands at its grade's summit round the card (`ChargeFraming.summit`). A tap
+on the figure hands back (`returnToBoard`): its stage is unmounted, and so
+dismantled, the board steps back in and its run carries on, so a ten holds
+one set at a time; a tap on the board hurries it to the next featured card.
+Only the featured figures are ever parsed, and ONE AHEAD of the beam: the
+room warms the first before the reveal is up, each next one starts once the
+figure before it has been built (`warmAhead`), and a skip's stop the moment
+the skip picks it. The first cut warmed every featured card at the deal — a
+background parse each, all queued on the one importer lock — so a lifted
+card whose family was not parsed yet built on the main thread behind as many
+as ten (review, 2026-09-24). A card that is not featured parses only if the
+summary replays it. The summary: SUMMONED carved at the top left under the
+scroll's name ×10, the ten named under their faces, the tally ("1 ★★★★★ · 2
+★★★★ · 3 new", `SummonBoard.tally`, counting up as the cards land), the pity
+after the pull counting down as the room's chip does ("5★ in 78 · 4★+ in
+17"), and "Summon ×10 again" (`SummonAgainOffer`, from
+`SummonView.againOffer`), which spends scrolls in hand and nothing else:
+short of them it is dimmed with "×10 needs N more" and no way to buy.
+Docs/STORE.md's Guideline 3.1.1 note is about disclosing the odds before a
+PURCHASE, and the plate is never one; the banner's odds stay one tap away in
+the room. The reveal it replaces leaves after the new one has appeared, so a
+reveal leaving hushes only a charge of its OWN still sounding (`charging`):
+an unconditional hush took the new ten's opening drone (review). A tap on a
+card replays its reveal, lifted off the board as the first time
+(`openReplay`); a tap on the replay returns to the summary. Skip (W2.23)
+carries over: on the board it lifts the first card up and waiting that is
+worth seeing and passes over the ones before it (`RevealSkip.boardWaiting`,
+which its words read too — they read only the head of the queue at first,
+so a duplicate 4★ there named the new 4★ still face down while a press
+lifted the 5★ waiting behind it; review), else runs the face-down cards 40
+ms apart to the next 5★ or NEW 4★ (`RevealSkip.boardStop`) — featured cards
+on the way flare but do not lift, and the summary replays them — else turns
+everything for the summary; a press while a tap on the board runs to a card
+not worth a skip's stop (a duplicate 4★) runs on past it to the card the
+words name. The words are read off the cards that have LANDED
+(`RevealSkip.boardLabel`), so they change only at a landing; a hold goes to
+the summary from anywhere. `jump(to:)` and the grid are gone. The spec named
+`UnitCard`s: the board wears `UnitPortraitTile`, the glass tile every place
+over a painting wears (phase B's rule — dark glass over art; the reveal's
+dusk is art), its stars bright inside the grade's metal and the full-figure
+cards cropped to a bust, with NEW or W1.5's duplicate chip. Reduce Motion:
+the cards are dealt where they lie, turn as a crossfade, flare without the
+ring or the rays, and lift at once. Tour: `-tour-reveal board` (the same ten
+turned with no card lifted, `[TourCue] reveal-board` over the full board,
+then `reveal-summary`); `-tour-reveal ten` and `-tour-reveal-skip`
+photograph the board's path. The memory stress plays each ten as one reveal
+that moves itself on (`SummonRevealView.autoAdvance`). Tests:
+`SummonBoardTests`.
 
 **W2.4 The summoned figure's entrance.**
 - **What:**
@@ -1200,6 +1337,61 @@ entrance rows of `SummonRevealFeelTests`.
 - **Cost:** free, a day.
 - **Risk:** it must wait for the victory to finish dismissing, and repeats must
   not replay it.
+
+
+**As built (2026-09-24):** `StageClear` (CampaignService.swift) is what one
+settled run changed on its road, computed where a stage settles —
+`GameStore.finishCampaignBattle` and the sweep, through `noteClear`, so a
+fought run and a swept one share it (a swept stage is at three stars
+already, so it plays nothing): the stage, whether it was a first clear, the
+stars before and after, the tribute chests newly earned, and on a road's
+first end the chapter conquered, the tier it opened (Normal's end opens
+Hard, Hard's Hell) and — on Normal — the next chapter. It is nil for a
+repeat, a loss and anything off a road (the Labyrinth, the Halls, a raid); an
+auto-repeat's runs of one stage merge into one beat, the first run's before
+and the last run's after. `GameStore.lastClear` holds it, `@Published` and
+never saved; the map lets it go once played or left mid-beat
+(`finishClearBeat`), so a repeat never replays it. The spec named a
+`phaseAnimator`: the beat is `MapClearTimeline`, pure times read off the wall
+clock in a `TimelineView`, because a phase animator cannot sound its phases,
+hold one for the CI or tell the strip when to unseal, and it restarts
+whenever its view is rebuilt (the reveal's lesson, run 221). The medallion
+turns on its vertical axis from the stage the player stood at to gold (0.5 s,
+a first clear only); each new star stamps from 2.5× with a small dip (0.22 s,
+0.16 apart); the leader's face walks the NODE line in three hops to the stage
+the clear opened (0.6 s) and that stage's lock breaks into four (0.5 s); each
+chest the clear earned jumps with a column of light (0.9 s, 0.25 apart); and
+a road's first end runs CHAPTER CONQUERED across the map (`ConqueredRibbon`,
+2.4 s: the realm and the chapter over the words carved on a dark band between
+gold rules, wiping in, the name card's light swept across once, drifting
+out). As the ribbon lands (0.35 s in) the tier it opened unseals on the
+strip: `TierChips` holds that tier SHUT, and the conquered one uncleared,
+until then, and the chip's lock falls off (`TierLockFall`). The sounds and
+touches are timers at the same times: a whoosh as it turns, a tick as it
+lands gold, the glockenspiel's next note per star, a step per hop, a knock at
+the lock, a chime per chest, the realm's horn at the ribbon, a confirm at the
+unseal. It waits for the victory to finish DISMISSING: `awaitClearBeat` looks
+every quarter second until nothing is presented over the app (`coverIsUp`: a
+presented controller stays in place until its dismissal has finished) and no
+card or scroll stands over the map, then takes a 0.35 s breath; until then the
+road is drawn as it stood BEFORE the clear (`pendingLook`), so the beat
+starts where the player last saw it. A boss's first fall on Normal leaves
+the next chapter's city for the world road (`GameStore.pendingCityIgnition`,
+taken once): the road scrolls to it and, 0.6 s on, draws the road into it in
+gold and lights it — a ring, a flare, its lock falling
+(`WorldRoadMapView.igniteIfOwed`, 1.4 s). Only a city ON the painting
+lights: Rome and the Jade Court have no city there yet, so the chapter a
+road's end opens among them (after Yggdrasil 3, Rome 1, Rome 2 or Jade 1) is
+taken and let go — the first cut sounded the flare and its heavy touch over
+an empty road and scrolled to an id no city carries (review, 2026-09-24) —
+and a player past the painted road opens the road on its last city. Reduce
+Motion: no turn and no hop (the face moves at half way), the stars light
+where they stand, the shards and the city's lock fade in place, and the
+ribbon fades in and out with no wipe, drift or sweep. Tour: `-tour-map-clear`
+(the Duat's boss, over `ChapterMapView.tourClearWalk`), `-tour-map-clear
+road` (its third stage), `-tour-road-ignite`; each beat holds for its frame
+(`MapClearHold`) and prints its `[TourCue]` (`map-flip`, `map-conquered`,
+`map-unlock`, `road-ignite`). Tests: `MapClearTests`.
 
 **W2.6 Layered hits.**
 - **What:** four variants of every hit tier. Each variant is:
@@ -1470,6 +1662,49 @@ frame `18-dungeon_battle-boss`).
 - **Cost:** free, a day.
 - **Risk:** never reorder under a pressed finger.
 
+
+**As built (2026-09-24):** `QuestService.claimAllMissions`, `claimAllFeats`
+and `claimAllCounsel` are the existing claims looped until a pass claims
+nothing — the missions in the table's order and then the Daily Tribute they
+open, the feats in theirs, the Counsel's current tier in Athena's order and
+then its prize, stopping there (the next tier's steps are rows the list has
+not shown yet) — behind `GameStore.claimAllMissions()`, `claimAllFeats()`
+and `claimAllCounsel()`. `QuestTests.testClaimAllPaysWhatClaimingOneByOnePays`
+asserts the same save and the same grants in the same order as one by one,
+with four more cases (only what is ready; the Feats; the Counsel; a tier's
+prize taken and the next tier left). In `MissionsView` the list leads with a
+40-point line — "N READY TO CLAIM", and from two the CLAIM ALL plate (gold,
+its seal and the count) — the same height with the plate or without it.
+Ready rows stand first when the list opens, and the order is FROZEN between
+settles (`order`, `settled`): a claim stamps its row where it stands, and the
+list settles 1.1 s after the last claim — only with no finger on a claim
+plate (`TrackedPress` wraps the game's press and reports it per plate, a
+cancelled press included) and no seal still to stamp, looking again every
+0.4 s, and never once the screen has gone — sliding the claimed rows into a
+COMPLETED group at the foot. A change the screen did not make (midnight's
+new day, the CI's seed) re-freezes it at once while it is idle
+(`standingKey`). A plate's own claim takes its press off at once (a button's
+action runs on the lift), and a plate taken away under a finger reports the
+lift as it leaves (`TrackedPressBody`): a claim REMOVES its plate in the
+update that lifts the finger, a removed view hears no `onChange`, and the
+first cut's count, left at one there, could hold every settle and the
+midnight re-freeze for good (review, 2026-09-24). Every row, the lead line
+and the group's header have stable ids, so a settle MOVES rows. The claim:
+the DONE seal (`DoneSeal`: DONE in Cinzel in a gold rim) stands in the row
+from the start, clear until the claim, then is struck in from 1.9× turned
+−18° through 0.92× and springs to rest at −8° (`Motion.settleSpring`),
+landing 0.14 s in with a thud (`.hitBlunt`) and a touch while the row shakes
+4 points and dims to 0.62; Claim All stamps down the list 70 ms apart, the
+last firmer, under one receipt (`CodexService.merged`). The bars are 6
+points of gold on a groove (`MissionBar`; a 7-point `StatBar` before),
+breathing (`phaseAnimator` on `Motion.ambient`) once full and waiting; the
+Daily Tribute's eight pills (`TributePills`) are grey while their work is to
+do, ringed gold when ready, and gold with a tick that pops in as each is
+claimed. Reduce Motion: the seal from its own size with a short fade, no
+shake, no breath. Tour: `-tour-missions-ready` (`GameStore.seedTourMissions`:
+two ready under CLAIM ALL, the other six claimed in the COMPLETED group with
+their seals).
+
 **W2.13 The carved name card.**
 - **What:**
   - **The plaque:** a dark glass plaque with a rim in the rarity's metal slides
@@ -1548,6 +1783,48 @@ Tests: the card rows of `SummonRevealFeelTests`.
   - The mileage and selector reveals get the same treatment.
 - **Cost:** free, a day.
 - **Risk:** check on the phone that no white frame flashes before the reveal.
+
+
+**As built (2026-09-24):** `Pantheon/UI/Summon/SummonShot.swift`
+(`SummonShot`, `RevealGeometry`, `RevealDusk`, `SummonScrollArt`) and
+`SummonView.perform` → `windUp`, `beginShot`, `present`, `finishReveal`. The
+press resolves the summon first (a refusal lights nothing), warms the lead
+figure (`SummonBoard.firstStage`: a single's own, a ten's first featured
+card), and the room winds up for 0.35 s as before. It is ONE summon from the
+press to the reveal: the wind-up sets the room's `isCharging` at once and only
+`present` clears it, as the results go up, and the shot's layer and the tab
+bar take every touch from the press on — the first cut left the wind-up
+open, where a second press spent again and stranded the first pull (a 5★,
+perhaps) behind a newer shot, and the banner under the scroll could change
+(review, 2026-09-24). Then the scroll LIFTS OFF its ring — the circle stops
+drawing its own (`SummoningCircle.scrollLifted`) and reports where it hung in
+window points (`scrollFrame`, off the same `scrollPlace` it draws with) — and
+flies 0.55 s on an eased arc that rises 22% of the distance above the
+straight line, growing to the square the reveal's charge will hold it in
+(`RevealGeometry.openingScroll`: 24% of the height, on the beam's line — 26%
+of the width for a single, the middle for a ten — 42% down), turning to the
+charge's −12°, its light going from the scroll's own colour to the ground
+rung's blue-white, while the room fades to the reveal's own dusk
+(`RevealDuskScreen`, the sky and the vignette the reveal is drawn on, now one
+definition) and the tab bar dims. Its pose is a pure function of the clock
+(`pose(at:)`), drawn in a `TimelineView`. At the landing the room sets the
+reveal's results inside a `Transaction` with `disablesAnimations`, so the
+cover comes up with no slide, over a `presentationBackground` of that same
+dusk, and the reveal's charge comes up round the scroll it was handed
+(`openingScrollFrame`, `RevealGeometry.handoff`: 0.3 s, the rings, the pool,
+the beam, the motes and the flare drawn at that share, the scroll settling
+from the handed square into its own place); the flying scroll stays 0.35 s
+under the cover so no frame is without one. The reveal leaves the same way,
+with no animation, over the room still at full dusk, which then fades over
+0.45 s with the scroll back on its ring. The mileage and selector picks take
+the same shot once their sheet has finished leaving (`.sheet(onDismiss:)` →
+`playPendingGift`); "Summon ×10 again" (W2.3) builds a fresh reveal in place
+(`.id`) round its own scroll. With Reduce Motion — or no window or ring to
+measure — the room fades to the dusk over 0.25 s and the reveal cuts in: no
+flight. The pure parts are tested (`SummonBoardTests`: the flight ends on the
+reveal's own square, the arc lifts, the charge comes up over 0.3 s). On the
+phone only: that no white frame shows between the two — every layer between
+the room and the reveal's first frame is the dusk.
 
 **W2.15 The figure stages answer a touch.**
 - **What:** in the Hall of Ka, the Collection stage and the reveal's hold:
@@ -1628,6 +1905,38 @@ Tests: the card rows of `SummonRevealFeelTests`.
 - **Cost:** free, half a day.
 - **Risk:** too much roll reads as "slanted", which the owner has rejected
   twice. Keep it at 2.2° or less and judge it on the phone.
+
+**As built (2026-09-24):** `CameraShake` (Pantheon/Render/CameraShake.swift).
+A hit adds trauma by its weight as its freeze lets go (`Juice.Profile.
+trauma`: 0.18 a normal hit, 0.32 a heavy one, 0.42 a crit, 0.55 a kill,
+nothing for a glance); a boss climbing over the rim holds a floor of 0.3
+through the climb and 0.36 as it sinks back (`BossEntrance.rumbleTrauma`,
+`CameraShake.rumble`), and its roar adds 0.8 (`roarTrauma`). Trauma falls
+1.8 a second times the speed, and the shake is its square: a roll up to
+2.2°, a yaw and a pitch up to 0.6°, and 3 cm across the lens's own x and y,
+each channel its own stretch of one smooth gradient noise (Perlin's in one
+dimension, the quintic fade) at 14 cells a second. The kick is 4 cm (5 for
+a heavy blow or a crit, 6 for a kill) along the blow's line from striker to
+victim as the rig's right and up see it, out in 35 ms and eased home by
+200 ms. ×2 adds the same trauma and loses it twice as fast; ×3 adds √½ of
+it — half the shake — loses it three times as fast and kicks half as far,
+as the sine was halved; nothing moves under Reduce Motion, and the shake
+holds through a hit-stop as the world does. **The rig:** the controller's
+`buildCamera` hangs the camera under `camera_rig` (there is no
+`CameraDirector.buildCamera`; the director is handed its two nodes,
+`CameraDirector(rig:lens:)`). Every move the director makes — home, the
+skill zoom, the final blow, the triumph's frame, the cinematic cuts — writes
+the RIG, `stopMoves` no longer touches a shake, and `CameraShake.apply`
+writes the LENS alone, in the rig's own frame, from `renderUpdate`
+(`renderer(_:updateAtTime:)`) after the spotlight, so `projectPoint` in
+`willRenderScene` reads the shaken camera and the plates, the words and the
+head marks shake with the world. The main thread only adds, under a lock.
+The view's `pointOfView` is set by name (`onCameraBuilt`, `currentLens`) now
+that the camera no longer hangs from the root. `-tour-shake` pins the lens
+at the PEAK — every channel at its maximum at once, which no real frame
+reaches, since the channels never peak together — and holds the world 16 s,
+three seconds after the card lifts (`[TourCue] shake`, frame
+`6-battle-shake`): the tilt is judged there against `6-battle-a`.
 
 **W2.19 A haptic vocabulary.**
 - **What:** named Core Haptics patterns (Apple's library for custom
@@ -1714,6 +2023,53 @@ Tests: the card rows of `SummonRevealFeelTests`.
   - The head mark is a sprite ring, so no particle rule applies.
 - **Cost:** free, half a day.
 - **Risk:** keep the pop's temporary size out of the plate declutter.
+
+**As built (2026-09-24):** `UnitPlate.applyStatuses` (BattleSceneView.swift)
+diffs its tiles by kind: a kept tile slides to its new place in 0.18 s, a
+new one pops from 0.2 through 1.28 to 1 with a flash and four sparks in the
+blue of a buff or the red of a debuff, an expiring one shrinks away, and a
+debuff taken off by a cleanse — `.statusRemoved` not by a strip, not a buff,
+not a bomb (`UnitNode.removeStatus(_:cleansed:)`, `StatusTileExit.cleanse`)
+— is wiped: a streak of light crosses it as it lifts out. The plate's
+declutter reads the tiles' FINAL layout, never a pop's size (the Risk).
+**The push:** `.attackBarChanged` already carries it (the entry's "old
+value"), and it floats a chip — `PlateArt.pushChip`, a capsule with an
+arrow, "+25%" in blue and "−50%" in red, with a float's clear edge and
+shadow — as one of its unit's FLOATS (`BattleSceneController.floatPush`): it
+pops at the chest and rises to rest under the plate, just under the bar it
+moved, stacks with the unit's other floats newest lowest, keeps off every
+other plate and the HUD, and fades where it stands when its unit leaves the
+frame, as every float does (`layoutFloats`); a boss's stands beside its
+head, as its words do. It was first built off the plate's right end at the
+attack bar, and a review caught what that cost: an enemy's plate reaches 60
+points left of its centre and 54 right with the enemies about 118 apart, so
+the chip lay over the next plate's level badge, and a second chip landed on
+the first. Two relic sets top a bar up on their own clock and float nothing
+(`BarPush.chipPercent`): Ichor, for its wearer's next turn as each of that
+wearer's turns opens, and Nemesis, on every blow its wearer takes — a chip
+every turn, and three on one spot off a three-hit. The engine does not say
+where a change came from, so the controller reads it off the events round it
+(a gain on the actor between its `.turnBegan` and its cast; a gain on the
+unit a hit has just struck) and off each unit's sets (`registerMaxHealth`),
+which today's engine order makes exact; a skill's, a passive's, a boon's, a
+regalia's and a resonance's push all float. **The head mark:** a stunned,
+sleeping or frozen unit wears one (`HeadMarkKind.of`: a freeze over a stun
+over a sleep): three stars, Z's in Cinzel or frost flakes round an ellipse
+34 × 10 points, a lap every 1.6 s (`StatusHeadMark`), on the overlay's
+`markLayer` under the bursts and the words. `layoutPlates` places it every
+frame round the head, 4 points under the top of the figure as the plate
+reads it — the standing height, lowered with a body going down — rather
+than off the head joint, which swings with every clip; a boss's at 0.95 of
+its height at 1.8 times the size. All of it is sprites on the SpriteKit
+overlay, with no SceneKit particle and so no host to retire. Under Reduce
+Motion the tiles fade in and out, the chip fades in rather than pops (it
+rises as every float does) and the mark does not turn. `-tour-status`: three
+seconds after the card lifts, a Defence Break and a Stun on the leftmost
+enemy, −50% on the enemy beside it (on the stunned one the resting chip
+would lie over the stars), an Attack Up and +25% on the first of the team,
+the world and the plates held at the tiles' pop for 16 s with the stars set
+at full strength (`holdForTour`: the hold caught their fade-in at 45%),
+`[TourCue] status`, frame `6-battle-status`.
 
 **W2.23 Skip that never swallows a 5★.**
 - **What:**
@@ -1823,6 +2179,64 @@ Skip. Tests: the Skip rows of `SummonRevealFeelTests`, among them
   - The card must never hold longer than the build does, except for its
     0.6 s floor.
 
+**As built (2026-09-24):** every site that opens a `BattleView` — the
+campaign, the Labyrinth's dungeons, Tower and Titans, the Shrines, the arena,
+the Draft Arena and the guild war from the island and from Settings, nine in
+all — sets its cover's binding through `BattleCover.open` (StageCard.swift)
+inside a `withTransaction` that disables animations: a cover presents with
+the transaction its binding changed in, so the one helper at the binding does
+what a `.transaction` modifier on each cover was meant to. The cover opens
+straight onto `StageCardView`, a `UIViewRepresentable` whose moving parts are
+Core Animation's, because the build holds the main thread for a tenth of a
+second to four (run 245) and a SwiftUI animation stops with it: black at
+once, the realm's painting decoded off the main thread at the screen's pixels
+(ImageIO, 2048 at most) fading up and pushing in 7% over nine seconds, and
+the carved plate (`StageCardArt.plate`, drawn once: dark glass in a gold rim,
+"REALM · PLACE" between two rules, the stage's name in carved gold at 30
+points shrinking to fit, "3 WAVES · HARD · BOSS", and STAGE POWER against
+YOUR TEAM, green when the team meets it and rose when it falls short — a
+rival's name and power for the arena, a war or a draft) springing up from
+0.94, a glow breathing behind it and a light running across it every 2.6 s.
+The fight is built 0.06 s after the card is up (`BattleViewModel.
+beginUnderCard`); the card stands `StageCardTiming.minimumHold` 0.6 s at
+least and until the controller has drawn its first frames and the
+pre-draw's (`onStageShown`: the count the veil lifted on, which `frameDrawn`
+already keeps from the governor-wrapped `didRenderScene`, rather than a
+second report from the governor), or 5 s after the build, then dissolves in
+0.5 s (0.32 at ×3, 0.3 under Reduce Motion). The queue is held under it
+(`cardHolds`), so the fight's opening — the horn call, an opening boss's
+rise, a chapter boss's line, what waited for the stage to be seen — plays as
+the card goes (`BattleSceneController.revealField`), which also prints
+`[TourCue] shown (why)`. **The pre-draw:** `EffectPlan.of`
+(Pantheon/Render/EffectPlan.swift) lists what the fight can draw from every
+wave's fighters, a later wave's read off its blueprints: each skill's named
+effect (`impact_generic` as the caster's element), every fighter's element
+impact, the crit, buff, debuff and heal, a melee fight's slash and
+shockwave, a projectile per ranged element, a boss's rim dust.
+`VFXLibrary.predraw` draws all of it at FULL strength on a 1.5 m grid at the
+field's middle, with a standing sheet, a ground sheet, a soul column and
+light, the cast ring and a swing's ribbon (`UnitNode.predrawPieces`) and the
+plates' additive sprites. At 1%, as this entry had it, an opaque piece
+compiles the blended pipeline rather than its own, and the card hides the
+field anyway. Every host an effect makes during the call hangs from one
+holder (`VFXLibrary.stageRoot(of:)`), the effects' own lights stay off
+(`flash` is quiet under a pre-draw), and `PredrawStep` stands one, two and
+then three faint omni lights (intensity 12) over successive pairs of frames
+— and a later wave's boss's spot, with and without a flash — so the
+figures' and the set's shaders are compiled for each light count a fight
+reaches. The last step takes the holder off through `VFXLibrary.retire`; a
+card that leaves before it `dismiss`es it. **The way out:** Continue calls
+`BattleView.leaveFight`: a new card fades up over the reckoning in 0.38 s,
+holds 0.3 s, and `BattleCover.close` dismisses with no slide. Under Reduce
+Motion it fades up in 0.2 s and holds 0.25: the wait is read off the same
+numbers the card fades by (`StageCardTiming.arrivalOut(calm:)`,
+`leaveWait(calm:)`), so the cover never closes on a card still arriving (a
+review caught it closing at 0.3 s on a card at nine tenths). An
+auto-repeat's later runs build under no card (the controller's
+`holdsForStageCard` is taken by the first build). The black veil
+(`stageShown`, `veilLimit`) is gone. `-tour-card` holds the card 16 s once
+the stage has been drawn (`[TourCue] card`, frame `6-battle-card`).
+
 **W2.25 The lineup built by hand.**
 - **What:** in `TeamPickerView`:
   - **Cards fly:** a card tapped in the roster flies to its slot and lands
@@ -1895,6 +2309,31 @@ Skip. Tests: the Skip rows of `SummonRevealFeelTests`, among them
   - The simulator's GPU is not a phone's, so read CI's numbers as trends
     between runs. The absolute numbers come from the phone's Diagnostics.
   - Keep every histogram write off the main thread.
+
+**As built (2026-09-24):** `FrameMeter` (Pantheon/Render/FrameMeter.swift),
+one in each `StageRenderGovernor` — the battle, the reveal and the island are
+the stages that wear one; the altar, the collection's Stage and the chest
+are set up without `GraphicsSettings.configure` and print nothing yet. Every
+`renderer(_:updateAtTime:)` puts the interval since the last into a
+`[UInt32]` of 256 half-millisecond buckets (the last holds everything past
+127.5 ms), allocated once, bumped under a lock on the render thread before
+the stage's own work; a gap of 2 s or more is a stage that stopped drawing
+and is left out. Its line — `[Frames] battle p50 16.8 p95 18.3 p99 41.3 · 3
+over 33 ms of 1,812, the longest 120 ms`, the percentiles read off the
+histogram — goes to the console and to More → Diagnostics when the stage
+goes ("(the stage gone)", from the governor's deinit) and, under `-tour`,
+every 3 s of drawing, so the line nearest a photograph is never more than a
+few seconds old; a single frame over 100 ms prints `[Frames] battle hitch
+412 ms at 3.1 s` (24 lines a stage at most). A line's string is built only
+when one is due. `tools/ciframes.py` prints each launch's latest line per
+stage — a relaunch's labelled with its arguments — and the first eight
+hitch lines beside the step's console, as FRAMES. **The island** draws at 60
+while touched: `IslandView.touchIsland` sets `isInteracting` on every drag
+and pinch change and on a figure's tap (for the 1.8 s of its answer) and
+lets it fall half a second after the last, and `IslandSceneView.
+framesPerSecond(interacting:choice:)` gives 60, or 120 where the player chose
+ProMotion, and keeps a battery cap's 30. A decoration moves through its
+sheet, not a gesture on the island, so nothing else sets it.
 
 **W2.27 Readable and touchable on the smallest phone.**
 - **What:**

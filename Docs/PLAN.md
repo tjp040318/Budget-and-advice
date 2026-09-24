@@ -8719,3 +8719,337 @@ was a second error. The local is `anonymous`, and swiftcheck has a rule for
 the whole class (`check_keyword_bindings`: a `let` or `var` named with any
 reserved word but `self`), proven on this line and silent on the rest of the
 tree.
+
+
+## The premium feel, Wave 2: the summon and the menus (2026-09-24; `Docs/FEEL.md` W2.3, W2.14, W2.5, W2.12)
+
+Batch B, built by one agent on the summon's, the chapter map's and the
+missions' own files (`SummonRevealView`, `SummonView`, `RevealSkip`, two new
+files in `Pantheon/UI/Summon`, `CampaignMapView`, `MissionsView`,
+`GameStore`, `QuestService`, the settle path in `CampaignService`) while
+another built the fight's; the shared files (`TourView`, build.yml, these
+docs) were handed over as changes. `Docs/FEEL.md` has an *As built*
+paragraph under each item. The genre's own pages are refused by this
+environment's network policy, so the genre's side is what is known of the
+games [recalled], and ours is measured in the code and the frames [ours].
+
+### What the genre does
+
+- **The ten-pull.** Summoners War made its 10× summon because single
+  reveals were slow: one summoning for the ten, the results laid out
+  together, a 4★ or a 5★ given its own moment [recalled]. Genshin plays one
+  meteor for a ten, coloured by its best pull, then the cards in turn, a
+  5★'s splash kept through a skip; Star Rail the same; Epic Seven turns the
+  cards over and pulls a 5★ out for its own scene; every one of them ends on
+  the ten laid out with "again" in reach [recalled]. Ours was ten charges and
+  ten taps ending on a grid of 74-point tiles that scrolled and was never
+  photographed [ours].
+- **The continuous shot.** Summoners War's scroll flies into the circle on
+  the same screen; nothing slides up from the bottom [recalled]. Ours was a
+  dip over the ring, a system sheet sliding up, and a second scroll [ours].
+- **The map after a clear.** AFK Arena returns to its world map on a chapter
+  clear and walks the hero to the next node; Summoners War stamps the stars
+  a stage earned; a chapter's end gets a banner of its own [recalled]. Ours
+  was the same map before and after (`13-chapter_map`) [ours].
+- **Claim All.** Summoners War: Chronicles added "Complete All"; Star Rail
+  and AFK Journey keep the daily track's prize at the head of the list and
+  what is ready first; a claimed row is stamped, not removed [recalled]. Our
+  Codex already had one [ours].
+
+### The options, and the choice
+
+- **W2.3, the ten.** (a) The spec's board: one charge to the best grade,
+  cards flipping 90 ms apart, a featured card stepping out for its full
+  reveal, a summary that fits. (b) Genshin's: one meteor, then every card in
+  turn with a quick skip. (c) The old ten reveals with a better grid.
+  **Chosen: (a)** — the genre's answer to a slow reveal that still gives a
+  5★ its whole 3D moment. Within it: a featured card LIFTS off the board to
+  the beam while the board steps aside, rather than the board cutting away,
+  so the eye follows one object; its figure lands without a second ladder,
+  its face having told the grade; only featured figures are warmed, and ONE
+  AHEAD of the beam (a ten of new commons would otherwise parse ten figures
+  — the memory hunt's lesson — and every warm is a parse of its own on the
+  one importer lock, so ten at once stand ahead of a lifted card's
+  main-thread build); turns already under way finish when a featured card
+  lands (cutting them short would tell); Skip keeps W2.23's order and reads
+  its words off LANDINGS. The card is the glass `UnitPortraitTile`, not the
+  spec's `UnitCard` (phase B: dark glass over art). "Summon again" spends
+  scrolls in hand only and offers no purchase.
+- **W2.14, the shot.** (a) The room draws the flight and hands over to a
+  cover presented with no animation over a dusk that is the reveal's own.
+  (b) The reveal as an overlay in the room, not a cover — no presentation at
+  all, but it would stand under the tab bar and the strip and change every
+  screen that opens a reveal. (c) A `matchedGeometryEffect` — it does not
+  cross a presentation. **Chosen: (a)**; the room's landing square and the
+  reveal's scroll square are one function (`RevealGeometry.openingScroll`),
+  tested.
+- **W2.5, the map.** The spec's `phaseAnimator` against a timeline read off
+  the wall clock. **The timeline**: a phase animator cannot sound its
+  phases, hold one for the CI or tell the strip when to unseal, and it
+  restarts whenever its view is rebuilt (run 221's lesson). The face walks
+  the node line, not the painted road (the spec's call: the painted roads
+  wander off the line between the medallions). The beat waits for the
+  victory's cover to finish leaving by looking at what is presented: a flag
+  set by the battle's view would be another lane's file, and a timer would
+  guess.
+- **W2.12, Claim All.** A new service call that pays a sum (fast, and a
+  second path that could pay differently) against the existing claims
+  looped: **the loop**, so it cannot pay what one by one would not
+  (`QuestTests` asserts it). The order: sorted live (a row jumps from under
+  the finger that claimed it), never sorted, or **frozen between settles**,
+  the settle waiting for no finger on a plate.
+
+### The review, before CI (2026-09-24)
+
+A reviewer read the batch before its first run and found six faults; each
+was confirmed in the code and fixed the same day.
+
+- **"Summon ×10 again" silenced its own charge.** The reveal it replaces
+  leaves after the new one appears, and its leaving faded every voice of the
+  charge stems, whoever started them — the new ten's opening drone. A
+  reveal leaving now hushes only a charge of its own still sounding.
+- **Skip's words could name one card and lift another.** They read only the
+  head of the cards waiting to lift, and a press lifted the first worth
+  seeing: with a duplicate 4★ ahead of a 5★ that had finished turning — the
+  CI's own ten — the words named the new 4★ still face down while a press
+  lifted the 5★. Both read `RevealSkip.boardWaiting` now (tested), and a
+  press while a tap on the board runs to a duplicate runs on to the card
+  the words name.
+- **A second press in the room's 0.35 s wind-up summoned twice**, and the
+  first pull — a 5★, perhaps — was never revealed. One summon from the
+  press to the reveal (`isCharging`); the shot's layer and the tab bar take
+  every touch from the press.
+- **The missions list could stop settling for good.** A claim removes its
+  own plate in the update that lifts the finger, a removed view hears no
+  `onChange`, and the press count stayed at one. Presses are kept per
+  plate, a claim takes its own off, a plate leaving under a finger reports
+  the lift, and a settle still waiting ends with the screen.
+- **The world road lit cities it does not have.** Rome and the Jade Court
+  have no city on the painting, and their ignition sounded the flare over an
+  empty road. Only a painted city lights.
+- **The board warmed every featured figure at once**, a background parse
+  each on the one importer lock, so a lifted card whose family was not
+  parsed yet built on the main thread behind as many as ten. Figures parse
+  one ahead of the beam now, and a skip's stop when the skip picks it.
+
+### Still to do
+
+- **Judge the frames:** `5-reveal-ten` (a lifted card over the board, Skip
+  to ★★★★★), `-ten-skipped` (the 5★'s card), `-board` and `-summary` (does
+  the summary fit, are the names whole), `13-chapter_map-clear-flip`,
+  `-clear-conquered` (the ribbon and Hard's chip), `-clear-road` (the leader
+  arrived, the lock breaking), `-road-ignite`, `14-missions-ready`, and the
+  stress step's MEMORY curve for the three tens — and send them to the owner
+  before he tests (rule 1).
+- **On the phone only:** that no white frame shows between the room and the
+  reveal; the flight's landing on the reveal's scroll (the window's bounds
+  against the cover's); a card's turn and flare at 120 Hz; the seal's thud
+  under a scrolling list, and the list settling after a claim whose plate it
+  took away; "Summon ×10 again" keeping its charge's drone; a quick double
+  press on Summon revealing one pull; the map's beat after a real victory's
+  cover and a sweep's receipt.
+- **The owner's calls:** a painted card back (6 credits); "Summon again" on
+  the summary at all (Docs/STORE.md); Claim All on the Feats.
+- **Sounds wanted** (none made; `AudioLibrary` and `tools/sfx.py` are the
+  other lane's): a card's turn (`.starTick` now), a rim flare's sting per
+  grade (the glockenspiel's note now), the scroll's lift-off (`.whoosh`), a
+  lock breaking (`.hitBlunt`), a chest's bounce and beam (`.summonBurst3`),
+  the DONE seal's stamp (`.hitBlunt`), CHAPTER CONQUERED's fanfare (the
+  realm's horn now), a city lighting (`.summonIgnite`), the summary's ledger
+  chime (`.uiConfirm`).
+
+## The premium feel, Wave 2, batch B: the battle's half (2026-09-24; `Docs/FEEL.md` W2.24, W2.2, W2.22, W2.18, W2.26)
+
+Five items, built in the battle's files while another agent built the other
+half of batch B in its own: the way into a fight, the reward box by rarity,
+statuses that land, the trauma shake and the frame count. The research
+first, then the options for each and the one chosen. The genre's own pages
+are refused by this environment's network policy, so the genre's side is
+what `Docs/FEEL.md` checked and what is known of the games [recalled]; ours
+is measured in the code and the frames [ours].
+
+### What the genre does
+
+- **The way in.** Summoners War and Raid put a loading card between the map
+  and the fight, the stage's art with its name; Epic Seven fades to a
+  painting [recalled]. None of them slides a system sheet up over the map.
+  Ours slid a full-screen cover up and opened the fight under a black veil
+  for up to five seconds while its stage built (run 243's white first
+  frame), and drew nothing in advance, so a fight's first ultimate compiled
+  its shaders on the spot — the reveal's lesson of run 221, which the battle
+  had never applied [ours].
+- **The reward box.** Raid colours its shards by rarity [checked]; Genshin
+  and Star Rail tell a five-star by its light and a held beat before it
+  lands [recalled]; the genre's chests shake before they open [recalled].
+  Ours landed every spoil on the same 0.14 s tick, a Hero relic beside
+  drachma (run 245's `20-victory-c`), over black [ours].
+- **Statuses.** Summoners War names each effect as it lands and marks a
+  stunned monster over its head [recalled]; Star Rail moves a pushed or
+  delayed unit along its action order as it happens [recalled]. Ours
+  already floated the name, but a tile appeared with no arrival, a cleanse
+  took tiles off without a sign, and a push moved the bar and nothing else
+  [ours].
+- **The shake.** Eiserloh, *Juicing Your Cameras With Math* (GDC 2016):
+  trauma, a shake of trauma squared, smooth noise per channel, rotation
+  before translation [checked]. Ours was a sine along WORLD x on the camera
+  node itself, which pulled the camera back to a stale point in the middle
+  of a dolly [ours].
+- **Frame pacing.** Uneven delivery feels worse than a steady lower rate,
+  and the gap between the average and the 1% low is the tell [checked:
+  FEEL.md's sources]. We had a main-thread watchdog and no frame count, and
+  the island drew at 30 under the finger [ours].
+
+### The options, and the choice
+
+- **W2.24, the card.** (a) SwiftUI views and animations — they stop while
+  the build holds the main thread, a tenth of a second to four (run 245).
+  (b) A `UIViewRepresentable` whose moving parts are Core Animation's, which
+  run on the render server through the build. (c) A title in the SceneKit
+  scene — the scene is the thing being built. **Chosen: (b).** **The
+  pre-draw.** (a) Each effect at 1% behind the team, as FEEL.md had it — an
+  opaque piece drawn at 1% compiles the BLENDED pipeline, not the one the
+  fight draws it with. (b) Everything at full strength under the opaque
+  card, and the light counts a fight reaches (one, two, three omni lights; a
+  later boss's spot) stood up over successive frames, since the count of
+  lights is part of every lit material's shader. (c) `SCNSceneRenderer.
+  prepare` — documented to upload, not to build pipelines (the reveal's
+  finding). **Chosen: (b).** **The cover.** (a) `.transaction` on each
+  cover; (b) the binding set inside `withTransaction` with animations
+  disabled, the transaction a cover presents with, through one helper.
+  **Chosen: (b)**, `BattleCover`, at nine sites. **When the card lifts.** On
+  the count `frameDrawn` already kept for the veil, which the governor's
+  `didRenderScene` drives, rather than a second count in the governor.
+- **W2.2, the box.** The tiers read off the tile (its key, relic and stars —
+  `RewardTier.of`) rather than a field every producer of loot must fill; the
+  auras as SwiftUI gradients added with `.plusLighter` rather than particles
+  over a SwiftUI panel; the backdrop as `SCNView.snapshot()` softened once
+  off the main thread rather than a second live, blurred view under the
+  panel for as long as the box stands; the sounds built by `sfx.py` from the
+  VSCO CC0 library rather than bought. The tray under the tiles turned DARK:
+  added light on the cream marble was a wash.
+- **W2.22, statuses.** The tiles diffed by kind in the plate, as FEEL.md had
+  it. The head mark: (a) three glyphs round an ellipse on the SpriteKit
+  overlay, placed each frame with the plates; (b) SceneKit particles off the
+  head joint — a particle host per stunned unit (run 239's crash class) on a
+  joint that swings with every clip. **Chosen: (a).** **The push chip's
+  place.** (a) Off the plate's right end at the attack bar, as first built —
+  an enemy's plate reaches 60 points left of its centre and 54 right, the
+  enemies stand about 118 apart, so the chip lay over the next plate's level
+  badge, and a second chip landed on the first; (b) one of the unit's
+  floats, resting under its plate just under the bar it moved, which
+  `layoutFloats` already stacks newest lowest, keeps off every other plate
+  and the HUD, and fades off the frame. **Chosen: (b)**, after the review.
+  **Which changes float.** The engine does not tag a bar change with its
+  source. (a) Tag it there — the engine and its event are another lane's
+  files and every reader of the event would move with it; (b) read it off
+  the events round it in the scene: Ichor's top-up is a gain on the actor
+  between its `.turnBegan` and its cast, Nemesis's a gain straight after a
+  hit on its wearer, both only for their sets' wearers. **Chosen: (b)**,
+  exact for today's engine order (a turn-start passive that fed its own
+  bar would be read as Ichor on an Ichor wearer; there is none).
+- **W2.18, the shake.** (a) Trauma on a rig, the lens written on the render
+  thread in `updateAtTime`; (b) trauma through the old `SCNAction` — actions
+  run after `updateAtTime`, on the node the dolly moves, which is the fight
+  the rig exists to end. **Chosen: (a).**
+- **W2.26, the count.** (a) A histogram in the governor the stages already
+  wear; (b) a main-thread display link — it times the main thread's frames,
+  not the renderer's; (c) MetricKit's hitch rate — a day's, not a step's.
+  **Chosen: (a).**
+
+### As built
+
+`Docs/FEEL.md` has an *As built* paragraph under each item. The numbers are
+EffectPlan.swift's (`PredrawStep`), StageCard.swift's (`StageCardTiming`),
+SpoilsBeats.swift's (`ChestTiming`, `SpoilsTimeline`), CameraShake.swift's,
+FrameMeter.swift's, `BarPush`'s and `Juice.Profile`'s, pinned by
+`BattleFeelTests` (22) and `HitFeelTests`. Twenty sounds are new —
+`chest_rattle_1`–`3`, `chest_open`, `spoil_1`–`12`, `spoil_legend`,
+`relic_roll`, `relic_ring`, `relic_crack` (`python3 tools/sfx.py spoils
+--vsco DIR`) — every one at or under 0.89 at its peak, the fullest box
+summing to 0.887 and the roll into the ring to 0.866; no shipped sound
+changed.
+
+### The review, and what it changed
+
+A reviewer read the first cut before any run and found six things, each
+checked against the code and fixed in the same pass:
+
+- **The level-up stood at the still's scrim.** Once the fight's still was
+  taken, every phase after the reckoning took its 0.5 scrim, the level-up
+  too, whose shafts and gold words need the 0.84 the live field gets. The
+  still and its scrim are the chest's phases alone now (`stillShown`).
+- **The push chips were noisy and in the way.** Every `.attackBarChanged`
+  floated one: Ichor's top-up at every turn of its wearer, Nemesis's on
+  every hit (three on one spot off a three-hit), and off the plate's right
+  end each lay over the next plate's badge. The top-ups float nothing now
+  and a push is one of its unit's floats (the W2.22 option above).
+- **The tribute chest shook in silence.** The three rattles were in
+  `RewardChestView`, which the tribute card shares; the card sounds none of
+  them and lists its grants at the tap. `rattles` is the battle box's alone.
+- **The tour's stars stood at 45%.** `-tour-status` held the overlay 0.09 s
+  into the mark's 0.2 s fade; the hold sets a mark to full strength first,
+  and the push goes on the enemy beside the stunned one, since a resting
+  chip would lie over its stars.
+- **The calm way out closed early.** Under Reduce Motion the cover closed at
+  0.3 s on a card that fades up in 0.38; the calm card fades in 0.2 s and
+  the wait is read off the same numbers (`leaveWait(calm:)`).
+- **This section's anchor.** "tree." ends line 5088 as well as the file, so
+  it is matched as the WHOLE last line, never as a substring.
+
+### Still to do
+
+- **Judge the frames**, and send them to the owner before he tests (rule 1):
+  `6-battle-card`, `6-battle-status`, `6-battle-shake` (the roll against
+  `6-battle-a`: a jolt, never "slanted"), `20-victory-b` (the chest over the
+  softened painting), `20-victory-c`, `20-victory-levelup` (its 0.84 scrim)
+  and `20-victory-legend`; and each step's FRAMES lines in `ciframes.py`, a
+  `[Frames] battle hitch` line on the first ultimate above all.
+- **On the phone only:** that the cover opens and closes with no slide; the
+  card over a slow build; whether the pre-draw covers the first ultimate (a
+  hitch line says); the box's sounds over the music; the 2.2° roll on a real
+  screen; the island at 60 under a finger.
+- **Left as it was, and what the better one costs:** the relic power-up's
+  glow and shake still land at the tap while its verdict sounds 0.26 s later
+  — `RelicInventoryView`'s picture was outside this lane, and moving both
+  onto `AudioLibrary.Sound.rollLead` is a few lines. The altar, the
+  collection's Stage and the chest wear no governor and print no `[Frames]`
+  line; `GraphicsSettings.configure` is a line in each, and it puts them
+  under the player's frame-rate choice too. A raid's result (`raid_grade`)
+  still stands over black in the tour. The tribute card could have the
+  battle box's rattles if its receipt waited for the lid and it sounded them
+  on `ChestTiming` (`CampaignMapView`, the other lane's file this pass). A
+  bar change could carry its source from the engine (`BattleEvent`), which
+  would retire the scene's reading of the event order; a new set that tops
+  a bar up needs a line in `BarPush` until then.
+- **The owner's calls:** the card's words (STAGE POWER against YOUR TEAM,
+  the tier, BOSS) and its 0.6 s floor; the chest's three rattles, which put
+  the first tile 2.1 s after the tap where it was 1.6; the legend's 0.35 s
+  stop and its turning rays; the head marks' glyphs; whether a boon's, a
+  regalia's and a resonance's bar gains should float a chip beside their
+  names, as they do now.
+
+**Run 251: the pale panel at a 5★'s peak was the summon beam (2026-09-24).**
+`-tour-reveal-hold apex` photographed every 5★ at the entrance's high point
+under a flat pale rectangle about 1.6 m wide, from the dais to the top of
+the frame, over the figure and the set behind it alike (`5-reveal-apex`,
+`5-reveal-awakened-apex`). It was not the sunburst (that plane is 2.2 times
+the figure's height and stands behind it): it was `VFXLibrary.summonBeam`,
+a 1.6 m cylinder drawn `.add` that is spawned at the flash and stands at
+full size for most of a second after it. Its near half was in front of the
+figure, and it wrote its ALPHA into the reveal's transparent `SCNView`, so
+the compositor drew its projection as a translucent panel over the dusk and
+over the body. It was never photographed before because the reveal's frames
+were taken three seconds in, after the beam had gone. The Hall of Ka's
+evolve and awaken rites spawn the same beam over the same kind of view.
+Three ways out were weighed: the write mask alone (RGB, no alpha) would
+still add a flat hard-edged band of colour OVER the body; culling the near
+half would put the band behind the figure but keep its hard edges; a soft
+column behind the figure keeps the genre's pillar of light and the body
+whole in front of it. The last was built: `summonBeamColumn`, a plane faced
+to the lens 0.6 m behind the feet (both stages' cameras look down −Z), its
+light a baked profile (`summonBeamImage`: `(1 − d²)³` across, faded in off
+the floor over 0.35 m and out above 5 m, peak 0.9) times the tint, `.add`
+with `colorBufferWriteMask` red, green, blue only; it opens from a sliver
+over 0.35 s, holds 0.5 s and narrows away as it fades. The reveal's warm-up
+draws the same builder's column (`warmBeamTwin`), so the flash compiles
+nothing new.

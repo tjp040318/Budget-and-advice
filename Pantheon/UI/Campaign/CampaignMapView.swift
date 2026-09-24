@@ -555,6 +555,7 @@ struct ChapterMapArt {
 /// broke the strip's rule on run 211 (2026-09-22). What a tier pays is the
 /// last line of the chapter's scroll on the map.
 struct TierChips: View {
+    @EnvironmentObject private var store: GameStore
     let base: Chapter
     /// Whose progress opens the tiers: the store's player, or the tour's
     /// walked copy of it (`CampaignView.previewPlayer`).
@@ -572,9 +573,35 @@ struct TierChips: View {
         .background(ScreenChrome.well)
     }
 
+    /// The clear the map owes on this chapter (Docs/FEEL.md W2.5), if any.
+    private var clearHere: StageClear? {
+        guard let clear = store.lastClear, CampaignDifficulty.split(clear.chapterID).base == base.id else { return nil }
+        return clear
+    }
+
+    /// Whether the map's ribbon has broken this clear's seal.
+    private var unsealed: Bool {
+        guard let clear = clearHere else { return false }
+        return store.unsealedClear == clear.serial
+    }
+
+    /// The tier a clear on this chapter opened, held SHUT on the strip until
+    /// the map's ribbon lands, and the tier it conquered, held uncleared as
+    /// long: the chips change with the beat, not under the victory's cover.
+    private func sealed(_ tier: CampaignDifficulty) -> Bool {
+        guard let clear = clearHere, !unsealed else { return false }
+        return clear.tierOpened == tier
+    }
+
+    private func heldUncleared(_ tier: CampaignDifficulty) -> Bool {
+        guard let clear = clearHere, !unsealed, clear.conquered else { return false }
+        return CampaignDifficulty.split(clear.chapterID).difficulty == tier
+    }
+
     private func segment(_ tier: CampaignDifficulty) -> some View {
-        let open = CampaignService.isOpen(tier, of: base, player: player)
-        let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count
+        let open = CampaignService.isOpen(tier, of: base, player: player) && !sealed(tier)
+        let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count && !heldUncleared(tier)
+        let opening: Bool = clearHere?.tierOpened == tier
         let selected = tier == difficulty
         let glyphTint: Color = selected ? Theme.ink : (open ? Color(hex: tier.glowHex) : Theme.onGlassDim)
         let labelTint: Color = selected ? Theme.ink : (open ? Theme.onGlass : Theme.onGlassDim)
@@ -601,6 +628,14 @@ struct TierChips: View {
             .background(
                 Capsule().fill(selected ? AnyShapeStyle(Theme.goldPlate) : AnyShapeStyle(Color.clear))
             )
+            // The tier a clear opened: its lock falls off as the map's
+            // ribbon lands (W2.5), where the chip's own lock stood.
+            .overlay(alignment: .leading) {
+                if opening {
+                    TierLockFall(falling: unsealed, calm: MotionComfort.isReduced)
+                        .padding(.leading, 9)
+                }
+            }
             .contentShape(Capsule())
         }
         // A locked tier sinks under the finger but says nothing: its
@@ -791,6 +826,15 @@ struct ChapterMapView: View {
     /// feathers only an edge with haze beyond it. Measured by `bleed`;
     /// both until then, the case of every phone with an island or a notch.
     @State private var hazeSides = MapHazeSides(leading: true, trailing: true)
+    /// The clear the map is playing (Docs/FEEL.md W2.5), its timeline, when
+    /// it began and the CI's holds in it; nil while none plays.
+    @State private var beat: StageClear?
+    @State private var beatTimeline: MapClearTimeline?
+    @State private var beatStart: Date?
+    @State private var beatHolds: [MapClearHold] = []
+    /// The watch for the way to clear before a beat (`awaitClearBeat`): a
+    /// serial, so a watch left from another chapter or tier goes nowhere.
+    @State private var gateSerial = 0
 
     /// Under the CI tour the toast stays up, so the frame shows it.
     private static let touring = ProcessInfo.processInfo.arguments.contains("-tour")
@@ -860,7 +904,7 @@ struct ChapterMapView: View {
                         .opacity(tabHidden ? 0 : 1)
                         .allowsHitTesting(!tabHidden)
                         .animation(.easeOut(duration: 0.2), value: tabHidden)
-                    road(chapter, nodes: placed.nodes, chests: placed.chests, size: size)
+                    roadLayer(chapter, nodes: placed.nodes, chests: placed.chests, size: size)
                     arrows(size: size)
                     if let tierToast, !scrollOpen, !cardIsUp {
                         // Along the edge the tab is not on, centred.
@@ -913,15 +957,30 @@ struct ChapterMapView: View {
             announce(difficulty)
             // The chapters an arrow leads to, soft before they are asked for.
             SoftMapPainting.warm(ChapterMapArt.byChapter.values.map(\.image))
+            awaitClearBeat()
         }
         .onChange(of: chapterID) { _, _ in
             settleTier()
             scrollOpen = false
+            leaveBeat()
+            awaitClearBeat()
         }
         // Switching to Hard or Hell says the tier's terms in one line for a
         // few seconds; the scroll stays the tab's to open.
         .onChange(of: difficulty) { _, tier in
             announce(tier)
+            leaveBeat()
+            awaitClearBeat()
+        }
+        // A clear settles while the map is under the victory's cover: its
+        // beat waits for the cover to finish leaving (`awaitClearBeat`).
+        .onChange(of: store.lastClear?.serial) { _, _ in
+            awaitClearBeat()
+        }
+        // A map left mid-beat has played it: never again. A clear not yet
+        // begun waits for the map's return.
+        .onDisappear {
+            leaveBeat()
         }
         .sheet(item: $openTribute) { tribute in
             TributeCard(tribute: tribute, chapterID: chapterID, difficulty: difficulty)
@@ -1225,7 +1284,30 @@ struct ChapterMapView: View {
 
     // MARK: - The road
 
-    private func road(_ chapter: Chapter, nodes: [CGPoint], chests: [CGPoint], size: CGSize) -> some View {
+    /// The road, and while the map plays a clear (W2.5) the road under the
+    /// beat's clock with the ribbon over it; while a clear waits for the
+    /// victory to finish leaving, the road as it stood before the clear, so
+    /// the beat starts where the player last saw it.
+    @ViewBuilder
+    private func roadLayer(_ chapter: Chapter, nodes: [CGPoint], chests: [CGPoint], size: CGSize) -> some View {
+        if let clear = beat, let timeline = beatTimeline, let start = beatStart {
+            TimelineView(.animation) { context in
+                let elapsed: TimeInterval = context.date.timeIntervalSince(start)
+                let time: TimeInterval = MapClearTimeline.beatTime(elapsed: elapsed, holds: beatHolds)
+                let look = ClearLook(clear: clear, frame: timeline.frame(at: time), calm: MotionComfort.isReduced)
+                ZStack(alignment: .topLeading) {
+                    road(chapter, nodes: nodes, chests: chests, size: size, look: look)
+                    ribbon(chapter, look: look, size: size)
+                }
+                .frame(width: size.width, height: size.height)
+            }
+        } else {
+            road(chapter, nodes: nodes, chests: chests, size: size, look: pendingLook(chapter))
+        }
+    }
+
+    private func road(_ chapter: Chapter, nodes: [CGPoint], chests: [CGPoint], size: CGSize,
+                      look: ClearLook?) -> some View {
         let player = self.player
         // The first open, uncleared stage is where the player stands; his
         // campaign leader's face rides over it.
@@ -1234,6 +1316,7 @@ struct ChapterMapView: View {
         }
         let leader = store.team(store.player.campaignTeam).first
         let bossPortrait = ChapterMapArt.bossPortrait(for: chapter)
+        let walking: Bool = look?.clear.firstClear ?? false
         return ZStack(alignment: .topLeading) {
             // The road: a dotted curve through the medallions — drawn only
             // where the map is not painted, since a painted map has its own.
@@ -1260,23 +1343,134 @@ struct ChapterMapView: View {
             }
 
             ForEach(Array(chapter.stages.enumerated()), id: \.element.id) { index, stage in
-                let state: StageMarkState = CampaignService.isCleared(stage, player: player)
-                    ? .cleared
-                    : (index == current ? .current : .locked)
                 if index < nodes.count {
-                    node(stage, state: state, at: nodes[index], leader: leader, bossPortrait: bossPortrait)
+                    let mark: MarkLook = markLook(index, stage: stage, current: current, look: look)
+                    node(stage, at: nodes[index], leader: leader, bossPortrait: bossPortrait, mark: mark)
                         .position(nodes[index])
                 }
+            }
+
+            // A first clear's leader walks the node line to the stage it
+            // opened, apart from the medallions (W2.5).
+            if walking, let look, let leader, !nodes.isEmpty, !chapter.stages.isEmpty {
+                leaderWalk(leader, look: look, nodes: nodes, stages: chapter.stages)
             }
 
             // The three tribute chests: the road's, the gate's by the boss,
             // the judgment beyond it.
             ForEach(TributeService.tributes(for: chapter)) { tribute in
-                chest(tribute, chapter: chapter)
+                chest(tribute, chapter: chapter, jump: look?.frame.chests[tribute.milestone])
                     .position(chestPoint(tribute.milestone, chests: chests))
             }
         }
         .frame(width: size.width, height: size.height)
+    }
+
+    /// A medallion's state and look, with a clear's beat laid over what the
+    /// save says (W2.5): the stage cleared turns from the one the player
+    /// stood at to gold as the beat's flip passes half way and stamps its
+    /// new stars; the stage it opened stays shut until its lock breaks; the
+    /// leader's face rides neither while it walks.
+    private func markLook(_ index: Int, stage: Stage, current: Int?, look: ClearLook?) -> MarkLook {
+        let saved: StageMarkState = CampaignService.isCleared(stage, player: player)
+            ? .cleared
+            : (index == current ? .current : .locked)
+        var mark = MarkLook(state: saved)
+        guard let look else { return mark }
+        mark.calm = look.calm
+        let clear: StageClear = look.clear
+        let frame: MapClearFrame = look.frame
+        if index == clear.stageIndex {
+            if clear.firstClear {
+                let turned: Bool = frame.flip >= 0.5
+                mark.state = turned ? .cleared : .current
+                if !look.calm {
+                    mark.turn = turned ? (frame.flip - 1) * 180 : frame.flip * 180
+                }
+            }
+            mark.heldPips = clear.starsBefore
+            // Under Reduce Motion a new star lights where it stands, with
+            // no drop from over its place.
+            let lit: [Double] = frame.stamps.map { (stamp: Double) -> Double in stamp > 0 ? 1 : 0 }
+            mark.stamps = look.calm ? lit : frame.stamps
+            mark.showsLeader = false
+        } else if clear.firstClear, index == clear.stageIndex + 1 {
+            mark.state = frame.shards > 0 ? .current : .locked
+            mark.shards = frame.shards < 1 ? frame.shards : 0
+            mark.showsLeader = false
+        }
+        return mark
+    }
+
+    /// The leader's face walking the node line — not the painted road —
+    /// from the medallion just cleared to the one it opened, in three hops
+    /// (W2.5). On a road's end there is nowhere to walk: it fades as the
+    /// medallion turns gold.
+    private func leaderWalk(_ leader: ResolvedUnit, look: ClearLook, nodes: [CGPoint], stages: [Stage]) -> some View {
+        let from: Int = min(max(0, look.clear.stageIndex), max(0, min(nodes.count, stages.count) - 1))
+        let onward: Bool = from + 1 < min(nodes.count, stages.count)
+        let to: Int = onward ? from + 1 : from
+        let start: CGPoint = Self.faceSpot(nodes[from], isBoss: stages[from].isBoss)
+        let end: CGPoint = Self.faceSpot(nodes[to], isBoss: stages[to].isBoss)
+        let walked: CGFloat = CGFloat(look.frame.hop)
+        let hopping: Double = abs(sin(Double(walked) * Double.pi * Double(MapClearTimeline.hops)))
+        let arc: CGFloat = look.calm ? 0 : -16 * CGFloat(hopping)
+        let along: CGFloat = look.calm ? (walked < 0.5 ? 0 : 1) : walked
+        let x: CGFloat = start.x + (end.x - start.x) * along
+        let y: CGFloat = start.y + (end.y - start.y) * along + arc
+        let shown: Double = onward ? 1 : 1 - look.frame.flip
+        return WearerBadge(unit: leader, size: 28)
+            .overlay(Circle().strokeBorder(Theme.goldText, lineWidth: 1.5))
+            .shadow(color: .black.opacity(0.6), radius: 3, y: 2)
+            .opacity(shown)
+            .position(x: x, y: y)
+            .allowsHitTesting(false)
+    }
+
+    /// Where the leader's face rides on a medallion (`node`'s overlay): 20
+    /// points above its disc, or beside it where above would leave the
+    /// frame.
+    static func faceSpot(_ point: CGPoint, isBoss: Bool) -> CGPoint {
+        let diameter: CGFloat = isBoss ? 64 : 52
+        if ChapterMapArt.leaderSitsAbove(point, isBoss: isBoss) {
+            return CGPoint(x: point.x, y: point.y - diameter / 2 - 20)
+        }
+        return CGPoint(x: point.x + diameter / 2 + 20, y: point.y)
+    }
+
+    /// CHAPTER CONQUERED across the map while the ribbon runs (W2.5).
+    @ViewBuilder
+    private func ribbon(_ chapter: Chapter, look: ClearLook, size: CGSize) -> some View {
+        if let progress = look.frame.ribbon, progress > 0, progress < 1 {
+            ConqueredRibbon(eyebrow: ribbonEyebrow(chapter), progress: progress, width: size.width, calm: look.calm)
+                .position(x: size.width / 2, y: size.height * 0.40)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// "THE DUAT · CHAPTER 1", and the tier when it is not Normal.
+    private func ribbonEyebrow(_ chapter: Chapter) -> String {
+        let order: Int = StageDatabase.chapterOrder(of: chapter.id)
+        var words: String = "\(chapter.realmName.uppercased()) · CHAPTER \(order)"
+        if chapter.difficulty != .normal {
+            words += " · " + chapter.difficulty.displayName.uppercased()
+        }
+        return words
+    }
+
+    /// The clear this map owes a beat: the store's last, when it was on this
+    /// road at this tier.
+    private var clearHere: StageClear? {
+        guard let clear = store.lastClear, let chapter, clear.chapterID == chapter.id else { return nil }
+        return clear
+    }
+
+    /// A clear owed and not yet begun — the victory still leaving: the road
+    /// as it stood before it.
+    private func pendingLook(_ chapter: Chapter) -> ClearLook? {
+        guard beat == nil, let clear = clearHere else { return nil }
+        let timeline = MapClearTimeline(clear: clear, hasNext: clear.stageIndex + 1 < chapter.stages.count)
+        return ClearLook(clear: clear, frame: timeline.frame(at: 0), calm: MotionComfort.isReduced)
     }
 
     private func chestPoint(_ milestone: TributeMilestone, chests: [CGPoint]) -> CGPoint {
@@ -1308,8 +1502,9 @@ struct ChapterMapView: View {
     /// the leader's face and the foot are drawn round it without moving it.
     /// Every surface is opaque dark glass or gold — the old locked medallion
     /// was translucent cream and photographed as a white bubble.
-    private func node(_ stage: Stage, state: StageMarkState, at point: CGPoint,
-                      leader: ResolvedUnit?, bossPortrait: String?) -> some View {
+    private func node(_ stage: Stage, at point: CGPoint, leader: ResolvedUnit?, bossPortrait: String?,
+                      mark: MarkLook) -> some View {
+        let state: StageMarkState = mark.state
         let diameter: CGFloat = stage.isBoss ? 64 : 52
         let unlocked = state != .locked
         let leaderAbove = ChapterMapArt.leaderSitsAbove(point, isBoss: stage.isBoss)
@@ -1322,8 +1517,16 @@ struct ChapterMapView: View {
                 Circle()
                     .strokeBorder(discRim(state, isBoss: stage.isBoss), lineWidth: rimWidth(state, isBoss: stage.isBoss))
                 face(stage, state: state, diameter: diameter, bossPortrait: bossPortrait)
+                // The lock of a stage a clear has just opened, breaking into
+                // four over its new face (W2.5).
+                if mark.shards > 0 {
+                    LockShards(progress: mark.shards, size: diameter, calm: mark.calm)
+                }
             }
             .frame(width: diameter, height: diameter)
+            // A first clear's medallion turns on its vertical axis from the
+            // one the player stood at to gold (W2.5); 0 for every other.
+            .rotation3DEffect(.degrees(mark.turn), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
             .shadow(color: .black.opacity(0.6), radius: 6, y: 3)
             .background {
                 if state == .current {
@@ -1338,12 +1541,12 @@ struct ChapterMapView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                foot(stage, state: state)
+                foot(stage, state: state, mark: mark)
                     .fixedSize()
                     .offset(y: 22)
             }
             .overlay(alignment: leaderAbove ? .top : .trailing) {
-                if state == .current, let leader {
+                if state == .current, mark.showsLeader, let leader {
                     WearerBadge(unit: leader, size: 28)
                         .overlay(Circle().strokeBorder(Theme.goldText, lineWidth: 1.5))
                         .shadow(color: .black.opacity(0.6), radius: 3, y: 2)
@@ -1454,13 +1657,13 @@ struct ChapterMapView: View {
     /// energy where the player stands, BOSS under the boss while it waits.
     /// A shut stage that is not the boss has no foot.
     @ViewBuilder
-    private func foot(_ stage: Stage, state: StageMarkState) -> some View {
-        let pips = player.stageStars?[stage.id] ?? 0
+    private func foot(_ stage: Stage, state: StageMarkState, mark: MarkLook) -> some View {
+        let pips = mark.heldPips ?? (player.stageStars?[stage.id] ?? 0)
         let content = HStack(spacing: 4) {
             switch state {
             case .cleared:
-                if pips > 0 {
-                    starPips(pips)
+                if pips > 0 || !mark.stamps.isEmpty {
+                    starPips(pips, stamps: mark.stamps)
                 } else {
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .black))
@@ -1502,15 +1705,32 @@ struct ChapterMapView: View {
     /// The stage's best rating as three stars, gold where earned. Saved by
     /// `TributeService.recordStars`; the judgment wants all three on every
     /// stage.
-    private func starPips(_ pips: Int) -> some View {
+    ///
+    /// While the map plays a clear (W2.5) the pips it held stand lit and the
+    /// new ones stamp in one by one (`stamps`, each 0 → 1): dropped from two
+    /// and a half times their size, landing with a small overshoot.
+    private func starPips(_ pips: Int, stamps: [Double] = []) -> some View {
         HStack(spacing: 1) {
-            ForEach(0..<3, id: \.self) { index in
+            ForEach(0..<3, id: \.self) { place in
+                let stamp: Double? = place >= pips && place - pips < stamps.count ? stamps[place - pips] : nil
+                let lit: Bool = place < pips || (stamp ?? 0) > 0
                 Image(systemName: "star.fill")
                     .font(.system(size: 10, weight: .black))
-                    .foregroundStyle(index < pips ? Theme.gold : Color.white.opacity(0.28))
+                    .foregroundStyle(lit ? Theme.gold : Color.white.opacity(0.28))
+                    .scaleEffect(Self.stampScale(stamp))
                     .shadow(color: .black.opacity(0.5), radius: 1)
             }
         }
+    }
+
+    /// A star stamping: 2.5 times its size falling to 1 with a small dip
+    /// past it; 1 at rest.
+    static func stampScale(_ stamp: Double?) -> CGFloat {
+        guard let stamp, stamp > 0, stamp < 1 else { return 1 }
+        let rest: Double = 1 - stamp
+        let fall: Double = 1 + 1.5 * rest * rest
+        let dip: Double = 0.12 * sin(Double.pi * stamp)
+        return CGFloat(fall - dip)
     }
 
     private func spokenName(_ stage: Stage, state: StageMarkState) -> String {
@@ -1783,6 +2003,189 @@ struct ChapterMapView: View {
         #endif
     }
 
+    // MARK: - Playing a clear (Docs/FEEL.md W2.5)
+
+    /// Plays the clear this map owes once nothing stands over it. The map
+    /// sits under the victory's cover the whole fight, so the beat waits for
+    /// that cover to finish LEAVING — and for any card or scroll over the map
+    /// — looked for every quarter second; then a breath, and the beat. A
+    /// clear already played is gone from the store (`finishClearBeat`), so a
+    /// repeat never plays it again.
+    private func awaitClearBeat() {
+        guard beat == nil, let clear = clearHere else { return }
+        gateSerial += 1
+        pollGate(gateSerial, serial: clear.serial)
+    }
+
+    private func pollGate(_ watch: Int, serial: Int) {
+        guard watch == gateSerial, beat == nil, let clear = clearHere, clear.serial == serial else { return }
+        if Self.coverIsUp() || cardIsUp || scrollOpen {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.gatePoll) {
+                pollGate(watch, serial: serial)
+            }
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.beatDelay) {
+            guard watch == gateSerial, beat == nil, let owed = clearHere, owed.serial == serial else { return }
+            if Self.coverIsUp() || cardIsUp || scrollOpen {
+                pollGate(watch, serial: serial)
+                return
+            }
+            startBeat(owed)
+        }
+    }
+
+    private func startBeat(_ clear: StageClear) {
+        guard let chapter else { return }
+        let timeline = MapClearTimeline(clear: clear, hasNext: clear.stageIndex + 1 < chapter.stages.count)
+        let holds: [MapClearHold] = Self.tourHolds(for: timeline)
+        beat = clear
+        beatTimeline = timeline
+        beatStart = Date()
+        beatHolds = holds
+        scheduleBeatEffects(clear, timeline: timeline, pantheon: chapter.pantheon, holds: holds)
+    }
+
+    /// The beat's sounds and touches, and its word to the strip, as timers at
+    /// the times its picture reaches them (the picture itself is read off the
+    /// clock): a whoosh as the medallion turns and a tick as it lands gold;
+    /// each new star on the glockenspiel's next note; a step for each of the
+    /// leader's hops; the lock's crack; a chime and a touch as each chest
+    /// jumps; the realm's horn and success as the ribbon crosses, and the
+    /// tier's seal breaking on the strip as it lands.
+    private func scheduleBeatEffects(_ clear: StageClear, timeline: MapClearTimeline, pantheon: Pantheon,
+                                     holds: [MapClearHold]) {
+        let serial: Int = clear.serial
+        func at(_ beatTime: TimeInterval, _ effect: @escaping () -> Void) {
+            let wall: TimeInterval = MapClearTimeline.wallTime(atBeat: beatTime, holds: holds)
+            DispatchQueue.main.asyncAfter(deadline: .now() + wall) {
+                guard beat?.serial == serial else { return }
+                effect()
+            }
+        }
+        if clear.firstClear {
+            at(timeline.flipStart) { AudioLibrary.shared.play(.whoosh, volume: 0.45) }
+            at(timeline.flipStart + timeline.flipLength) {
+                AudioLibrary.shared.play(.starTick, volume: 0.6)
+                Juice.haptic(.light)
+            }
+        }
+        for (place, start) in timeline.starStarts.enumerated() {
+            let note: AudioLibrary.Sound = AudioLibrary.Sound.star(clear.starsBefore + place)
+            at(start + MapClearTimeline.star * 0.4) {
+                AudioLibrary.shared.play(note, volume: 0.7)
+                Juice.haptic(.light)
+            }
+        }
+        if let walk = timeline.hopStart {
+            for step in 1...MapClearTimeline.hops {
+                let landing: TimeInterval = walk + MapClearTimeline.hop * Double(step) / Double(MapClearTimeline.hops)
+                at(landing) { AudioLibrary.shared.play(.uiTap, volume: 0.4) }
+            }
+        }
+        if let unlock = timeline.unlockStart {
+            at(unlock) {
+                AudioLibrary.shared.play(.hitBlunt, volume: 0.5)
+                Juice.haptic(.medium)
+            }
+        }
+        for start in timeline.chestStarts.values.sorted() {
+            at(start) {
+                AudioLibrary.shared.play(.summonBurst3, volume: 0.45)
+                Juice.haptic(.medium)
+            }
+        }
+        if let ribbonAt = timeline.ribbonStart {
+            let horn: AudioLibrary.Sound = AudioLibrary.Sound.waveCall(for: pantheon)
+            at(ribbonAt) {
+                AudioLibrary.shared.play(horn, volume: 0.8)
+                Juice.notify(.success)
+            }
+            at(ribbonAt + MapClearTimeline.ribbonLands) {
+                store.unsealClearTier(serial)
+                AudioLibrary.shared.play(.uiConfirm, volume: 0.5)
+            }
+        }
+        #if DEBUG
+        for hold in holds {
+            at(hold.at) { print("[TourCue] \(hold.cue)") }
+        }
+        #endif
+        let finish: TimeInterval = MapClearTimeline.wallTime(atBeat: timeline.end, holds: holds)
+        DispatchQueue.main.asyncAfter(deadline: .now() + finish) {
+            finishBeat(serial)
+        }
+    }
+
+    /// The beat has played: the store lets the clear go for good.
+    private func finishBeat(_ serial: Int) {
+        guard beat?.serial == serial else { return }
+        store.finishClearBeat(serial)
+        beat = nil
+        beatTimeline = nil
+        beatStart = nil
+        beatHolds = []
+    }
+
+    /// The map is leaving its road (another chapter, another tier, another
+    /// tab): a beat under way counts as played; a watch still waiting stops,
+    /// and its clear waits for the map's return.
+    private func leaveBeat() {
+        gateSerial += 1
+        if let playing = beat {
+            finishBeat(playing.serial)
+        }
+    }
+
+    /// Whether anything is presented over the app — the battle's full-screen
+    /// cover, a sheet — or is still on its way out: a presented controller
+    /// stays in place until its dismissal has finished.
+    @MainActor
+    static func coverIsUp() -> Bool {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows where window.isKeyWindow {
+                guard let root = window.rootViewController else { continue }
+                var stack = [root]
+                while let next = stack.popLast() {
+                    if next.presentedViewController != nil { return true }
+                    stack.append(contentsOf: next.children)
+                }
+            }
+        }
+        return false
+    }
+
+    /// How often the watch looks, and the breath between the way clearing
+    /// and the beat (a second under the tour, so the map has drawn).
+    private static let gatePoll: TimeInterval = 0.25
+    private static let beatDelay: TimeInterval = touring ? 1.0 : 0.35
+
+    /// `-tour-map-clear` (DEBUG): the CI's frames of the beat.
+    private static let tourClear: Bool = ProcessInfo.processInfo.arguments.contains("-tour-map-clear")
+
+    /// The CI's holds (`-tour-map-clear`): the medallion caught turning gold
+    /// (`map-flip`), then on a road's end the ribbon landed and lit
+    /// (`map-conquered`), or on a stage's the lock mid-break with the leader
+    /// arriving (`map-unlock`). None outside the tour.
+    static func tourHolds(for timeline: MapClearTimeline) -> [MapClearHold] {
+        #if DEBUG
+        guard tourClear else { return [] }
+        var holds: [MapClearHold] = []
+        if timeline.flipLength > 0 {
+            holds.append(MapClearHold(at: timeline.flipStart + timeline.flipLength * 0.72, seconds: 8, cue: "map-flip"))
+        }
+        if let ribbonAt = timeline.ribbonStart {
+            holds.append(MapClearHold(at: ribbonAt + MapClearTimeline.ribbonLands + 0.45, seconds: 10, cue: "map-conquered"))
+        } else if let unlock = timeline.unlockStart {
+            holds.append(MapClearHold(at: unlock + MapClearTimeline.shards * 0.35, seconds: 8, cue: "map-unlock"))
+        }
+        return holds
+        #else
+        return []
+        #endif
+    }
+
     // MARK: - The arrows
 
     /// The chapter before and the chapter after, an arrow at either edge of
@@ -1831,11 +2234,19 @@ struct ChapterMapView: View {
     /// A chest on the road in one of three states: shut with a lock until
     /// earned, gold and pulsing with a mark while it waits to be claimed,
     /// grey with a check once it has paid.
-    private func chest(_ tribute: Tribute, chapter: Chapter) -> some View {
+    ///
+    /// `jump` (W2.5): a chest the clear the map is playing earned, 0 → 1 —
+    /// shut until its jump begins, then leaping with a column of light out
+    /// of it and landing ready; nil draws what the save says.
+    private func chest(_ tribute: Tribute, chapter: Chapter, jump: Double? = nil) -> some View {
         let player = self.player
-        let earned = TributeService.isEarned(tribute, chapter: chapter, player: player)
+        let saved = TributeService.isEarned(tribute, chapter: chapter, player: player)
+        let earned: Bool = jump.map { $0 > 0 } ?? saved
         let claimed = TributeService.isClaimed(tribute, player: player)
         let ready = earned && !claimed
+        let leap: Double = jump ?? 1
+        let calm: Bool = MotionComfort.isReduced
+        let rise: CGFloat = leap < 1 && !calm ? -22 * CGFloat(sin(Double.pi * min(1, leap * 2))) : 0
         return Button {
             openTribute = tribute
         } label: {
@@ -1860,6 +2271,12 @@ struct ChapterMapView: View {
                 }
             }
             .frame(width: 54, height: 54)
+            .offset(y: rise)
+            .overlay(alignment: .bottom) {
+                if let jump, jump > 0, jump < 1 {
+                    ChestBeam(progress: jump)
+                }
+            }
         }
         .buttonStyle(GamePressStyle(.plate))
     }
@@ -1927,6 +2344,11 @@ struct WorldRoadMapView: View {
     /// Called with the chapter whose city was tapped.
     var onSelect: (Chapter) -> Void
 
+    /// The city a road conquered on Normal opened (Docs/FEEL.md W2.5), taken
+    /// once from the store as the road appears, and when it began to light.
+    @State private var ignition: String?
+    @State private var ignitionStart: Date?
+
     /// Where each chapter's city sits on the painting, in 0...1 of its width
     /// and height, in story order.
     static let cities: [(id: String, x: CGFloat, y: CGFloat)] = [
@@ -1955,30 +2377,46 @@ struct WorldRoadMapView: View {
                 ScrollView([.horizontal, .vertical], showsIndicators: false) {
                     ZStack(alignment: .topLeading) {
                         painting(width: mapWidth, height: mapHeight)
-                        road(width: mapWidth, height: mapHeight)
-                        ForEach(Array(Self.cities.enumerated()), id: \.offset) { index, city in
-                            if let chapter = StageDatabase.chapter(city.id) {
-                                CityMedallion(
-                                    chapter: chapter,
-                                    order: index + 1,
-                                    state: state(of: chapter),
-                                    action: { onSelect(chapter) }
-                                )
-                                .position(x: city.x * mapWidth, y: city.y * mapHeight)
-                                .id(city.id)
+                        // A city lighting (W2.5): the road into it drawn in
+                        // gold, its lock falling and a flare, off one clock.
+                        if let city = ignition, let start = ignitionStart {
+                            TimelineView(.animation) { context in
+                                let lit: Double = Self.ignitionProgress(since: start, at: context.date)
+                                ZStack(alignment: .topLeading) {
+                                    road(width: mapWidth, height: mapHeight, igniting: city, progress: lit)
+                                    cities(width: mapWidth, height: mapHeight, igniting: city, progress: lit)
+                                }
+                                .frame(width: mapWidth, height: mapHeight, alignment: .topLeading)
                             }
+                        } else {
+                            road(width: mapWidth, height: mapHeight, igniting: nil, progress: 1)
+                            cities(width: mapWidth, height: mapHeight, igniting: nil, progress: 1)
                         }
                     }
                     .frame(width: mapWidth, height: mapHeight)
                 }
+                // A city owed its light while the road is up: the road
+                // scrolls to it in the breath before it lights.
+                .onChange(of: store.pendingCityIgnition) { _, _ in
+                    if let city = igniteIfOwed() {
+                        withAnimation(.easeOut(duration: 0.45)) {
+                            scroller.scrollTo(city, anchor: .center)
+                        }
+                    }
+                }
                 .onAppear {
+                    let lighting: String? = igniteIfOwed()
                     // Every chapter map's haze, built while the player picks
                     // a city, so the first map opened has it in its first
                     // frame (`SoftMapPainting`).
                     SoftMapPainting.warm(ChapterMapArt.byChapter.values.map(\.image))
-                    // Open on the city the player is in, not on the top-left
-                    // corner of a map three screens wide.
-                    let here = CampaignView.currentChapter(for: store.player).id
+                    // Open on the city the player is in — or the one about to
+                    // light — not on the top-left corner of a map three
+                    // screens wide. A player past the painted road (Rome,
+                    // the Jade Court: no city here yet) opens on its end.
+                    let current: String = CampaignView.currentChapter(for: store.player).id
+                    let onTheRoad: Bool = Self.cities.contains(where: { $0.id == current })
+                    let here: String = lighting ?? (onTheRoad ? current : (Self.cities.last?.id ?? current))
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                         withAnimation(.easeOut(duration: 0.45)) {
                             scroller.scrollTo(here, anchor: .center)
@@ -2009,25 +2447,124 @@ struct WorldRoadMapView: View {
 
     /// The road, drawn city to city in story order. Gold behind the player,
     /// faint ahead of him, so the map itself shows how far he has come.
-    private func road(width: CGFloat, height: CGFloat) -> some View {
+    /// While a city lights (`igniting`, W2.5) the road into it is faint and
+    /// then drawn in gold from the city before it over the first part of
+    /// the light.
+    private func road(width: CGFloat, height: CGFloat, igniting: String?, progress: Double) -> some View {
         Canvas { context, _ in
             let points = Self.cities.map { CGPoint(x: $0.x * width, y: $0.y * height) }
+            let gold: Color = Color(hex: "#F5D57A").opacity(0.85)
+            let faint: Color = Color.white.opacity(0.25)
+            let strong = StrokeStyle(lineWidth: 3, lineCap: .round, dash: [7, 9])
+            let thin = StrokeStyle(lineWidth: 2, lineCap: .round, dash: [7, 9])
             for index in 0..<max(0, points.count - 1) {
                 var path = Path()
                 path.move(to: points[index])
                 path.addLine(to: points[index + 1])
-                let travelled = StageDatabase.chapter(Self.cities[index].id).map {
+                let lighting: Bool = Self.cities[index + 1].id == igniting
+                let travelled: Bool = !lighting && (StageDatabase.chapter(Self.cities[index].id).map {
                     state(of: $0) == .cleared
-                } ?? false
-                context.stroke(
-                    path,
-                    with: .color(travelled ? Color(hex: "#F5D57A").opacity(0.85) : Color.white.opacity(0.25)),
-                    style: StrokeStyle(lineWidth: travelled ? 3 : 2, lineCap: .round, dash: [7, 9])
-                )
+                } ?? false)
+                context.stroke(path, with: .color(travelled ? gold : faint), style: travelled ? strong : thin)
+                if lighting {
+                    let drawn: Double = min(1, progress / Self.roadShare)
+                    if drawn > 0 {
+                        context.stroke(path.trimmedPath(from: 0, to: CGFloat(drawn)), with: .color(gold), style: strong)
+                    }
+                }
             }
         }
         .frame(width: width, height: height)
         .allowsHitTesting(false)
+    }
+
+    /// The cities on the road, one medallion a chapter; the one lighting
+    /// wears its ignition.
+    @ViewBuilder
+    private func cities(width: CGFloat, height: CGFloat, igniting: String?, progress: Double) -> some View {
+        ForEach(Array(Self.cities.enumerated()), id: \.offset) { index, city in
+            if let chapter = StageDatabase.chapter(city.id) {
+                CityMedallion(
+                    chapter: chapter,
+                    order: index + 1,
+                    state: state(of: chapter),
+                    action: { onSelect(chapter) },
+                    ignition: city.id == igniting ? progress : nil
+                )
+                .position(x: city.x * width, y: city.y * height)
+                .id(city.id)
+            }
+        }
+    }
+
+    // MARK: A city lighting (Docs/FEEL.md W2.5)
+
+    /// The light's run: the road drawn in over its first `roadShare`, the
+    /// city's flare and its lock falling from `lightAt`; a breath after the
+    /// road has scrolled to the city.
+    static let ignitionSpan: TimeInterval = 1.4
+    static let roadShare: Double = 0.55
+    static let lightAt: Double = 0.5
+    private static let ignitionDelay: TimeInterval = 0.6
+
+    /// `-tour-road-ignite` (DEBUG): the light held at its flare for the CI's
+    /// frame, with `[TourCue] road-ignite`.
+    private static let ignitionHolds: [MapClearHold] = {
+        #if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("-tour-road-ignite") else { return [] }
+        return [MapClearHold(at: ignitionSpan * 0.62, seconds: 10, cue: "road-ignite")]
+        #else
+        return []
+        #endif
+    }()
+
+    /// How far the light has run at `date`, 0 → 1.
+    static func ignitionProgress(since start: Date, at date: Date) -> Double {
+        let elapsed: TimeInterval = date.timeIntervalSince(start)
+        guard elapsed > 0 else { return 0 }
+        let time: TimeInterval = MapClearTimeline.beatTime(elapsed: elapsed, holds: ignitionHolds)
+        return min(1, time / ignitionSpan)
+    }
+
+    /// Lights the city the store holds for the road, once: its sound and
+    /// touch at the flare, and the road itself again once the light is out.
+    /// The city it lit, for the road to scroll to; nil when none was owed.
+    ///
+    /// Only a city ON THE PAINTING lights (review, 2026-09-24). The store
+    /// owes the road whichever chapter a Normal road's end opened, and four
+    /// of the twelve have no city here yet — Yggdrasil 3's end opens Rome 1,
+    /// and Rome and the Jade Court are in the Realms sheet alone — which lit
+    /// nothing, sounded the flare and its heavy touch over an empty road,
+    /// and scrolled to an id no city carries. Such a city is taken and let
+    /// go, so it waits nowhere.
+    @discardableResult
+    private func igniteIfOwed() -> String? {
+        guard ignition == nil, let city = store.takeCityIgnition() else { return nil }
+        guard Self.cities.contains(where: { $0.id == city }) else { return nil }
+        let holds: [MapClearHold] = Self.ignitionHolds
+        ignition = city
+        ignitionStart = Date().addingTimeInterval(Self.ignitionDelay)
+        let flare: TimeInterval = Self.ignitionDelay + MapClearTimeline.wallTime(atBeat: Self.ignitionSpan * Self.lightAt, holds: holds)
+        DispatchQueue.main.asyncAfter(deadline: .now() + flare) {
+            guard ignition == city else { return }
+            AudioLibrary.shared.play(.summonIgnite, volume: 0.8)
+            Juice.haptic(.heavy)
+        }
+        #if DEBUG
+        for hold in holds {
+            let cue: TimeInterval = Self.ignitionDelay + MapClearTimeline.wallTime(atBeat: hold.at, holds: holds)
+            DispatchQueue.main.asyncAfter(deadline: .now() + cue) {
+                if ignition == city { print("[TourCue] \(hold.cue)") }
+            }
+        }
+        #endif
+        let out: TimeInterval = Self.ignitionDelay + MapClearTimeline.wallTime(atBeat: Self.ignitionSpan, holds: holds) + 0.1
+        DispatchQueue.main.asyncAfter(deadline: .now() + out) {
+            guard ignition == city else { return }
+            ignition = nil
+            ignitionStart = nil
+        }
+        return city
     }
 
     private func state(of chapter: Chapter) -> CityState {
@@ -2051,14 +2588,24 @@ struct CityMedallion: View {
     let order: Int
     let state: CityState
     let action: () -> Void
+    /// The city lighting (Docs/FEEL.md W2.5): 0 → 1 while the world road
+    /// ignites it; nil otherwise.
+    var ignition: Double? = nil
 
     private var cleared: Int {
         chapter.stages.filter { CampaignService.isCleared($0, player: store.player) }.count
     }
 
+    /// The state drawn: a city lighting stands shut until its flare, then
+    /// open, whatever the save has caught up to.
+    private var shown: CityState {
+        guard let ignition else { return state }
+        return ignition < WorldRoadMapView.lightAt ? .locked : .open
+    }
+
     var body: some View {
         Button {
-            guard state != .locked else { return }
+            guard shown != .locked else { return }
             AudioLibrary.shared.play(.uiConfirm)
             action()
         } label: {
@@ -2067,7 +2614,7 @@ struct CityMedallion: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: state == .locked
+                                colors: shown == .locked
                                     ? [Color(hex: "#2A2A38"), Color(hex: "#14141C")]
                                     : [Color(hex: "#4A3A16"), Color(hex: "#1A1408")],
                                 startPoint: .top, endPoint: .bottom
@@ -2076,13 +2623,13 @@ struct CityMedallion: View {
                         .frame(width: 42, height: 42)
                     Circle()
                         .strokeBorder(
-                            state == .locked ? LinearGradient(colors: [Theme.stroke, Theme.stroke],
+                            shown == .locked ? LinearGradient(colors: [Theme.stroke, Theme.stroke],
                                                               startPoint: .top, endPoint: .bottom)
                                              : Theme.goldPlate,
                             lineWidth: 2
                         )
                         .frame(width: 42, height: 42)
-                    switch state {
+                    switch shown {
                     case .locked:
                         Image(systemName: "lock.fill")
                             .font(.system(size: 15, weight: .black))
@@ -2097,18 +2644,19 @@ struct CityMedallion: View {
                             .foregroundStyle(Theme.gold)
                     }
                 }
-                .shadow(color: state == .open ? Theme.gold.opacity(0.55) : .black.opacity(0.6),
-                        radius: state == .open ? 9 : 5)
+                .shadow(color: shown == .open ? Theme.gold.opacity(0.55) : .black.opacity(0.6),
+                        radius: shown == .open ? 9 : 5)
+                .overlay { ignitionFlare }
 
                 VStack(spacing: 0) {
                     Text(chapter.name)
                         .font(Theme.body(9).weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
-                    if state != .locked {
+                    if shown != .locked {
                         Text("\(cleared)/\(chapter.stages.count)")
                             .font(Theme.numeric(8))
-                            .foregroundStyle(state == .cleared ? Theme.gold : Theme.textSecondary)
+                            .foregroundStyle(shown == .cleared ? Theme.gold : Theme.textSecondary)
                     }
                 }
                 .padding(.horizontal, 5)
@@ -2119,8 +2667,39 @@ struct CityMedallion: View {
         }
         // The road pans, but its twelve cities stand apart on the painting,
         // so a drag rarely starts on one: the full press, silent when shut.
-        .buttonStyle(GamePressStyle(.medallion, sounds: state != .locked))
-        .opacity(state == .locked ? 0.75 : 1)
+        .buttonStyle(GamePressStyle(.medallion, sounds: shown != .locked))
+        .opacity(shown == .locked ? 0.75 : 1)
+    }
+
+    /// The city catching light (W2.5): a ring of gold swelling off the
+    /// medallion and fading, a flare in its heart, and its lock falling away.
+    @ViewBuilder
+    private var ignitionFlare: some View {
+        if let ignition, ignition > WorldRoadMapView.lightAt {
+            let burst: Double = min(1, (ignition - WorldRoadMapView.lightAt) / (1 - WorldRoadMapView.lightAt))
+            // Under Reduce Motion the ring and the lock fade where they stand.
+            let calm: Bool = MotionComfort.isReduced
+            let ring: CGFloat = calm ? 48 : 42 + 70 * CGFloat(burst)
+            ZStack {
+                Circle()
+                    .strokeBorder(Theme.goldText, lineWidth: 3)
+                    .frame(width: ring, height: ring)
+                    .opacity(1 - burst)
+                Circle()
+                    .fill(RadialGradient(colors: [Color(hex: "#FFE9A8").opacity(0.9), Theme.gold.opacity(0)],
+                                         center: .center, startRadius: 0, endRadius: 40))
+                    .frame(width: 80, height: 80)
+                    .opacity(0.9 * (1 - burst))
+                    .blendMode(.plusLighter)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 15, weight: .black))
+                    .foregroundStyle(Theme.textSecondary)
+                    .rotationEffect(.degrees(calm ? 0 : 40 * burst))
+                    .offset(y: calm ? 0 : 26 * CGFloat(burst))
+                    .opacity(1 - burst)
+            }
+            .allowsHitTesting(false)
+        }
     }
 }
 
@@ -2390,3 +2969,384 @@ struct TributeCard: View {
         }
     }
 }
+
+// MARK: - The map plays the clear (Docs/FEEL.md W2.5)
+
+/// A hold in the map's beat, for the CI (`-tour-map-clear`, the world road's
+/// `-tour-road-ignite`): at beat time `at` the beat stands still for
+/// `seconds`, and `cue` is printed as it does, for the job's clock.
+struct MapClearHold: Equatable {
+    let at: TimeInterval
+    let seconds: TimeInterval
+    let cue: String
+}
+
+/// The chapter map's beat after a clear, as times from its start — pure, so
+/// the tests read it and the map draws it off one clock, as the reveal's
+/// charge is drawn: the medallion turning from bronze to gold, each new star
+/// stamping, the leader's face walking the node line to the stage the clear
+/// opened, that stage's lock breaking into four, each chest the clear earned
+/// jumping with a beam, and a road's end crossing the map with CHAPTER
+/// CONQUERED. A clear that only bettered its stars stamps them and nothing
+/// else.
+///
+/// The spec named a `phaseAnimator`; a phase animator cannot sound its
+/// phases, hold on one for the CI's frame or tell the strip's chips when to
+/// unseal, and it restarts from its first phase whenever its view is
+/// rebuilt. A timeline read off the wall clock does all four (the reveal's
+/// lesson, run 221): the beat is wherever it should be whenever a frame is
+/// drawn, and its sounds are timers at the same times.
+struct MapClearTimeline: Equatable {
+    let flipStart: TimeInterval
+    let flipLength: TimeInterval
+    let starStarts: [TimeInterval]
+    let hopStart: TimeInterval?
+    let unlockStart: TimeInterval?
+    let chestStarts: [TributeMilestone: TimeInterval]
+    let ribbonStart: TimeInterval?
+    let end: TimeInterval
+
+    /// The medallion's turn.
+    static let flip: TimeInterval = 0.5
+    /// Each new star stamps this long, the next this much later.
+    static let star: TimeInterval = 0.22
+    static let starGap: TimeInterval = 0.16
+    /// The leader's walk to the next medallion, in this many hops.
+    static let hop: TimeInterval = 0.6
+    static let hops: Int = 3
+    /// The lock breaking.
+    static let shards: TimeInterval = 0.5
+    /// A chest's jump and its beam, the next this much later.
+    static let chest: TimeInterval = 0.9
+    static let chestGap: TimeInterval = 0.25
+    /// The ribbon's run across the map, and how far into it it has landed —
+    /// when the strip's tier seal breaks.
+    static let ribbon: TimeInterval = 2.4
+    static let ribbonLands: TimeInterval = 0.35
+    /// A breath at the end before the map is itself again.
+    static let tail: TimeInterval = 0.3
+
+    init(clear: StageClear, hasNext: Bool) {
+        var t: TimeInterval = 0
+        let turn: TimeInterval = clear.firstClear ? Self.flip : 0
+        t += turn
+        let newStars: Int = max(0, clear.starsAfter - clear.starsBefore)
+        var stars: [TimeInterval] = []
+        for place in 0..<newStars {
+            stars.append(t + 0.05 + Double(place) * Self.starGap)
+        }
+        if let last = stars.last {
+            t = last + Self.star
+        }
+        var walk: TimeInterval?
+        var unlock: TimeInterval?
+        if clear.firstClear && hasNext {
+            walk = t + 0.1
+            let arrives: TimeInterval = t + 0.1 + Self.hop
+            unlock = arrives - 0.1
+            t = arrives - 0.1 + Self.shards
+        }
+        var chests: [TributeMilestone: TimeInterval] = [:]
+        for (place, milestone) in clear.chestsEarned.enumerated() {
+            chests[milestone] = t + 0.1 + Double(place) * Self.chestGap
+        }
+        if !clear.chestsEarned.isEmpty {
+            t = t + 0.1 + Double(clear.chestsEarned.count - 1) * Self.chestGap + Self.chest
+        }
+        var ribbonAt: TimeInterval?
+        if clear.conquered {
+            ribbonAt = t + 0.15
+            t = t + 0.15 + Self.ribbon
+        }
+        self.flipStart = 0
+        self.flipLength = turn
+        self.starStarts = stars
+        self.hopStart = walk
+        self.unlockStart = unlock
+        self.chestStarts = chests
+        self.ribbonStart = ribbonAt
+        self.end = t + Self.tail
+    }
+
+    /// Where the beat stands at `time`.
+    func frame(at time: TimeInterval) -> MapClearFrame {
+        let turned: Double = flipLength > 0 ? Self.ramp(time, from: flipStart, length: flipLength) : 1
+        let stamps: [Double] = starStarts.map { Self.ramp(time, from: $0, length: Self.star) }
+        let walked: Double = hopStart.map { Self.ramp(time, from: $0, length: Self.hop) } ?? 0
+        let broken: Double = unlockStart.map { Self.ramp(time, from: $0, length: Self.shards) } ?? 0
+        var jumps: [TributeMilestone: Double] = [:]
+        for (milestone, start) in chestStarts {
+            jumps[milestone] = Self.ramp(time, from: start, length: Self.chest)
+        }
+        let ribbon: Double? = ribbonStart.map { Self.ramp(time, from: $0, length: Self.ribbon) }
+        return MapClearFrame(flip: turned, stamps: stamps, hop: walked, shards: broken, chests: jumps,
+                             ribbon: ribbon, finished: time >= end)
+    }
+
+    /// 0 before `start`, 1 after `length` more, straight between.
+    static func ramp(_ time: TimeInterval, from start: TimeInterval, length: TimeInterval) -> Double {
+        min(1, max(0, (time - start) / max(0.001, length)))
+    }
+
+    /// The beat's time `elapsed` wall seconds in, with the CI's holds: at
+    /// each hold's beat time the beat stands still for its seconds.
+    static func beatTime(elapsed: TimeInterval, holds: [MapClearHold]) -> TimeInterval {
+        var time: TimeInterval = elapsed
+        for hold in holds.sorted(by: { $0.at < $1.at }) {
+            if time <= hold.at { break }
+            time = max(hold.at, time - hold.seconds)
+        }
+        return time
+    }
+
+    /// The wall time at which the beat reaches beat time `time`: that time
+    /// and every hold that began before it.
+    static func wallTime(atBeat time: TimeInterval, holds: [MapClearHold]) -> TimeInterval {
+        time + holds.filter { $0.at < time }.reduce(0) { $0 + $1.seconds }
+    }
+}
+
+/// Where the map's beat stands (`MapClearTimeline.frame`), every part 0 → 1.
+struct MapClearFrame: Equatable {
+    /// The medallion's turn; 1 for a clear that was not a first.
+    var flip: Double
+    /// Each new star's stamp.
+    var stamps: [Double]
+    /// The leader's walk to the next medallion.
+    var hop: Double
+    /// The next medallion's lock breaking.
+    var shards: Double
+    /// Each chest the clear earned, jumping.
+    var chests: [TributeMilestone: Double]
+    /// The ribbon's run; nil for a clear that conquered nothing.
+    var ribbon: Double?
+    var finished: Bool
+}
+
+/// A clear laid over the road: what it changed and where its beat stands.
+private struct ClearLook {
+    let clear: StageClear
+    let frame: MapClearFrame
+    let calm: Bool
+}
+
+/// How one medallion is drawn, with a clear's beat laid over what the save
+/// says: its state, its turn from bronze to gold, the pips it held and the
+/// new ones stamping, its lock breaking, and whether the leader's face rides
+/// on it or walks the road apart.
+private struct MarkLook {
+    var state: StageMarkState
+    var turn: Double = 0
+    var heldPips: Int? = nil
+    var stamps: [Double] = []
+    var shards: Double = 0
+    var showsLeader: Bool = true
+    /// Reduce Motion: the lock's quarters fade where they stand.
+    var calm: Bool = false
+}
+
+/// A medallion's lock breaking into four as its stage opens: the lock's four
+/// quarters flying out from its middle, turning and fading.
+private struct LockShards: View {
+    let progress: Double
+    let size: CGFloat
+    var calm: Bool = false
+
+    var body: some View {
+        let reach: CGFloat = calm ? 0 : size * 0.5 * CGFloat(progress)
+        let fade: Double = 1 - progress
+        return ZStack {
+            ForEach(0..<4, id: \.self) { quarter in
+                let across: CGFloat = quarter % 2 == 0 ? -1 : 1
+                let down: CGFloat = quarter < 2 ? -1 : 1
+                let spin: Double = calm ? 0 : Double(across * down) * 45 * progress
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .frame(width: 20, height: 20)
+                    .mask(alignment: Self.corner(quarter)) {
+                        Rectangle().frame(width: 10, height: 10)
+                    }
+                    .rotationEffect(.degrees(spin))
+                    .offset(x: across * reach, y: down * reach)
+                    .opacity(fade)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private static func corner(_ quarter: Int) -> Alignment {
+        switch quarter {
+        case 0: return .topLeading
+        case 1: return .topTrailing
+        case 2: return .bottomLeading
+        default: return .bottomTrailing
+        }
+    }
+}
+
+/// A column of light rising out of a chest the clear earned, as it jumps.
+private struct ChestBeam: View {
+    let progress: Double
+
+    var body: some View {
+        let rise: CGFloat = 110 * CGFloat(min(1, progress * 1.6))
+        let glow: Double = sin(Double.pi * progress)
+        return LinearGradient(
+            colors: [Theme.gold.opacity(0), Color(hex: "#FFE9A8").opacity(0.85), Theme.gold.opacity(0.45)],
+            startPoint: .top, endPoint: .bottom
+        )
+        .frame(width: 26, height: rise)
+        .blur(radius: 3)
+        .opacity(glow)
+        .blendMode(.plusLighter)
+        .offset(y: -18)
+        .allowsHitTesting(false)
+    }
+}
+
+/// A road's end fallen for the first time on a tier: CHAPTER CONQUERED
+/// carved across the map on a dark band between gold rules, wiping in from
+/// the left, lit once by the name card's travelling light
+/// (`RevealNameCard.sweepStops`), and leaving to the right. Under Reduce
+/// Motion it fades in and out where it stands.
+private struct ConqueredRibbon: View {
+    let eyebrow: String
+    /// 0 → 1 over the ribbon's run.
+    let progress: Double
+    let width: CGFloat
+    let calm: Bool
+
+    private static let words = "CHAPTER CONQUERED"
+
+    var body: some View {
+        let landed: Double = MapClearTimeline.ribbonLands / MapClearTimeline.ribbon
+        let wipe: Double = calm ? 1 : min(1, progress / landed)
+        let arrive: Double = calm ? min(1, progress / landed) : 1
+        let leaving: Double = max(0, (progress - 0.82) / 0.18)
+        let sweep: Double = min(1, max(0, (progress - landed) / 0.35))
+        let drift: CGFloat = calm ? 0 : CGFloat(leaving) * width * 0.2
+        return VStack(spacing: 2) {
+            Text(eyebrow)
+                .font(Theme.title(12))
+                .tracking(3)
+                .foregroundStyle(Theme.onGlassEyebrow)
+                .lineLimit(1)
+                .fixedSize()
+            Text(Self.words)
+                .font(Theme.display(34))
+                .tracking(2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .carved()
+                .overlay {
+                    if !calm {
+                        Text(Self.words)
+                            .font(Theme.display(34))
+                            .tracking(2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .foregroundStyle(LinearGradient(stops: RevealNameCard.sweepStops(sweep),
+                                                            startPoint: .leading, endPoint: .trailing))
+                            .blendMode(.plusLighter)
+                    }
+                }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 24)
+        .frame(width: width)
+        .background(band)
+        .mask(alignment: .leading) {
+            Rectangle()
+                .frame(width: width * CGFloat(wipe))
+        }
+        .offset(x: drift)
+        .opacity(arrive * (1 - leaving))
+    }
+
+    /// The band: dark across the middle and fading at both ends, a gold
+    /// rule along its top and its foot.
+    private var band: some View {
+        let dark: [Color] = [Color.black.opacity(0), Color.black.opacity(0.78), Color.black.opacity(0.78), Color.black.opacity(0)]
+        let rule: [Color] = [Theme.gold.opacity(0), Color(hex: "#FFE9A8"), Theme.gold, Theme.gold.opacity(0)]
+        return ZStack {
+            LinearGradient(colors: dark, startPoint: .leading, endPoint: .trailing)
+            VStack(spacing: 0) {
+                LinearGradient(colors: rule, startPoint: .leading, endPoint: .trailing)
+                    .frame(height: 1.5)
+                Spacer(minLength: 0)
+                LinearGradient(colors: rule, startPoint: .leading, endPoint: .trailing)
+                    .frame(height: 1.5)
+            }
+        }
+    }
+}
+
+/// A tier chip's lock falling off as a clear opens the tier (W2.5), with the
+/// map's ribbon: drawn only once `falling` turns true — before it, the chip
+/// wears its own lock — and gone once fallen. Its resting value is the
+/// fallen one, so a view built after the fall draws nothing.
+private struct TierLockFall: View {
+    let falling: Bool
+    let calm: Bool
+
+    var body: some View {
+        Image(systemName: "lock.fill")
+            .font(.system(size: 10, weight: .black))
+            .foregroundStyle(Theme.onGlassDim)
+            .keyframeAnimator(initialValue: LockFallFrame(), trigger: falling) { content, frame in
+                content
+                    .rotationEffect(.degrees(frame.tilt))
+                    .offset(y: frame.drop)
+                    .opacity(falling ? frame.opacity : 0)
+            } keyframes: { _ in
+                KeyframeTrack(\.drop) {
+                    MoveKeyframe(0)
+                    CubicKeyframe(calm ? 0 : -3, duration: 0.12)
+                    CubicKeyframe(calm ? 0 : 16, duration: 0.42)
+                }
+                KeyframeTrack(\.tilt) {
+                    MoveKeyframe(0)
+                    CubicKeyframe(calm ? 0 : -8, duration: 0.12)
+                    CubicKeyframe(calm ? 0 : 35, duration: 0.42)
+                }
+                KeyframeTrack(\.opacity) {
+                    MoveKeyframe(1)
+                    LinearKeyframe(1, duration: 0.3)
+                    LinearKeyframe(0, duration: 0.24)
+                }
+            }
+            .allowsHitTesting(false)
+    }
+}
+
+/// The falling lock's animated value (`TierLockFall`): at rest, fallen.
+private struct LockFallFrame {
+    var drop: CGFloat = 16
+    var tilt: Double = 35
+    var opacity: Double = 0
+}
+
+#if DEBUG
+extension ChapterMapView {
+    /// The player the `-tour-map-clear` boss frames read (W2.5): the Duat
+    /// walked to its end with three, three, two and one stars and three on
+    /// the boss — the state AFTER the clear `GameStore.seedTourClear(boss:)`
+    /// hands the map, which the map plays its way to from the one before. A
+    /// COPY, never written anywhere: the tour's save persists between
+    /// launches.
+    static func tourClearWalk(_ player: Player) -> Player {
+        var walked = player
+        guard let road = StageDatabase.chapter("duat_1") else { return walked }
+        walked.campaignProgress[road.id] = road.stages.count
+        var stars: [String: Int] = walked.stageStars ?? [:]
+        let pips: [Int] = [3, 3, 2, 1]
+        for (place, stage) in road.stages.enumerated() {
+            let wanted: Int = place == road.stages.count - 1 ? 3 : pips[min(place, pips.count - 1)]
+            stars[stage.id] = max(stars[stage.id] ?? 0, wanted)
+        }
+        walked.stageStars = stars
+        return walked
+    }
+}
+#endif

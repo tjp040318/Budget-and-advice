@@ -36,6 +36,12 @@ final class UnitNode: SCNNode {
     weak var plate: UnitPlate? {
         didSet { if plate != nil { healthBarRoot.isHidden = true } }
     }
+    /// The overlay the unit's head mark is drawn on (Docs/FEEL.md W2.22): a
+    /// stunned, sleeping or frozen unit wears one — a boss too, which has no
+    /// plate. Set by the battle; the island and the Hall of Ka have none.
+    weak var markOverlay: UnitPlateOverlay?
+    /// The head mark the unit wears now, so an unchanged one is not re-made.
+    private var headMarkShown: HeadMarkKind?
     /// THE TURN CIRCLE (2026-09-24, Docs/FEEL.md W1.9): a flat rune disc
     /// under the acting unit, 0.95 of its width, in its element's colour,
     /// turning slowly over a soft pool of the same light, popped in as its
@@ -1249,9 +1255,15 @@ final class UnitNode: SCNNode {
     /// icons over the health bar, a blue tile for a buff and a red one for a
     /// debuff, the effect's glyph on it and the turns left in the corner.
     /// The coloured dots of the first build told the player nothing.
-    func setStatuses(_ statuses: [ActiveStatus]) {
+    func setStatuses(_ statuses: [ActiveStatus], leaving: StatusTileExit = .expire) {
         activeStatuses = statuses
-        plate?.setStatuses(statuses)
+        plate?.setStatuses(statuses, leaving: leaving)
+        // The mark round the head while it cannot act (W2.22).
+        let mark = HeadMarkKind.of(statuses.map { $0.kind })
+        if mark != headMarkShown, let markOverlay {
+            headMarkShown = mark
+            markOverlay.setHeadMark(mark, for: combatantID)
+        }
         statusRow.childNodes.forEach { $0.removeFromParentNode() }
         // One tile per kind, the longest-lasting of each, six at most.
         var byKind: [StatusKind: Int] = [:]
@@ -1286,8 +1298,10 @@ final class UnitNode: SCNNode {
         setStatuses(statuses)
     }
 
-    func removeStatus(_ kind: StatusKind) {
-        setStatuses(activeStatuses.filter { $0.kind != kind })
+    /// A status gone: run out, or — `cleansed` — taken off by a cleanse,
+    /// whose red tiles are wiped rather than shrunk (W2.22).
+    func removeStatus(_ kind: StatusKind, cleansed: Bool = false) {
+        setStatuses(activeStatuses.filter { $0.kind != kind }, leaving: cleansed ? .cleanse : .expire)
     }
 
     private static func imageMaterial(_ image: UIImage?) -> SCNMaterial {
@@ -1842,15 +1856,7 @@ final class UnitNode: SCNNode {
         trail.name = "swing_trail"
         // A ribbon of light casts nothing (the cast ring's reason, above).
         trail.castsShadow = false
-        let material = SCNMaterial()
-        material.lightingModel = .constant
-        material.diffuse.contents = UIColor.white
-        material.emission.contents = tint
-        material.blendMode = .add
-        material.writesToDepthBuffer = false
-        material.readsFromDepthBuffer = false
-        material.isDoubleSided = true
-        material.colorBufferWriteMask = [.red, .green, .blue]
+        let material = UnitNode.trailMaterial(tint: tint)
         stage.addChildNode(trail)
         var samples: [(root: SCNVector3, tip: SCNVector3)] = []
         let keep = 12
@@ -1890,6 +1896,43 @@ final class UnitNode: SCNNode {
             }
         }
         RunLoop.main.add(timer, forMode: .common)
+    }
+
+    /// The ribbon's material: white under the strike's colour, added to the
+    /// frame and written to neither the depth nor the alpha.
+    private static func trailMaterial(tint: UIColor) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = UIColor.white
+        material.emission.contents = tint
+        material.blendMode = .add
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        material.isDoubleSided = true
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        return material
+    }
+
+    /// The cast ring and a swing's ribbon, built as `castRing` and
+    /// `swingTrail` build them, for the pre-draw under the stage card
+    /// (Docs/FEEL.md W2.24, `VFXLibrary.predraw`): the ring's additive plane
+    /// and the ribbon's vertex-coloured strip are pipelines of their own,
+    /// compiled there rather than on the first ultimate's wind-up. The
+    /// caller places them; neither casts a shadow.
+    static func predrawPieces(tint: UIColor) -> [SCNNode] {
+        let ring = StageBuilder.runeRing(radius: 1.2, tint: tint)
+        ring.name = "predraw_cast_ring"
+        ring.position = SCNVector3(0, 0.03, 0)
+        ring.enumerateHierarchy { child, _ in child.castsShadow = false }
+        let samples: [(root: SCNVector3, tip: SCNVector3)] = [
+            (root: SCNVector3(-0.5, 1.0, 0), tip: SCNVector3(-0.4, 2.0, 0)),
+            (root: SCNVector3(0, 1.1, 0), tip: SCNVector3(0.1, 2.1, 0)),
+            (root: SCNVector3(0.5, 1.0, 0), tip: SCNVector3(0.6, 2.0, 0)),
+        ]
+        let trail = SCNNode(geometry: ribbon(samples, material: trailMaterial(tint: tint)))
+        trail.name = "predraw_swing_trail"
+        trail.castsShadow = false
+        return [ring, trail]
     }
 
     /// A triangle strip through the samples, oldest first, darkening toward

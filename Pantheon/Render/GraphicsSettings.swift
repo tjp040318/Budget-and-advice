@@ -193,15 +193,26 @@ final class StageRenderGovernor: NSObject, SCNSceneRendererDelegate {
     private let dimmedCameras = NSMapTable<SCNCamera, NSNumber>.weakToStrongObjects()
     private let quietLights = NSMapTable<SCNLight, NSNumber>.weakToStrongObjects()
 
+    /// The stage's frame pacing (Docs/FEEL.md W2.26): every
+    /// `renderer(_:updateAtTime:)` counted into its histogram on the render
+    /// thread, its line printed when the stage goes and, under the CI tour,
+    /// every few seconds of drawing (`FrameMeter`).
+    private let meter: FrameMeter
+
     init(stage: RenderStage, inner: SCNSceneRendererDelegate?) {
         self.stage = stage
         self.inner = inner
+        meter = FrameMeter(name: Self.liveName(stage))
         super.init()
         Self.adjustLive(stage, by: 1)
     }
 
     deinit {
         Self.adjustLive(stage, by: -1)
+        if let line = meter.report(final: true) {
+            print(line)
+            DiagnosticsLog.shared.record(line)
+        }
     }
 
     // MARK: Live views (2026-09-24)
@@ -242,6 +253,11 @@ final class StageRenderGovernor: NSObject, SCNSceneRendererDelegate {
     // MARK: - Forwarding
 
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+        // The interval first, before the stage's own work adds to the next.
+        if let line = meter.record(at: time) {
+            print(line)
+            DiagnosticsLog.shared.record(line)
+        }
         inner?.renderer?(renderer, updateAtTime: time)
         govern(renderer)
     }

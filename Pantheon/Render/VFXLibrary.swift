@@ -108,7 +108,7 @@ enum VFXLibrary {
             let host = SCNNode()
             host.name = "vfx_\(identifier)_sparks"
             host.position = position
-            scene.rootNode.addChildNode(host)
+            stageRoot(of: scene).addChildNode(host)
             host.addParticleSystem(sparks(tint: tint, count: 36, speed: 5, scale: scale))
             retire(host, after: 3.0)
         }
@@ -135,7 +135,7 @@ enum VFXLibrary {
         // effect a host belonged to.
         host.name = "vfx_\(identifier)"
         host.position = position
-        scene.rootNode.addChildNode(host)
+        stageRoot(of: scene).addChildNode(host)
 
         // Every painted sheet, light, sky flash and spark count below goes
         // through these, so a cast on several victims is drawn by `reach`'s
@@ -488,7 +488,7 @@ enum VFXLibrary {
         billboard.freeAxes = .all
         node.constraints = [billboard]
         node.castsShadow = false
-        scene.rootNode.addChildNode(node)
+        stageRoot(of: scene).addChildNode(node)
         if standingSheetsSeen.insert(name).inserted {
             let across = String(format: "%.2f", Double(side))
             let up = String(format: "%.2f", Double(centreHeight))
@@ -636,7 +636,7 @@ enum VFXLibrary {
         node.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
         node.position = SCNVector3(position.x, 0.04, position.z)
         node.castsShadow = false
-        scene.rootNode.addChildNode(node)
+        stageRoot(of: scene).addChildNode(node)
         let count = cut.count
         let start = CACurrentMediaTime()
         var shown = 0
@@ -670,7 +670,7 @@ enum VFXLibrary {
     /// sphere and every direction here is world up, so the motes gather
     /// exactly where and how they did.
     static func charge(on caster: SCNNode, tint: UIColor, duration: TimeInterval, scale: Float) {
-        guard let stage = caster.parent else { return }
+        guard let stage = predrawHolder ?? caster.parent else { return }
         let host = SCNNode()
         host.name = "vfx_charge"
         host.position = caster.convertPosition(SCNVector3(0, 1.0 * scale, 0), to: stage)
@@ -885,7 +885,7 @@ enum VFXLibrary {
         host.name = "vfx_projectile_\(name)"
         host.position = start
         host.constraints = [SCNBillboardConstraint()]
-        scene.rootNode.addChildNode(host)
+        stageRoot(of: scene).addChildNode(host)
 
         let plane = SCNPlane(width: size * CGFloat(scale), height: size * CGFloat(scale))
         let material = SCNMaterial()
@@ -1423,6 +1423,9 @@ enum VFXLibrary {
         duration: TimeInterval,
         strength: CGFloat = 1
     ) {
+        // A pre-draw's effects bring no light of their own: the controller
+        // stands up the counts a fight reaches itself (`predrawLight`).
+        guard predrawHolder == nil else { return }
         let peak = min(2_400, 900 + 420 * CGFloat(max(0.2, radius))) * strength
         let light = SCNLight()
         light.type = .omni
@@ -1445,30 +1448,48 @@ enum VFXLibrary {
         ]))
     }
 
-    /// The beam that drops a summoned unit onto the reveal stage.
+    /// The beam that drops a summoned unit onto the reveal stage, and the
+    /// pillar an evolution or an awakening raises on the Hall of Ka's altar.
+    ///
+    /// A soft column STANDING BEHIND the figure (2026-09-24, run 251). It was
+    /// a 1.6 m cylinder drawn `.add` whose near half stood in front of the
+    /// figure and wrote its alpha into these stages' transparent views, so
+    /// for the second after the flash — the entrance's high point, when the
+    /// name slams — every 5★ wore a flat pale panel over its body
+    /// (`5-reveal-apex`, `5-reveal-awakened-apex`). Now it is a plane faced
+    /// to the lens (both stages' cameras look down −Z), `summonBeamDepth`
+    /// behind the feet so the depth test keeps the body whole in front of
+    /// it, its light a baked profile (`summonBeamImage`: full down the
+    /// middle, nothing at the sides, faded in off the floor and out towards
+    /// the top) times the tint, adding light and writing no alpha, as the
+    /// entrance's flipbooks do. It opens from a sliver, holds, and narrows
+    /// away as it fades. The reveal's warm-up draws the same column
+    /// (`summonBeamColumn`), so its pipeline is compiled before the flash.
     static func summonBeam(at position: SCNVector3, in scene: SCNScene, tint: UIColor) {
         let host = SCNNode()
         host.position = position
         scene.rootNode.addChildNode(host)
 
-        let beam = SCNCylinder(radius: 0.8, height: 14)
-        let material = SCNMaterial()
-        material.lightingModel = .constant
-        material.diffuse.contents = tint.withAlphaComponent(0.25)
-        material.emission.contents = tint
-        material.blendMode = .add
-        material.writesToDepthBuffer = false
-        beam.firstMaterial = material
-
-        let node = SCNNode(geometry: beam)
-        node.position = SCNVector3(0, 7, 0)
-        node.scale = SCNVector3(0.05, 1, 0.05)
+        let node = summonBeamColumn(tint: tint)
+        node.scale = SCNVector3(0.05, 1, 1)
         host.addChildNode(node)
 
+        let open: TimeInterval = 0.35
+        let close: TimeInterval = 0.5
         node.runAction(.sequence([
-            .scale(to: 1.0, duration: 0.35),
+            .customAction(duration: open) { node, elapsed in
+                let t = Float(min(1, elapsed / CGFloat(open)))
+                let eased: Float = t * t * (3 - 2 * t)
+                node.scale = SCNVector3(0.05 + 0.95 * eased, 1, 1)
+            },
             .wait(duration: 0.5),
-            .group([.scale(to: 0.02, duration: 0.5), .fadeOut(duration: 0.5)]),
+            .group([
+                .customAction(duration: close) { node, elapsed in
+                    let t = Float(min(1, elapsed / CGFloat(close)))
+                    node.scale = SCNVector3(max(0.02, 1 - 0.98 * t), 1, 1)
+                },
+                .fadeOut(duration: close)
+            ]),
             .removeFromParentNode()
         ]))
 
@@ -1476,6 +1497,79 @@ enum VFXLibrary {
         host.addParticleSystem(rising(tint: tint, count: 200, scale: 2.0))
         retire(host, after: 4)
     }
+
+    /// How far behind the feet the summon beam stands, in metres.
+    static let summonBeamDepth: Float = -0.6
+    /// The summon beam's width and height, in metres.
+    static let summonBeamWidth: CGFloat = 2.2
+    static let summonBeamHeight: CGFloat = 14
+
+    /// The summon beam's column at full size, with no motes: what
+    /// `summonBeam` opens and closes, and what the reveal's warm-up draws
+    /// once out of sight (`SummonStageView.warmBeamTwin`) so the flash
+    /// compiles nothing. One builder, so the two can never differ.
+    static func summonBeamColumn(tint: UIColor) -> SCNNode {
+        let plane = SCNPlane(width: summonBeamWidth, height: summonBeamHeight)
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = summonBeamImage
+        material.multiply.contents = tint.withAlphaComponent(1)
+        material.blendMode = .add
+        // Light added, never alpha: these stages' views are transparent, and
+        // an additive quad that writes its alpha prints its own rectangle
+        // over whatever is behind the view (run 251's panel).
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        material.isDoubleSided = true
+        plane.firstMaterial = material
+        let node = SCNNode(geometry: plane)
+        node.name = "vfx_summon_beam_column"
+        node.position = SCNVector3(0, Float(summonBeamHeight) / 2, summonBeamDepth)
+        node.renderingOrder = 3
+        node.castsShadow = false
+        return node
+    }
+
+    /// The summon beam's light, one channel of it in all three: across the
+    /// width `(1 - d²)³` of the distance from the middle (half strength about
+    /// a quarter of the way in from either side), up the height nothing at
+    /// the floor and all of it 0.35 m up — the dais never cuts it with a
+    /// line — then fading out between 5 m and the top. Peak 0.9, so the
+    /// tint is never added at full over a painted sky. Opaque: `.add` adds
+    /// a pixel's colour whatever its alpha.
+    static let summonBeamImage: CGImage? = {
+        let width = 64, height = 256
+        var pixels = [UInt8](repeating: 255, count: width * height * 4)
+        let tall = Float(VFXLibrary.summonBeamHeight)
+        for row in 0..<height {
+            let fromTop: Float = (Float(row) + 0.5) / Float(height)
+            let metres: Float = (1 - fromTop) * tall
+            let floorRamp: Float = min(1, max(0, metres / 0.35))
+            let floor: Float = floorRamp * floorRamp * (3 - 2 * floorRamp)
+            let topRamp: Float = min(1, max(0, (tall - metres) / (tall - 5)))
+            let top: Float = topRamp * topRamp * (3 - 2 * topRamp)
+            for column in 0..<width {
+                let across: Float = (Float(column) + 0.5) / Float(width)
+                let d: Float = abs(across - 0.5) * 2
+                let core: Float = pow(max(0, 1 - d * d), 3)
+                let value = UInt8(clamping: Int((0.9 * core * floor * top * 255).rounded()))
+                let at = (row * width + column) * 4
+                pixels[at] = value
+                pixels[at + 1] = value
+                pixels[at + 2] = value
+                pixels[at + 3] = 255
+            }
+        }
+        let space = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.noneSkipLast.rawValue
+        return pixels.withUnsafeMutableBytes { buffer -> CGImage? in
+            guard let base = buffer.baseAddress,
+                  let context = CGContext(data: base, width: width, height: height, bitsPerComponent: 8,
+                                          bytesPerRow: width * 4, space: space, bitmapInfo: info) else { return nil }
+            return context.makeImage()
+        }
+    }()
 
     // MARK: - Leaving the field (Docs/FEEL.md W2.8, W2.11)
 
@@ -1491,7 +1585,7 @@ enum VFXLibrary {
         let host = SCNNode()
         host.name = "vfx_soul_column"
         host.position = SCNVector3(feet.x, feet.y + height * 0.45, feet.z)
-        scene.rootNode.addChildNode(host)
+        stageRoot(of: scene).addChildNode(host)
         let emitting = CGFloat(max(0.2, duration))
         let count: CGFloat = sparse ? 16 : 40
         let life: CGFloat = 1.3
@@ -1539,7 +1633,7 @@ enum VFXLibrary {
         let host = SCNNode()
         host.name = "vfx_soul_light"
         host.position = start
-        scene.rootNode.addChildNode(host)
+        stageRoot(of: scene).addChildNode(host)
 
         let orb = SCNNode(geometry: SCNPlane(width: size, height: size))
         let material = SCNMaterial()
@@ -1608,7 +1702,7 @@ enum VFXLibrary {
         let host = SCNNode()
         host.name = "vfx_rim_dust"
         host.position = position
-        scene.rootNode.addChildNode(host)
+        stageRoot(of: scene).addChildNode(host)
         let share = max(0.2, strength)
         let span = CGFloat(max(1, width))
         let cloudLife: CGFloat = 1.8
@@ -1640,6 +1734,140 @@ enum VFXLibrary {
         chips.particleAngularVelocityVariation = 180
         host.addParticleSystem(chips)
         retire(host, after: 0.25 + Double(cloudLife) * 1.3 + 1.0)
+    }
+
+    // MARK: - Drawn in advance (Docs/FEEL.md W2.24)
+
+    /// Where an effect's pieces hang while the stage card pre-draws: the
+    /// pre-draw's holder instead of the stage's root, so one retirement
+    /// takes every piece off. Nil in a fight. Main thread; set only for the
+    /// length of `predraw`'s own synchronous call.
+    private static var predrawHolder: SCNNode?
+
+    /// The node an effect's hosts hang from: the stage's root, or the
+    /// pre-draw's holder while one is being drawn.
+    private static func stageRoot(of scene: SCNScene) -> SCNNode {
+        predrawHolder ?? scene.rootNode
+    }
+
+    /// Every effect `plan` names, drawn once at `spot` under the stage card,
+    /// with everything else a fight's first ultimate is likeliest to meet
+    /// for the first time — a sheet standing over a row and faded into the
+    /// floor, one laid flat on it, a projectile of each ranged element, a
+    /// fallen unit's soul column and light, a boss's rim dust, the cast
+    /// ring and a swing's ribbon — so each one's shaders are built and its
+    /// textures uploaded while nobody is looking (the reveal's lesson, run
+    /// 221: a shader compiles the first time something is DRAWN with it).
+    /// Drawn at full strength, not faintly: the card is opaque over the
+    /// view, and at 1% an opaque piece would compile the blended pipeline
+    /// rather than the one the fight draws it with. The effects' own lights
+    /// stay off (`flash` is quiet under a pre-draw): the controller stands
+    /// up the light counts a fight reaches, step by step
+    /// (`predrawLight`, `PredrawStep`). Everything hangs from the returned
+    /// holder, which the controller takes off through `retire` once it has
+    /// been drawn; its pieces' own retirements go with it.
+    @discardableResult
+    static func predraw(_ plan: EffectPlan, in scene: SCNScene, at spot: SCNVector3) -> SCNNode {
+        let holder = SCNNode()
+        holder.name = "vfx_predraw"
+        scene.rootNode.addChildNode(holder)
+        predrawHolder = holder
+        defer { predrawHolder = nil }
+        // A grid across the middle of the field, a metre and a half apart,
+        // so no piece is culled behind another.
+        let across = 5
+        func place(_ index: Int) -> SCNVector3 {
+            let column = Float(index % across - across / 2)
+            let row = Float(index / across)
+            return SCNVector3(spot.x + column * 1.5, spot.y, spot.z - row * 1.5)
+        }
+        var index = 0
+        for effect in plan.effects {
+            spawn(effect.name, at: place(index), in: scene, tint: UIColor(hex: effect.tintHex) ?? .white)
+            index += 1
+        }
+        // A cast over a row: its sheet STANDS, faded into the floor
+        // (`standingFlipbook`), a plane of its own kind; and a heavy blow's
+        // ring lies flat (`groundFlipbook`).
+        let white = UIColor.white
+        standingFlipbook("sunburst", at: place(index), in: scene, tint: white.withAlphaComponent(rowSheetStrength),
+                         size: areaSheetLimit, life: 2, lift: 0)
+        index += 1
+        groundFlipbook("shockwave", at: place(index), in: scene, tint: white, size: 3, life: 2)
+        index += 1
+        // A projectile of each ranged element, flying slowly across its cell.
+        for element in plan.projectiles {
+            let from = place(index)
+            let to = SCNVector3(from.x + 1, from.y, from.z)
+            let tint = UIColor(hex: element.accentHex) ?? white
+            projectile(element, from: from, to: to, in: scene, tint: tint, duration: 2, scale: 1)
+            index += 1
+        }
+        // A fallen unit's column and its small light, and a boss's dust.
+        let fallen = place(index)
+        soulColumn(at: SCNVector3(fallen.x, 0, fallen.z), in: scene, tint: white, height: 1.9, duration: 1, sparse: false)
+        soulLight(from: fallen, in: scene, tint: white, rise: 0.4, duration: 2, size: 0.4, onWink: {})
+        index += 1
+        if plan.boss {
+            let rim = place(index)
+            rimDust(at: SCNVector3(rim.x, 0, rim.z), in: scene, tint: white, width: 3)
+            index += 1
+        }
+        // The cast ring under a caster and a swing's ribbon, as `UnitNode`
+        // builds them.
+        for piece in UnitNode.predrawPieces(tint: white) {
+            let at = place(index)
+            piece.position = SCNVector3(at.x + piece.position.x, piece.position.y, at.z + piece.position.z)
+            holder.addChildNode(piece)
+            index += 1
+        }
+        print("[VFX] pre-drawn under the stage card: \(plan.effects.count) effect(s), \(plan.projectiles.count) projectile(s)\(plan.boss ? ", a boss's dust" : "")")
+        return holder
+    }
+
+    /// One of `flash`'s lights as the pre-draw stands it up: the same kind,
+    /// falloff and reach rules at a hundredth of the strength, reaching
+    /// `radius` × 1.5 from `position` — the whole field, so every material
+    /// on it compiles the shader its count of lights asks for.
+    @discardableResult
+    static func predrawLight(at position: SCNVector3, radius: Float, in holder: SCNNode) -> SCNNode {
+        let light = SCNLight()
+        light.type = .omni
+        light.color = UIColor.white
+        light.intensity = 12
+        light.attenuationStartDistance = CGFloat(radius * 0.35)
+        light.attenuationEndDistance = CGFloat(radius * 1.5)
+        let node = SCNNode()
+        node.name = "vfx_predraw_light"
+        node.light = light
+        node.position = position
+        holder.addChildNode(node)
+        return node
+    }
+
+    /// A boss's warm spot as the pre-draw stands it up (a later wave's boss
+    /// brings a spot light the figures' shaders have not met): a spot of
+    /// the same cone and reach, faint, aimed at `target`, lighting only
+    /// what `category` names (the figures, when the fight's lights are
+    /// layered).
+    @discardableResult
+    static func predrawSpot(aimedAt target: SCNVector3, in holder: SCNNode, category: Int?) -> SCNNode {
+        let spot = SCNLight()
+        spot.type = .spot
+        spot.color = UIColor.white
+        spot.intensity = 12
+        spot.spotInnerAngle = 22
+        spot.spotOuterAngle = 46
+        spot.attenuationStartDistance = 5
+        spot.attenuationEndDistance = 14
+        if let category { spot.categoryBitMask = category }
+        let node = SCNNode()
+        node.name = "vfx_predraw_spot"
+        node.light = spot
+        node.position = SCNVector3(target.x + 3, target.y + 4, target.z + 7)
+        node.look(at: target)
+        holder.addChildNode(node)
+        return node
     }
 
     // MARK: - Retiring a node that carries particles

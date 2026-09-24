@@ -318,10 +318,12 @@ enum BossEntrance {
     static let roarAt: TimeInterval = 1.2
     /// How far under the rim it starts.
     static let depth: Float = 4.5
-    /// The ground under the team as it climbs, and the roar's shake.
-    static let rumble: Float = 0.05
-    static let roarShake: Float = 0.3
-    static let roarShakeLength: TimeInterval = 0.6
+    /// The ground under the team as it climbs — a trauma floor held for the
+    /// climb, a shake of 0.09 (its square) — and the roar's trauma, the most
+    /// any one moment adds (Docs/FEEL.md W2.18: "up to 0.8 for a boss
+    /// landing"), gone in under half a second at `CameraShake.decay`.
+    static let rumbleTrauma: Float = 0.3
+    static let roarTrauma: Float = 0.8
     /// The breath after it before the first turn.
     static let settle: TimeInterval = 0.15
 }

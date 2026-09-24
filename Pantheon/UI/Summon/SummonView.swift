@@ -23,6 +23,29 @@ struct SummonView: View {
     @EnvironmentObject private var store: GameStore
     @State private var selectedBanner: Banner = Banner.all[0]
     @State private var revealResults: [SummonResult] = []
+    /// Bumped for every reveal the cover shows, so "Summon ×10 again" builds
+    /// a fresh one in place (`.id`) rather than handing new results to the
+    /// reveal that is ending.
+    @State private var revealSerial = 0
+    /// Where the room's scroll handed over to the reveal (Docs/FEEL.md
+    /// W2.14), in window points; nil when it cut.
+    @State private var openingFrame: CGRect?
+    /// The scroll's square over the ring, in window points, as the circle
+    /// reports it (`SummoningCircle.scrollFrame`): where the flight lifts off.
+    @State private var roomScroll: CGRect = .zero
+    /// The scroll on its way from the ring to the reveal's charge, while it
+    /// flies (`SummonShot`), and the serial that keeps a stale step of an
+    /// earlier shot from landing on this one.
+    @State private var shot: SummonShot?
+    @State private var shotSerial = 0
+    /// The room's scroll is off the ring: in the air, or in the reveal.
+    @State private var scrollLifted = false
+    /// The reveal's dusk over the room, 0 → 1 under the flight; it stands at
+    /// 1 under the reveal and fades out after it.
+    @State private var duskLevel: Double = 0
+    /// A mileage or selector pick, waiting for its sheet to finish leaving:
+    /// its reveal takes the same shot as a summon (W2.14).
+    @State private var pendingGift: [SummonResult] = []
     /// The full published table — every grade's odds and every name in the
     /// pool. It is `RateTableView`, the screen the strip's Rates button used
     /// to open; the button is gone and the rates ? is the one way in.
@@ -82,25 +105,42 @@ struct SummonView: View {
                     }
                 }
             }
+            // The reveal comes up with NO slide (Docs/FEEL.md W2.14): its
+            // results are set inside a transaction that disables animations
+            // (`present`), over the room already faded to the reveal's own
+            // dusk, and the cover's ground is that dusk, so no frame of white
+            // or of the system's sheet shows between the two.
             .fullScreenCover(isPresented: .constant(!revealResults.isEmpty)) {
-                SummonRevealView(results: revealResults, scroll: selectedBanner.scroll) {
-                    revealResults = []
+                SummonRevealView(
+                    results: revealResults,
+                    scroll: selectedBanner.scroll,
+                    againOffer: againOffer(for: revealResults.count),
+                    openingScrollFrame: openingFrame
+                ) {
+                    finishReveal()
+                }
+                .id(revealSerial)
+                .presentationBackground {
+                    RevealDuskSky()
                 }
             }
             .sheet(isPresented: $showPool) {
                 RateTableView(banner: selectedBanner)
             }
-            .sheet(isPresented: $showMileage) {
+            // A mileage or selector pick plays as a summon does: the sheet
+            // leaves first, then the room's scroll lifts off for it
+            // (`playPendingGift`).
+            .sheet(isPresented: $showMileage, onDismiss: playPendingGift) {
                 MileageSheet(banner: selectedBanner) { result in
-                    warmFirstFigure([result])
-                    revealResults = [result]
+                    warmFigure(result)
+                    pendingGift = [result]
                 }
                 .environmentObject(store)
             }
-            .sheet(isPresented: $showSelector) {
+            .sheet(isPresented: $showSelector, onDismiss: playPendingGift) {
                 SelectorSheet { result in
-                    warmFirstFigure([result])
-                    revealResults = [result]
+                    warmFigure(result)
+                    pendingGift = [result]
                 }
                 .environmentObject(store)
             }
@@ -115,6 +155,14 @@ struct SummonView: View {
                 RuneLinesArt.prepare()
             }
         }
+        // The shot (W2.14): the reveal's dusk rising over the strip and the
+        // room, and the scroll flying over it, laid out in window points so
+        // it lands on the reveal's first frame exactly. From the press on
+        // (`isCharging`, the wind-up) the layer and the tab bar take every
+        // touch: a summon under way is never pressed twice, its banner never
+        // changed and its tab never left before its reveal is up.
+        .overlay { shotLayer }
+        .dimsTabBar(isCharging || duskLevel > 0)
     }
 
     /// Out to the glass on both sides, as every other place's painting is
@@ -130,7 +178,9 @@ struct SummonView: View {
             charging: isCharging,
             leadingInset: Self.menuWidth,
             headerClearance: Self.headerFoot,
-            deckClearance: Self.deckHead
+            deckClearance: Self.deckHead,
+            scrollLifted: scrollLifted,
+            scrollFrame: $roomScroll
         )
         .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
     }
@@ -655,39 +705,262 @@ struct SummonView: View {
         return ""
     }
 
-    /// The circle winds up, then the reveal takes over.
+    /// The circle winds up, then its scroll carries the summon into the
+    /// reveal (Docs/FEEL.md W2.14).
     ///
     /// The summon itself is resolved first and only the presentation waits:
     /// if the wallet says no, nothing lights up and nothing is spent. The
-    /// 0.45 s is the charge — long enough to read as a wind-up, short enough
-    /// that a player pulling ten times in a row does not feel taxed for it.
+    /// wind-up is the room's 0.35 s charge; then the shot (`beginShot`).
+    ///
+    /// ONE summon from the press to the reveal (review, 2026-09-24): the
+    /// wind-up sets `isCharging` at once and only `present` clears it, as
+    /// the results go up, so a second press in the wind-up — before the
+    /// shot or the results exist — neither spends again nor strands the
+    /// first pull behind a newer shot (its step bails on the serial). The
+    /// shot's layer and the tab bar take every touch from the press on, so
+    /// the banner under the scroll cannot change in the wind-up either.
     private func perform(count: Int) {
+        guard !isCharging, shot == nil, revealResults.isEmpty else { return }
         let results = store.summon(banner: selectedBanner, count: count)
         guard !results.isEmpty else { return }
-        warmFirstFigure(results)
-        // The scroll catching light over the ring (Docs/FEEL.md W2.7): a
-        // shimmer and a breath of flame, short, so the reveal's own charge
-        // is the one that climbs.
+        warmLead(results)
+        windUp()
+        beginShot(results)
+    }
+
+    /// The scroll catching light over the ring (Docs/FEEL.md W2.7): a
+    /// shimmer and a breath of flame, short, so the reveal's own charge is
+    /// the one that climbs; the scroll straightens, swells and drops toward
+    /// the portal.
+    private func windUp() {
         AudioLibrary.shared.play(.summonIgnite, volume: 0.9)
         Juice.haptic(.medium)
         withAnimation(.easeIn(duration: 0.2)) { isCharging = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+    }
+
+    /// The room's wind-up, then the shot: the scroll lifts off its ring and
+    /// flies, growing, to the square where the reveal's charge will hold it
+    /// (`RevealGeometry.openingScroll`) while the room fades to the reveal's
+    /// dusk, and the reveal comes up under it with no slide. Under Reduce
+    /// Motion — or with no window or scroll to measure — the room fades to
+    /// the dusk and the reveal cuts in.
+    private func beginShot(_ results: [SummonResult]) {
+        shotSerial += 1
+        let mine: Int = shotSerial
+        let calm: Bool = MotionComfort.isReduced
+        after(Self.windUpLength) {
+            guard mine == shotSerial else { return }
+            let window: CGRect = SummonShot.windowBounds()
+            let target: CGRect = RevealGeometry.openingScroll(pulls: results.count, in: window.size)
+            if calm || roomScroll == .zero || window == .zero {
+                withAnimation(.easeIn(duration: Self.calmFade)) { duskLevel = 1 }
+                after(Self.calmFade) { present(results, opening: nil, serial: mine) }
+                return
+            }
+            AudioLibrary.shared.play(.whoosh, volume: 0.5)
+            shot = SummonShot(
+                serial: mine,
+                scroll: selectedBanner.scroll,
+                pulls: results.count,
+                from: roomScroll,
+                to: target,
+                fromTilt: 0,
+                toTilt: RevealGeometry.scrollTilt,
+                fromLight: ChargeRGB(selectedBanner.scroll.tint),
+                toLight: ChargeLadder.ground,
+                began: Date()
+            )
+            scrollLifted = true
+            withAnimation(.easeIn(duration: SummonShot.length)) { duskLevel = 1 }
+            after(SummonShot.length) { present(results, opening: target, serial: mine) }
+        }
+    }
+
+    /// The reveal comes up with no animation over the room's full dusk; the
+    /// flying scroll stays a beat under the cover so no frame lacks it.
+    private func present(_ results: [SummonResult], opening: CGRect?, serial: Int) {
+        guard serial == shotSerial else { return }
+        var instantly = Transaction()
+        instantly.disablesAnimations = true
+        withTransaction(instantly) {
+            revealSerial += 1
+            openingFrame = opening
+            revealResults = results
             isCharging = false
+        }
+        after(Self.shotLinger) {
+            if shotSerial == serial { shot = nil }
+        }
+    }
+
+    /// The reveal is done: it goes with no animation, over the room still
+    /// at full dusk, and the dusk fades off the room — the scroll back on
+    /// its ring.
+    private func finishReveal() {
+        shotSerial += 1
+        var instantly = Transaction()
+        instantly.disablesAnimations = true
+        withTransaction(instantly) {
+            revealResults = []
+            openingFrame = nil
+            shot = nil
+            scrollLifted = false
+        }
+        withAnimation(.easeOut(duration: Self.duskOut)) { duskLevel = 0 }
+    }
+
+    /// "Summon ×10 again" from the summary (W2.3): the same banner, the same
+    /// count, a fresh reveal in place — its charge comes up round its own
+    /// scroll on the summary's dusk — or a refusal's touch and nothing more
+    /// when the wallet says no.
+    private func summonAgain(count: Int) {
+        let results = store.summon(banner: selectedBanner, count: count)
+        guard !results.isEmpty else {
+            Juice.notify(.error)
+            return
+        }
+        warmLead(results)
+        AudioLibrary.shared.play(.summonIgnite, volume: 0.9)
+        Juice.haptic(.medium)
+        let window: CGRect = SummonShot.windowBounds()
+        var instantly = Transaction()
+        instantly.disablesAnimations = true
+        withTransaction(instantly) {
+            revealSerial += 1
+            openingFrame = window == .zero ? nil : RevealGeometry.openingScroll(pulls: results.count, in: window.size)
             revealResults = results
         }
     }
 
+    /// A mileage or selector pick, once its sheet has gone: the room winds
+    /// up and its scroll carries the pick into the reveal, as a summon's
+    /// does (W2.14).
+    private func playPendingGift() {
+        guard !pendingGift.isEmpty, !isCharging, shot == nil, revealResults.isEmpty else { return }
+        let gift: [SummonResult] = pendingGift
+        pendingGift = []
+        windUp()
+        beginShot(gift)
+    }
+
+    /// The summary's "Summon again" for a reveal of `count` (W2.3): the
+    /// banner's scroll, how many are held, the pity after the pull. Nil for
+    /// a single, which has no summary.
+    private func againOffer(for count: Int) -> SummonAgainOffer? {
+        guard count > 1 else { return nil }
+        let scroll: ScrollType = selectedBanner.scroll
+        return SummonAgainOffer(
+            count: count,
+            scroll: scroll,
+            held: store.player.wallet.count(of: scroll),
+            pity: pityWords,
+            action: { summonAgain(count: count) }
+        )
+    }
+
+    /// The pity as the room's chip says it — counting DOWN — for the
+    /// summary: "5★ in 78 · 4★+ in 17". Nil for a banner with none.
+    private var pityWords: String? {
+        var parts: [String] = []
+        if let cap = selectedBanner.legendaryPity {
+            parts.append("5★ in \(max(1, cap - pity.sinceLegendary))")
+        }
+        if let cap = selectedBanner.rarePity {
+            parts.append("4★+ in \(max(1, cap - pity.sinceRare))")
+        }
+        if pity.featuredGuaranteed {
+            parts.append("next 5★ featured")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     /// The first figure the reveal will stand on its beam starts parsing
     /// the moment the summon returns (2026-09-23, run 221): the wind-up and
-    /// the cover's presentation are most of a second, and the reveal's
-    /// stage then clones it from the cache instead of parsing it on the
-    /// main thread (1.2 s of it on the CI's simulator). The FIRST only: the
-    /// warm pass parses its list in no set order, and a ten-pull's second
-    /// figure would contend with its first for the importer. The reveal
-    /// warms each next pull while the one before is on the beam.
-    private func warmFirstFigure(_ results: [SummonResult]) {
-        guard let first = results.first else { return }
-        ModelLibrary.shared.warm(forms: [(spec: first.blueprint.model, awakened: first.isAwakening || first.unit.isAwakened)])
+    /// the flight are most of a second, and the reveal's stage then clones
+    /// it from the cache instead of parsing it on the main thread (1.2 s of
+    /// it on the CI's simulator). ONE figure: the warm pass parses its list
+    /// in no set order, and a second would contend with it for the
+    /// importer. A single's own; a ten's first featured card — the only
+    /// figures a ten stands on its beam (`SummonBoard.firstStage`); the
+    /// board warms each next one while the one before it stands on the
+    /// beam, one at a time (`SummonRevealView.warmAhead`).
+    private func warmLead(_ results: [SummonResult]) {
+        guard let lead = SummonBoard.firstStage(in: results) else { return }
+        warmFigure(lead)
+    }
+
+    private func warmFigure(_ result: SummonResult) {
+        ModelLibrary.shared.warm(forms: [(spec: result.blueprint.model, awakened: result.isAwakening || result.unit.isAwakened)])
+    }
+
+    // MARK: - The shot's layer (W2.14)
+
+    /// The reveal's dusk over the whole screen the room stands in, and the
+    /// scroll in flight over it. Always in place, clear and untouchable at
+    /// rest (so its dusk fades on its own opacity, with no transition of its
+    /// own on top); it takes every touch while a summon is on its way — from
+    /// the press, through the wind-up (`isCharging`), the flight and the
+    /// reveal, until the dusk has gone.
+    private var shotLayer: some View {
+        GeometryReader { proxy in
+            let origin: CGPoint = proxy.frame(in: .global).origin
+            let window: CGRect = SummonShot.windowBounds()
+            let pulls: Int = shot?.pulls ?? max(1, revealResults.count)
+            let area: CGRect = window == .zero ? CGRect(origin: origin, size: proxy.size) : window
+            ZStack(alignment: .topLeading) {
+                RevealDuskScreen(line: RevealGeometry.line(forPulls: pulls))
+                    .frame(width: area.width, height: area.height)
+                    .offset(x: area.minX - origin.x, y: area.minY - origin.y)
+                    .opacity(duskLevel)
+                if let shot {
+                    TimelineView(.animation) { timeline in
+                        flyingScroll(shot, at: timeline.date, origin: origin)
+                    }
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .contentShape(Rectangle())
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(isCharging || duskLevel > 0 || shot != nil)
+    }
+
+    /// The scroll at one moment of its flight: the painting drawn at the
+    /// larger of its two sizes and scaled, so it is decoded once; its glow
+    /// turning from the scroll's own colour to the charge's blue-white and
+    /// tightening from the room's shadow to the charge's blur on the way.
+    private func flyingScroll(_ shot: SummonShot, at date: Date, origin: CGPoint) -> some View {
+        let pose: SummonShot.Pose = shot.pose(at: date)
+        let full: CGFloat = max(1, max(shot.from.width, shot.to.width))
+        let scale: CGFloat = pose.side / full
+        let light: Color = shot.fromLight.mixed(with: shot.toLight, by: pose.progress).color
+        let blurShare: CGFloat = 0.22 + (0.08 - 0.22) * pose.progress
+        return ZStack {
+            light.opacity(0.85)
+                .frame(width: full, height: full)
+                .mask { SummonScrollArt(scroll: shot.scroll, side: full) }
+                .blur(radius: full * blurShare)
+            SummonScrollArt(scroll: shot.scroll, side: full)
+        }
+        .frame(width: full, height: full)
+        .rotationEffect(.degrees(pose.tilt))
+        .scaleEffect(scale)
+        .position(x: pose.centre.x - origin.x, y: pose.centre.y - origin.y)
+        .allowsHitTesting(false)
+    }
+
+    /// The room's wind-up before the scroll lifts off, as long as the
+    /// circle's own swell (`SummoningCircle`'s 0.35 s).
+    private static let windUpLength: TimeInterval = 0.35
+    /// Under Reduce Motion: the room fades to the dusk over this, no flight.
+    private static let calmFade: TimeInterval = 0.25
+    /// The flying scroll's beat under the cover once the reveal is up.
+    private static let shotLinger: TimeInterval = 0.35
+    /// The dusk leaving the room after the reveal.
+    private static let duskOut: TimeInterval = 0.45
+
+    private func after(_ seconds: TimeInterval, _ body: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: body)
     }
 }
 
@@ -827,6 +1100,13 @@ struct SummoningCircle: View {
     /// between, whatever the painting's scale does to the ring.
     var headerClearance: CGFloat = 0
     var deckClearance: CGFloat = 0
+    /// The scroll has lifted off the ring (Docs/FEEL.md W2.14): the summon
+    /// room's flight carries it into the reveal, so the ring stands empty.
+    var scrollLifted: Bool = false
+    /// Where the scroll hangs over the ring, in window points, told to the
+    /// room so its flight lifts off from exactly there; its current pose,
+    /// swollen and dropped while charging (the breath aside).
+    var scrollFrame: Binding<CGRect>? = nil
 
     @State private var spin: Double = 0
     @State private var pulse: CGFloat = 1
@@ -956,6 +1236,8 @@ struct SummoningCircle: View {
                 // the summon is coming it drops toward the portal's centre,
                 // swells and flares, and the reveal takes over.
                 scrollOverTheRing(portal: centre, ringSize: ringSize, height: frame.size.height)
+                    .opacity(scrollLifted ? 0 : 1)
+                scrollReport(portal: centre, ringSize: ringSize, height: frame.size.height)
 
                 // The banner's name used to hang above the altar here, on a
                 // marble plaque. It is in the header now: this whole view is a
@@ -1005,13 +1287,9 @@ struct SummoningCircle: View {
     /// the "5★ 3.0%" chip.
     private func scrollOverTheRing(portal: CGPoint, ringSize: CGFloat, height: CGFloat) -> some View {
         let key = ItemArt.key(scroll: banner.scroll)
-        let top = headerClearance
-        let plates = max(top + 40, height - deckClearance)
-        let rest = max(24, min(ringSize * 0.40, portal.y - top))
-        let size = charging ? rest * 1.25 : rest
-        let hung = portal.y - rest * 0.42
-        let restY = min(max(hung, top + rest * 0.5), plates - 8 - rest * 0.55)
-        let y = charging ? restY + (portal.y - restY) * 0.35 : restY
+        let place = scrollPlace(portal: portal, ringSize: ringSize, height: height)
+        let size: CGFloat = place.size
+        let y: CGFloat = place.y
         return ZStack {
             RadialGradient(
                 colors: [tint.opacity(charging ? 0.9 : 0.5), tint.opacity(0)],
@@ -1049,6 +1327,45 @@ struct SummoningCircle: View {
         .scaleEffect(pulse)
         .offset(y: (1 - pulse) * 90)
         .position(x: portal.x, y: y)
+    }
+
+    /// The scroll's size and height over the ring (`scrollOverTheRing`), at
+    /// rest or charging: as tall as the room between the header and the
+    /// portal's centre, at most two fifths of the ring, its lower knob just
+    /// inside the well; charging, a quarter bigger and a third of the way
+    /// down to the portal's centre.
+    private func scrollPlace(portal: CGPoint, ringSize: CGFloat, height: CGFloat) -> (size: CGFloat, y: CGFloat) {
+        let top: CGFloat = headerClearance
+        let plates: CGFloat = max(top + 40, height - deckClearance)
+        let rest: CGFloat = max(24, min(ringSize * 0.40, portal.y - top))
+        let size: CGFloat = charging ? rest * 1.25 : rest
+        let hung: CGFloat = portal.y - rest * 0.42
+        let restY: CGFloat = min(max(hung, top + rest * 0.5), plates - 8 - rest * 0.55)
+        let y: CGFloat = charging ? restY + (portal.y - restY) * 0.35 : restY
+        return (size, y)
+    }
+
+    /// Tells the room where the scroll hangs, in window points (W2.14): an
+    /// invisible square in the scroll's place — its pose charging or at
+    /// rest, the breath aside — read by a geometry reader, as the banner
+    /// rail reads its content.
+    @ViewBuilder
+    private func scrollReport(portal: CGPoint, ringSize: CGFloat, height: CGFloat) -> some View {
+        if let scrollFrame {
+            let place = scrollPlace(portal: portal, ringSize: ringSize, height: height)
+            Color.clear
+                .frame(width: place.size, height: place.size)
+                .background(
+                    GeometryReader { proxy in
+                        let global: CGRect = proxy.frame(in: .global)
+                        Color.clear
+                            .onAppear { scrollFrame.wrappedValue = global }
+                            .onChange(of: global) { _, now in scrollFrame.wrappedValue = now }
+                    }
+                )
+                .position(x: portal.x, y: place.y)
+                .allowsHitTesting(false)
+        }
     }
 
     /// Something for the overlaid controls to sit on. The lettering over the

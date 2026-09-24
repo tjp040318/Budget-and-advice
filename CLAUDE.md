@@ -1494,6 +1494,53 @@ environment can and cannot do. The short version:
   `cancelBeats` (skip, forfeit, a new run) ends every beat where it stands.
   Labs: `-tour-cutin` (`6-battle-cutin`, `-spotlight`), `-tour-dissolve`
   (`6-battle-dissolve`), `-tour-waves` (`18-dungeon_battle-wave`, `-boss`).
+- **The premium feel's Wave 2, batch B's battle half (2026-09-24;
+  `Docs/FEEL.md` W2.24, W2.2, W2.22, W2.18, W2.26, each with its *As
+  built*).** **A fight opens on a stage card, never a slide:** every cover
+  that opens a `BattleView` sets its binding through `BattleCover.open` and
+  leaves through `BattleCover.close` (StageCard.swift, `withTransaction`
+  with animations disabled) — a new battle site goes through them.
+  `StageCardView` is Core Animation, since the build holds the main thread
+  and a SwiftUI animation stops with it; `BattleViewModel.beginUnderCard`
+  builds the first run under it with the queue held (`cardHolds`) until
+  `BattleSceneController.revealField`, which plays the opening, runs what
+  waited for the stage to be seen and prints `[TourCue] shown`; the way out
+  waits `StageCardTiming.leaveWait(calm:)`, the card's own fade. Under the
+  card `VFXLibrary.predraw` draws the fight's `EffectPlan` once at full
+  strength and `PredrawStep` stands one, two, three lights and a later
+  boss's spot over successive frames. **Every effect host hangs from
+  `stageRoot(of: scene)`, never `scene.rootNode`**, so a pre-draw's
+  retirement takes it, and `flash` is quiet under a pre-draw; a new effect
+  follows both, and a new KIND of piece (a new sheet shape, a new light) is
+  added to `predraw`. **The reward box:** `RewardTier.of` (Components.swift)
+  tiers a spoil — a new kind of spoil gets a line there; `SpoilsShelf`,
+  `SpoilsTimeline`, `ChestTiming` and `RewardTierAura` are
+  SpoilsBeats.swift's, and `tools/sfx.py`'s spoils section mirrors their
+  clock for its mix check (`CHEST_*`, `TILE_STEP`, `ROLL_LEAD`): change one,
+  change both. The box stands over `BattleStill`, the field snapped 0.35 s
+  into the reckoning, at a 0.5 scrim in the chest's phases only
+  (`stillShown`; the level-up keeps 0.84). `RewardChestView` rattles only
+  when asked (`rattles: true`, the battle's box): a chest that sounds none
+  of it — the tribute card's — keeps the old four jolts. **Statuses:**
+  `UnitPlate.applyStatuses` diffs its tiles (a pop, a shrink, a cleanse's
+  wipe through `removeStatus(_:cleansed:)`); a push floats its chip as one
+  of its unit's FLOATS (`floatPush`, resting under the bar it moved, never
+  off the plate's end, where it covered the next badge), and never for a
+  relic's own top-up (`BarPush`: Ichor's as a turn opens, Nemesis's on a
+  blow — a new set that tops a bar up gets a line there); and
+  `UnitNode.markOverlay` draws the head mark (`HeadMarkKind`,
+  `StatusHeadMark`) on the overlay's `markLayer`. **The camera hangs under a
+  rig (`camera_rig`):** `CameraDirector` moves the rig and `CameraShake`
+  (trauma squared, a roll of 2.2° at most) writes the lens ONLY from
+  `renderUpdate`; never move the camera node itself, and point the view at
+  it through `onCameraBuilt`. `Juice.Profile` carries `trauma` and `kick`;
+  `addTrauma` and `rumble` replaced `shake(intensity:duration:)`.
+  **`[Frames]` lines:** a `FrameMeter` in every `StageRenderGovernor`,
+  printed as a stage goes and every 3 s under the tour, which `ciframes.py`
+  prints as FRAMES; the island draws at 60 under a finger
+  (`isInteracting`). Labs: `-tour-card` (`6-battle-card`), `-tour-status`
+  (`6-battle-status`), `-tour-shake` (`6-battle-shake`), `-tour-spoils
+  legend` (`20-victory-legend`).
 - **The premium feel's summon half (2026-09-24; `Docs/FEEL.md` W2.4, W2.13,
   W2.23, W2.7, each with its *As built*).** At the flash the reveal's scene
   holds 70 ms (110 for a 5★), then the figure plays its VICTORY clip's
@@ -1533,6 +1580,63 @@ environment can and cannot do. The short version:
   offsets (the loudest 0.895 of full scale); change a volume in
   `ChargeLadder` and sfx.py's `STEM_VOLUME`/`STAR_VOLUMES` together. Tour:
   `-tour-reveal-hold apex`, `-tour-reveal ten`, `-tour-reveal-skip`.
+  **The summon beam stands BEHIND the figure (run 251):**
+  `VFXLibrary.summonBeam` (the reveal and the Hall of Ka's rites) is a soft
+  plane 0.6 m behind the feet adding light with no alpha writes
+  (`summonBeamColumn`, `summonBeamImage`); the cylinder it replaced wrote
+  alpha into the transparent stage views and printed a pale panel over every
+  5★ at the entrance's peak. An additive quad on a transparent stage view
+  writes red, green and blue only.
+
+- **The premium feel's Wave 2, the summon and the menus (2026-09-24;
+  `Docs/FEEL.md` W2.3, W2.14, W2.5, W2.12, each with its *As built*).**
+  **A pull of several is ONE ceremony** (`SummonBoard.swift`;
+  `SummonRevealView`'s `RevealPhase`): one charge to the best grade in it, a
+  5 × 2 board of face-down cards turning 90 ms apart, a 4★, 5★ or NEW card
+  flaring and LIFTING off to the beam for its full reveal (no second ladder;
+  a ten holds one stage at a time), and a summary that always fits
+  (`SummonBoardLayout`: 96-point cards on the CI's phone) with the tally, the
+  pity and "Summon ×10 again" (`SummonAgainOffer`: scrolls in hand only,
+  never a purchase); a tap on a card replays it. Only featured figures
+  parse, ONE AHEAD of the beam (`warmAhead`, once the figure before it is
+  built): every `ModelLibrary.warm` is a parse of its own on the one
+  importer lock, and warming every featured card at the deal queued as many
+  as ten ahead of a lifted card's main-thread build. Skip on the board keeps
+  W2.23's order, reads its words off LANDINGS (`RevealSkip.boardStop`,
+  `boardLabel`) and names the card a press lifts — both read
+  `RevealSkip.boardWaiting` — and a reveal leaving hushes only a charge of
+  its OWN (`charging`): the reveal "Summon ×10 again" replaces leaves after
+  its successor has appeared. **The summon is one shot** (`SummonShot.swift`):
+  the room's scroll lifts off its ring and flies to the exact square the
+  reveal's charge holds it in (`RevealGeometry.openingScroll`, the one
+  function both sides read) while the room fades to the reveal's own dusk
+  (`RevealDusk`), and the reveal is presented inside a transaction that
+  disables animations over a `presentationBackground` of that dusk; mileage
+  and selector picks take the same shot once their sheet has left. ONE
+  summon from the press to the reveal: `isCharging` is set by the wind-up
+  and cleared only by `present`, and the shot's layer and the tab bar take
+  every touch from the press (a second press in the wind-up spent twice and
+  lost the first pull's reveal). A reveal that plays itself is
+  `autoAdvance` (the memory stress). **The map plays a clear** (`StageClear`
+  in CampaignService.swift; `GameStore.lastClear`, never saved, set by
+  `noteClear` where a fought or swept run settles; `MapClearTimeline`, pure,
+  off the wall clock): the medallion turns gold, the stars stamp, the leader
+  walks the node line, the next lock breaks, earned chests jump, a road's
+  first end runs CHAPTER CONQUERED and unseals the tier it opened on the
+  strip, and the world road lights the next city (`pendingCityIgnition`) —
+  only a city ON the painting (`WorldRoadMapView.cities`: Rome and the Jade
+  Court have none yet); it waits for the victory's cover to finish LEAVING
+  (`ChapterMapView.coverIsUp`) and a repeat never replays it. **Missions
+  have Claim All** (`QuestService.claimAll*`, the existing claims looped
+  until nothing changes; `QuestTests` asserts it pays what one by one
+  pays): ready rows first in an order FROZEN between settles — a settle
+  waits for no finger on a claim plate (`TrackedPress`, per plate: a plate
+  its own claim removes goes in the update that lifts the finger, and a
+  removed view hears no `onChange`, so the claim takes the press off and
+  `TrackedPressBody` reports a lift as it leaves) — a stamped DONE seal,
+  6-point gold bars that breathe when full, the tribute's eight pills.
+  Tour: `-tour-reveal board`, `-tour-map-clear [road]`,
+  `-tour-road-ignite`, `-tour-missions-ready`.
 - **The fight reads.** **Every unit's bars are a screen-space plate OVER
   ITS HEAD (2026-09-15; under the feet from 2026-09-11 until the owner,
   with Summoners War's frame beside ours: "The health bars are not above

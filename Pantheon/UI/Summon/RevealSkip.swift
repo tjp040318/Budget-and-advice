@@ -88,6 +88,43 @@ enum RevealSkip {
         }
     }
 
+    // MARK: The board (W2.3)
+
+    /// The first card at or after `from` worth stopping for — the stop a tap
+    /// on Skip runs the board to — or nil, for the summary.
+    static func boardStop(in results: [SummonResult], from: Int) -> Int? {
+        guard from < results.count else { return nil }
+        return (max(0, from)..<results.count).first { isWorthSeeing(results[$0]) }
+    }
+
+    /// The card a tap on Skip lifts at once: the first of the cards up and
+    /// waiting their turn on the beam (`queue`, in landing order) that is
+    /// worth seeing — the ones before it are passed over — or nil when none
+    /// is. The board's Skip (`SummonRevealView.boardSkip`) and its words
+    /// both read it, so the two can never name different cards: a duplicate
+    /// 4★ at the head of the queue once hid the 5★ waiting behind it, the
+    /// words naming the next card still face down while a press lifted the
+    /// 5★ (review, 2026-09-24).
+    static func boardWaiting(in results: [SummonResult], queue: [Int]) -> Int? {
+        queue.first { results.indices.contains($0) && isWorthSeeing(results[$0]) }
+    }
+
+    /// What Skip says on the board: the card it will go to — the first card
+    /// up and waiting that is worth seeing (`boardWaiting`), else the first
+    /// card worth seeing that has not LANDED (`landed` of them have) — or
+    /// plain Skip when nothing is left but the summary. Read off landings
+    /// alone (a card joins the queue as it lands), so the words change only
+    /// when a card lands, never at a turn's start (W1.5).
+    static func boardLabel(in results: [SummonResult], from landed: Int, queue: [Int]) -> RevealSkipLabel {
+        if let waiting = boardWaiting(in: results, queue: queue) {
+            let up: SummonResult = results[waiting]
+            return .to(stars: up.stars, new: up.stars < 5 && up.isNew)
+        }
+        guard let stop = boardStop(in: results, from: landed) else { return .skip }
+        let next: SummonResult = results[stop]
+        return .to(stars: next.stars, new: next.stars < 5 && next.isNew)
+    }
+
     /// How long Skip is held to skip everything.
     static let holdToSkipAll: Double = 0.6
 
@@ -352,16 +389,15 @@ struct SummonQuickToggle: View {
 
 #if DEBUG
 extension SummonRevealView {
-    /// `-tour-reveal ten` (DEBUG, the CI's frames of the Skip): a ten-pull
-    /// whose fifth pull is the fire Sekhmet, a 5★, with a NEW 4★ behind it
-    /// and 3★s and duplicates round them, so the first pull's Skip reads
-    /// "Skip to ★★★★★" and, pressed (`-tour-reveal-skip`), lands on the 5★
-    /// rather than on the summary. Nil without the flag.
+    /// `-tour-reveal ten` (DEBUG, the CI's frames of the board and its
+    /// Skip): a ten-pull whose fifth pull is the fire Sekhmet, a 5★, with a
+    /// NEW 4★ behind it and 3★s and duplicates round them, so the board's
+    /// Skip reads "Skip to ★★★★★" and, pressed (`-tour-reveal-skip`), runs
+    /// past the duplicate 4★ to the 5★'s reveal rather than to the summary.
+    /// `-tour-reveal board` is the same ten, turned without lifting a card
+    /// (`tourBoardHold`). Nil without either.
     static func tourTenPull() -> [SummonResult]? {
-        let args = ProcessInfo.processInfo.arguments
-        guard let at = args.firstIndex(of: "-tour-reveal"), at + 1 < args.count, args[at + 1] == "ten" else {
-            return nil
-        }
+        guard tourTenFlag else { return nil }
         let pool: [UnitBlueprint] = UnitDatabase.summonPool.compactMap { UnitDatabase.blueprint($0) }
         func pick(_ stars: Int, _ nth: Int) -> UnitBlueprint? {
             let grade: [UnitBlueprint] = pool.filter { $0.naturalStars == stars && !$0.element.isLightOrDark }
@@ -386,6 +422,22 @@ extension SummonRevealView {
             ))
         }
         return results.count == plan.count ? results : nil
+    }
+
+    /// Whether the tour asked for its ten (`-tour-reveal ten` or `board`).
+    private static var tourTenFlag: Bool {
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-reveal"), at + 1 < args.count else { return false }
+        return args[at + 1] == "ten" || args[at + 1] == "board"
+    }
+
+    /// The summary's plate under the CI's ten (W2.3): the summon room is not
+    /// there to hand one in, so a stand-in says what the plate says — ten of
+    /// twenty-three Mystical Scrolls held, the pity after the pull — and
+    /// summons nothing when pressed. Nil outside the tour's ten.
+    static func tourAgainOffer() -> SummonAgainOffer? {
+        guard tourTenFlag else { return nil }
+        return SummonAgainOffer(count: 10, scroll: .mystical, held: 23, pity: "4★+ in 17", action: {})
     }
 }
 #endif

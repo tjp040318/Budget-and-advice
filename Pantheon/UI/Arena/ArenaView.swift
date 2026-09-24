@@ -1005,7 +1005,8 @@ struct ArenaView: View {
         ModelLibrary.shared.warm(forms: opponent.team.map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }, crowded: true)
         guard let engine = store.startArenaBattle(against: opponent) else { return }
         pendingEngines[opponent.id] = engine
-        battle = .arena(opponent)
+        // Straight onto the stage card, with no slide (Docs/FEEL.md W2.24).
+        BattleCover.open { battle = .arena(opponent) }
     }
 }
 

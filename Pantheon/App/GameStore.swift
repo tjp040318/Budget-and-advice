@@ -24,6 +24,21 @@ final class GameStore: ObservableObject {
     /// island (`takeLevelCelebration`). Never saved: a level-up the island
     /// has not shown by the next launch is simply not replayed there.
     @Published private(set) var pendingLevelCelebration: LevelCelebration?
+    /// The last campaign clear the chapter map has not played yet
+    /// (Docs/FEEL.md W2.5): the medallion to turn gold, the stars to stamp,
+    /// the road it opened. Set where a stage settles — a fought run and a
+    /// swept one alike (`noteClear`) — merged across an auto-repeat's runs
+    /// of one stage, and let go by the map once it has played it
+    /// (`finishClearBeat`), so a repeat never plays it again. Never saved:
+    /// a clear the map has not shown by the next launch is simply not.
+    @Published private(set) var lastClear: StageClear?
+    /// The next chapter's city, left by a road conquered on Normal for the
+    /// world road to light once (`takeCityIgnition`). Never saved.
+    @Published private(set) var pendingCityIgnition: String?
+    /// The clear whose tier seal the map's ribbon has broken: `TierChips`
+    /// holds the tier a clear opened shut until then, and its lock falls.
+    @Published private(set) var unsealedClear: Int?
+    private var clearSerial = 0
 
     /// The account this store plays as. Its save goes under
     /// `account.storageKey` and nowhere else, so a store retired at sign-out
@@ -798,6 +813,40 @@ final class GameStore: ObservableObject {
         }
     }
 
+    /// Claims every finished mission of the day and then the Daily Tribute
+    /// they open (Docs/FEEL.md W2.12): the existing claims, looped until a
+    /// pass claims nothing (`QuestService.claimAllMissions`). What it paid,
+    /// as the claims paid it; empty when nothing was waiting.
+    func claimAllMissions() -> [ShopService.Grant] {
+        var rng = makeRandom()
+        var paid: [ShopService.Grant] = []
+        update { player in
+            paid = QuestService.claimAllMissions(player: &player, rng: &rng)
+        }
+        return paid
+    }
+
+    /// Claims every finished feat (W2.12).
+    func claimAllFeats() -> [ShopService.Grant] {
+        var rng = makeRandom()
+        var paid: [ShopService.Grant] = []
+        update { player in
+            paid = QuestService.claimAllFeats(player: &player, rng: &rng)
+        }
+        return paid
+    }
+
+    /// Claims every finished step of the Counsel's current tier and then
+    /// the tier's prize they open (W2.12).
+    func claimAllCounsel() -> [ShopService.Grant] {
+        var rng = makeRandom()
+        var paid: [ShopService.Grant] = []
+        update { player in
+            paid = QuestService.claimAllCounsel(player: &player, rng: &rng)
+        }
+        return paid
+    }
+
     /// Rewards waiting to be claimed, for the badge beside the wallet. The
     /// Counsel counts here too: a road nobody is told about is a road nobody
     /// walks.
@@ -866,12 +915,14 @@ final class GameStore: ObservableObject {
         var rng = makeRandom()
         var outcome: StageOutcome?
         let levelBefore = player.level
+        let before = player
         update { player in
             outcome = CampaignService.settle(
                 stage: stage, result: result, player: &player, rng: &rng
             )
         }
         noteLevelUp(from: levelBefore)
+        noteClear(stage: stage, before: before)
         noteShrines(after: stage, result: result)   // Hidden Shrines: GameStore+Shrines.swift, Docs/SHRINES.md
         return outcome ?? StageOutcome(
             result: result, stars: 0, drachma: 0, playerExperience: 0, unitExperience: 0,
@@ -895,6 +946,50 @@ final class GameStore: ObservableObject {
         guard let pending = pendingLevelCelebration else { return nil }
         pendingLevelCelebration = nil
         return pending
+    }
+
+    // MARK: - The map plays the clear (Docs/FEEL.md W2.5)
+
+    /// Leaves the chapter map what this run changed on its road
+    /// (`StageClear.between`): nothing for a repeat or a loss, the first
+    /// run's before and the last run's after across an auto-repeat of one
+    /// stage, and the next chapter's city for the world road when the road's
+    /// end on Normal opened it.
+    private func noteClear(stage: Stage, before: Player) {
+        clearSerial += 1
+        guard let clear = StageClear.between(before: before, after: player, stage: stage, serial: clearSerial) else { return }
+        if let pending = lastClear, pending.stageID == clear.stageID {
+            lastClear = pending.merged(with: clear)
+        } else {
+            lastClear = clear
+            unsealedClear = nil
+        }
+        if let city = clear.chapterOpened {
+            pendingCityIgnition = city
+        }
+    }
+
+    /// The map's ribbon has landed: the tier the clear opened comes unsealed
+    /// on the strip's chips, its lock falling.
+    func unsealClearTier(_ serial: Int) {
+        guard lastClear?.serial == serial else { return }
+        unsealedClear = serial
+    }
+
+    /// The map has played the clear, or left before it could finish: it is
+    /// never played again.
+    func finishClearBeat(_ serial: Int) {
+        guard let pending = lastClear, pending.serial == serial else { return }
+        lastClear = nil
+        unsealedClear = nil
+    }
+
+    /// The world road's claim on the city waiting to light: returned once
+    /// and forgotten.
+    func takeCityIgnition() -> String? {
+        guard let city = pendingCityIgnition else { return nil }
+        pendingCityIgnition = nil
+        return city
     }
 
     /// Clears a mastered stage `runs` times without a battle, and hands back
@@ -924,7 +1019,14 @@ final class GameStore: ObservableObject {
         var rng = makeRandom()
         var receipt: SweepReceipt?
         let levelBefore = player.level
-        defer { noteLevelUp(from: levelBefore) }
+        let before = player
+        defer {
+            noteLevelUp(from: levelBefore)
+            // A sweep runs a stage already at three stars, so its map has
+            // nothing new to play — but it comes through the same door as a
+            // fought run, so the two can never disagree (W2.5).
+            noteClear(stage: stage, before: before)
+        }
         update { player in
             var outcomes: [StageOutcome] = []
             var energySpent = 0
@@ -1314,6 +1416,64 @@ final class GameStore: ObservableObject {
             // Laurels in hand, so the lobby's Exchange leads to something a
             // 23-win record could buy.
             player.wallet.laurels = max(player.wallet.laurels, 1_240)
+        }
+    }
+
+    /// `-tour-map-clear` (Docs/FEEL.md W2.5): the clear the chapter map plays
+    /// for the CI. `boss: true` is the Duat's boss felled for the first time
+    /// with three stars — the medallion turning gold, the stars stamping,
+    /// the gate's chest jumping, CHAPTER CONQUERED and Hard's seal breaking —
+    /// over `ChapterMapView.tourClearWalk`'s copy of the player; `false` is
+    /// its third stage cleared with two, the leader walking on to the fourth
+    /// and its lock breaking, the road's chest jumping, over the tour's own
+    /// save (which stands exactly there). Nothing here is saved.
+    func seedTourClear(boss: Bool) {
+        guard let road = StageDatabase.chapter("duat_1"), road.stages.count >= 4 else { return }
+        clearSerial += 1
+        unsealedClear = nil
+        if boss {
+            let last: Int = road.stages.count - 1
+            lastClear = StageClear(
+                serial: clearSerial, stageID: road.stages[last].id, chapterID: road.id, stageIndex: last,
+                firstClear: true, starsBefore: 0, starsAfter: 3, chestsEarned: [.boss],
+                conquered: true, tierOpened: .hard,
+                chapterOpened: StageDatabase.chapters.count > 1 ? StageDatabase.chapters[1].id : nil
+            )
+        } else {
+            lastClear = StageClear(
+                serial: clearSerial, stageID: road.stages[2].id, chapterID: road.id, stageIndex: 2,
+                firstClear: true, starsBefore: 0, starsAfter: 2, chestsEarned: [.third],
+                conquered: false, tierOpened: nil, chapterOpened: nil
+            )
+        }
+    }
+
+    /// `-tour-road-ignite` (W2.5): the world road lights the Duat's second
+    /// city, as it does after the first chapter's boss falls on Normal.
+    func seedTourIgnition() {
+        guard StageDatabase.chapters.count > 1 else { return }
+        pendingCityIgnition = StageDatabase.chapters[1].id
+    }
+
+    /// `-tour-missions-ready` (Docs/FEEL.md W2.12): the Daily list the CI
+    /// photographs, the same every run whatever the tour's earlier steps
+    /// counted — two missions ready at the head of the list with CLAIM ALL
+    /// over them, and the other six claimed: the COMPLETED group under them,
+    /// its rows wearing the DONE seal within the frame (with fewer claimed
+    /// the group stands below the fold), and the tribute's pills six gold
+    /// with a tick and two ringed ready.
+    func seedTourMissions() {
+        update { player in
+            QuestService.refreshDay(player: &player)
+            var quests: QuestProgress = player.quests ?? QuestProgress()
+            var counters: [String: Int] = [:]
+            for mission in QuestService.missions {
+                counters[mission.id] = mission.goal
+            }
+            quests.counters = counters
+            let ready: Set<String> = ["summon", "power_up"]
+            quests.claimed = Set(QuestService.missions.map(\.id)).subtracting(ready)
+            player.quests = quests
         }
     }
     #endif
