@@ -104,20 +104,29 @@ MOTIONS = REPO / "Art" / "Motions"
 
 # The judged fixes (each on its board, see the report of 2026-09-23). Filled
 # in as the boards pass; --apply-all runs exactly these.
+#
+# The motion palette's roll-out (2026-09-24, Docs/MOTION.md *As rolled out*)
+# replaced every family's attack, stance and victory clips, and
+# tools/motion_palette.py `ship` now makes the clip-level fixes itself on the
+# clips it deals: a preset swung in the other hand from the family's weapon
+# is MIRRORED before the retarget (motion_palette.PRESET_SIDE, WEAPON_HAND),
+# Skadi's bow wrist is bent after (BOW_WRIST) and Sobek's snout lifted
+# (SNOUT). So Hephaestus's mirror of his old heavy (128; the deal gives him
+# 237 now, swung in his own hammer hand), Skadi's mirror and Sobek's snout are
+# out of this table: run again on the palette's clips they would undo the
+# palette's fix or mirror a clip already in the right hand. Their markers
+# (Art/Models/<family>.clipfix.json) record what was applied on the 23rd. The
+# re-arm stays: it still fits the walk, hit and death clips the palette does
+# not deal, and it refuses a palette clip by its frame count.
 FIXES = {
-    # the empty hand swung the hammer; the pose mirror gives the swing to the hammer's hand
-    "hephaestus": [("mirror", ["attack_heavy"], {})],
-    # the bow was in the drawing hand: mirrored, the bow hand's wrist stood the bow up at the loose, and
-    # the coat panel welded to that hand given back to the body (the skirt pass, base + LOD)
-    "skadi": [("skirt", None, {}), ("mirror", ["attack_basic", "attack_heavy", "ultimate"], {"bow_wrist": True})],
+    # the coat panel welded to Skadi's bow hand given back to the body (the skirt pass, base + LOD)
+    "skadi": [("skirt", None, {})],
     # Meshy put the presets' arms 40-175 degrees off on these rigs: the arm chains re-expressed from the
     # archive (every clip that IS its preset; bespoke clips are refused by frame count and body match)
     **{f: [("rearm", None, {})] for f in ("frigg", "baldr", "chang_e", "cobra_priestess", "pluto", "odin",
                                           "atalanta", "njord", "heimdall", "ares", "dark_elf")},
     # judged and left: fenrir (38 deg; the board is a wash and the stretch rose 3-13%), and nuwa, aphrodite,
     # light_elf, horus (22-32 deg: nothing a frame shows changes)
-    # the jaw kept out of the chest on the hammer swing's and the ground slam's follow-through
-    "sobek": [("snout", ["attack_heavy", "ultimate"], {"limit": 75.0})],
     # the slung bow, blended over shoulder, thigh and arm, made rigid on the torso (a stopgap: her archer
     # clips still draw with empty hands - the concept slings the bow, it does not hold it)
     "diana": [("bind", None, {"rank": 1, "size": 799, "joint": "Spine01"})],
@@ -873,13 +882,16 @@ def self_test(bundle):
     anim, _ = mirror_anim(c, "pose")
     off, who = check_mirror(c, anim, "pose")
     print(f"  pose mirror on diana's basic (a symmetric rest): off the reflection {off * 1000:.0f} mm at {who} (want < 40)"); ok &= off < 0.04
-    c = read(bundle / "anubis_idle_combat.usdz")
-    src = Motion.load(MOTIONS / "preset_89.motion.npz")
+    # a clip that IS its Meshy preset: the walk (preset 30; the motion palette,
+    # 2026-09-24, re-dealt the combat idle this control used to be, cut and
+    # looped, so its frames no longer match the preset's)
+    c = read(bundle / "anubis_walk.usdz")
+    src = Motion.load(MOTIONS / "preset_30.motion.npz")
     before = arm_error(c, src)[0]
     new = rearm_anim(c, src)
     worst = max(angle(unit_rot(trs([0, 0, 0], c.anim["R"][f, j], [1, 1, 1])), unit_rot(trs([0, 0, 0], new["R"][f, j], [1, 1, 1])))
                 for f in (0, 25, 50) for j, n in enumerate(c.joints) if leaf(n) in ARM_JOINTS)
-    print(f"  re-arm on anubis's combat idle (arms {before:.1f} deg off the preset): tracks move {worst:.1f} deg (want < 6)"); ok &= worst < 6
+    print(f"  re-arm on anubis's walk (arms {before:.1f} deg off the preset): tracks move {worst:.1f} deg (want < 6)"); ok &= worst < 6
     c = read(bundle / "hephaestus_idle_combat.usdz")
     _, b, a2 = lift_snout(c, 75.0) if "headfront" in [leaf(j) for j in c.joints] else (None, 180, 180)
     print(f"  snout lift on hephaestus's combat idle: closest {b:.0f} -> {a2:.0f} deg (want unchanged)"); ok &= abs(b - a2) < 1e-6

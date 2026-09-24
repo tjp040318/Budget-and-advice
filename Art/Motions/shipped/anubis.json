@@ -1,0 +1,14 @@
+{
+ "idle_combat": {
+  "preset": "89 stand",
+  "frames": 39,
+  "seconds": 1.3,
+  "loop": true
+ },
+ "victory": {
+  "preset": "88",
+  "frames": 117,
+  "seconds": 3.9,
+  "rate": 1.95
+ }
+}

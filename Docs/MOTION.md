@@ -245,8 +245,10 @@ if so). The half-guard stance (below) should read as a different pose from
 - **`contactFraction` needs no new row.** `prepare()` puts every palette
   clip's blow at the slot's default (0.42 / 0.55 / 0.62), and `UnitNode.play`
   retimes a one-shot to its contract inside the 0.6–2× clamp (every cut is
-  inside it; `ship` warns when not). `castRelease` plays the heavy clip and
-  reads the heavy row. The five gods' rows (anubis, sekhmet, zeus, ares,
+  inside it; `ship` warns when not). `castRelease` plays the heavy clip; a
+  god reads its heavy row for it, every other family the default 0.60, about
+  0.08 s after the heavy's blow at 0.55 on the 1.7 s contract (older than the
+  palette; the roll-out of §10 kept to it and changed no Swift). The five gods' rows (anubis, sekhmet, zeus, ares,
   thoth) stay because their bespoke clips stay. **If a god's attack clips
   are ever replaced from the palette, its row must be deleted**, or its old
   fractions will apply to the new clips.
@@ -278,10 +280,10 @@ if so). The half-guard stance (below) should read as a different pose from
    Then `python3 tools/motion_palette.py buy shield_maiden_serious <ids> --floor <floor> --cap <n>`,
    then `archive`, then `board-archive <ids>`. Write each new preset's cut
    into `PRESET_CUTS` and add it to `POOLS`.
-3. **Deal the roster**: `python3 tools/motion_palette.py plan --markdown` (the
+3. **Deal the roster** (done 2026-09-24, §10): `python3 tools/motion_palette.py plan --markdown` (the
    table below, from the 31 motions archived today). Adjust `POOLS`, and
    `BRUTES` or an override, where a family's character asks for a move.
-4. **Ship family by family**, on the owner's word:
+4. **Ship family by family** (done 2026-09-24 with `roll`, §10), on the owner's word:
    `python3 tools/motion_palette.py ship <asset>_serious <family> attack_basic=… attack_heavy=… ultimate=… idle_combat=… victory=… idle=stand --bundle Pantheon/Resources/Models --real`
    (clips only; about 25 s a family; 113 families take about 50 minutes at
    two at a time; each family's cut report goes to `Art/Motions/shipped/<family>.json`,
@@ -293,130 +295,365 @@ if so). The half-guard stance (below) should read as a different pose from
    the base and the awakened rig, with its blow read on the board and cut
    into `PRESET_CUTS`-style windows.
 
-## 9. The assignment (first deal, from the 31 archived motions)
+## 9. The assignment (as shipped, 2026-09-24)
 
-`python3 tools/motion_palette.py plan --markdown`. The 5-stars are dealt first,
-and no two families share a five-clip set (0 identical among 98 base
-families). Within a kind no two share more than one attack, except the
-archers (one triple until step 2's purchase) and the robed casters (12
-triples for 19 until step 2). `own:<god>` is the god's bespoke motion. An
-awakened form wears its family's set. `stand` and `half` are the guard stood
-fully or 70% up. The pilot's hand-picked sets differ from this deal where
-character called for it (the Minotaur's chest pound). Treat this as the
-starting point to judge on boards, not the answer.
+`python3 tools/motion_palette.py plan --markdown` prints this table: the deal
+(the 5-stars first, the pools, `JUMPERS`, `OVERRIDES`), then the board
+judgments of §10 (`JUDGED`, `KEPT`) laid over it. `hand` is the hand the
+family holds its weapon (an archer: its bow) in, `-` for none or one in each;
+`mirrored` names the clips reflected to it. `own:<god>` is the god's bespoke
+motion, untouched. `stand` and `half` are the guard stood fully or 70% up. An
+unmirrored clip on a left-handed family (`242`, `102` on Loki, Surtr,
+Achilles and the Dark Elf) is a judgment of §10, not an omission. No two
+families share their five clips; the robed casters, the archers and four
+left-handed blades share attack triples (§10, what is left).
 
-| family | grade | kind | basic | heavy | ultimate | stance | victory |
-|---|---|---|---|---|---|---|---|
-| ares | 5★ | blade | own:ares | own:ares | own:ares | 89 | 412 |
-| ares_awakened | 5★ | blade | own:ares | own:ares | own:ares | 89 | 412 |
-| horus | 5★ | blade | 219 | 242 | 102 | half | 298 |
-| horus_awakened | 5★ | blade | 219 | 242 | 102 | half | 298 |
-| loki | 5★ | blade | 97 | 221 | 105 | stand | 88 |
-| mars | 5★ | blade | 220 | 238 | 91 | 89 | 412 |
-| mars_awakened | 5★ | blade | 220 | 238 | 91 | 89 | 412 |
-| sekhmet | 5★ | blade | own:sekhmet | own:sekhmet | own:sekhmet | half | 298 |
-| sekhmet_awakened | 5★ | blade | own:sekhmet | own:sekhmet | own:sekhmet | half | 298 |
-| surtr | 5★ | blade | 206 | 105 | 86 | stand | 88 |
-| baldr | 5★ | caster | 129 | 130 | 126 | stand | 412 |
-| boss_unwrapped_king | 5★ | caster | 136 | 125 | 130 | half | 298 |
-| hades | 5★ | caster | 133 | 136 | 125 | stand | 412 |
-| hades_awakened | 5★ | caster | 133 | 136 | 125 | stand | 412 |
-| minerva | 5★ | caster | 129 | 133 | 125 | half | 298 |
-| odin | 5★ | caster | 136 | 133 | 126 | stand | 298 |
-| odin_awakened | 5★ | caster | 136 | 133 | 126 | stand | 298 |
-| ra | 5★ | caster | 133 | 125 | 126 | half | 412 |
-| ra_awakened | 5★ | caster | 133 | 125 | 126 | half | 412 |
-| boss_colossus | 5★ | heavy | 128 | 237 | 127 | 85 | 88 |
-| thor | 5★ | heavy | 219 | 128 | 238 | 89 | 412 |
-| thor_awakened | 5★ | heavy | 219 | 128 | 238 | 89 | 412 |
-| athena | 5★ | polearm | 219 | 221 | 105 | 89 | 412 |
-| athena_awakened | 5★ | polearm | 219 | 221 | 105 | 89 | 412 |
-| poseidon | 5★ | polearm | 97 | 242 | 102 | half | 298 |
-| poseidon_awakened | 5★ | polearm | 97 | 242 | 102 | half | 298 |
-| sun_wukong | 5★ | polearm | 220 | 238 | 91 | stand | 88 |
-| freya | 5★ | robed | 136 | 133 | 126 | stand | 412 |
-| freya_awakened | 5★ | robed | 136 | 133 | 126 | stand | 412 |
-| frigg | 5★ | robed | 129 | 136 | 125 | stand | 298 |
-| hera | 5★ | robed | 133 | 125 | 126 | stand | 412 |
-| hera_awakened | 5★ | robed | 133 | 125 | 126 | stand | 412 |
-| isis | 5★ | robed | 136 | 133 | 125 | stand | 298 |
-| isis_awakened | 5★ | robed | 136 | 133 | 125 | stand | 298 |
-| osiris | 5★ | robed | 129 | 136 | 126 | stand | 412 |
-| osiris_awakened | 5★ | robed | 129 | 136 | 126 | stand | 412 |
-| thoth | 5★ | robed | own:thoth | own:thoth | own:thoth | stand | 298 |
-| thoth_awakened | 5★ | robed | own:thoth | own:thoth | own:thoth | stand | 298 |
-| artemis | 4★ | archer | 224 | 224 | 222 | 89 | 298 |
-| diana | 4★ | archer | 224 | 224 | 222 | 226 | 412 |
-| skadi | 4★ | archer | 224 | 224 | 222 | half | 298 |
-| ullr | 4★ | archer | 224 | 224 | 222 | 89 | 412 |
-| achilles | 4★ | blade | 219 | 221 | 91 | 89 | 412 |
-| anhur | 4★ | blade | 97 | 238 | 102 | half | 298 |
-| anubis | 4★ | blade | own:anubis | own:anubis | own:anubis | stand | 88 |
-| heimdall | 4★ | blade | 220 | 242 | 105 | 89 | 412 |
-| mercury | 4★ | blade | 97 | 242 | 86 | half | 298 |
-| nike | 4★ | blade | 206 | 221 | 102 | stand | 88 |
-| njord | 4★ | blade | 219 | 238 | 105 | 89 | 412 |
-| perseus | 4★ | blade | 220 | 105 | 102 | half | 298 |
-| set | 4★ | blade | 206 | 242 | 91 | stand | 88 |
-| sif | 4★ | blade | 97 | 105 | 91 | 89 | 412 |
-| apollo | 4★ | caster | 129 | 136 | 130 | stand | 412 |
-| bragi | 4★ | caster | 136 | 130 | 125 | half | 298 |
-| demeter | 4★ | caster | 133 | 125 | 130 | stand | 412 |
-| dionysus | 4★ | caster | 129 | 130 | 125 | half | 298 |
-| hermes | 4★ | caster | 136 | 133 | 130 | stand | 412 |
-| bellona | 4★ | heavy | 97 | 221 | 102 | half | 298 |
-| guan_yu | 4★ | heavy | 128 | 242 | 238 | 85 | 88 |
-| hephaestus | 4★ | heavy | 219 | 237 | 102 | 89 | 412 |
-| heracles | 4★ | heavy | 97 | 128 | 127 | half | 298 |
-| khnum | 4★ | heavy | 219 | 242 | 127 | 85 | 88 |
-| neptune | 4★ | polearm | 219 | 242 | 86 | 89 | 412 |
-| nezha | 4★ | polearm | 97 | 221 | 91 | half | 298 |
-| sobek | 4★ | polearm | 219 | 238 | 102 | stand | 88 |
-| taweret | 4★ | polearm | 220 | 242 | 105 | 89 | 88 |
-| vidar | 4★ | polearm | 220 | 221 | 86 | half | 412 |
-| aphrodite | 4★ | robed | 133 | 136 | 125 | stand | 298 |
-| chang_e | 4★ | robed | 136 | 125 | 126 | stand | 412 |
-| hathor | 4★ | robed | 129 | 133 | 125 | stand | 412 |
-| hel | 4★ | robed | 129 | 125 | 126 | stand | 298 |
-| idunn | 4★ | robed | 133 | 136 | 126 | stand | 412 |
-| maat | 4★ | robed | 129 | 133 | 126 | stand | 298 |
-| nephthys | 4★ | robed | 136 | 133 | 125 | stand | 412 |
-| nuwa | 4★ | robed | 133 | 125 | 126 | stand | 298 |
-| pluto | 4★ | robed | 129 | 136 | 125 | stand | 412 |
-| ptah | 4★ | robed | 136 | 125 | 126 | stand | 298 |
-| bastet | 4★ | unarmed | 97 | 238 | 86 | 89 | 298 |
-| fenrir | 4★ | unarmed | 206 | 221 | 91 | half | 88 |
-| serqet | 4★ | unarmed | 219 | 242 | 105 | 89 | 412 |
-| tyr | 4★ | unarmed | 97 | 221 | 105 | half | 298 |
-| atalanta | 3★ | archer | 224 | 224 | 222 | 226 | 298 |
-| medjay | 3★ | archer | 224 | 224 | 222 | half | 412 |
-| bes | 3★ | blade | 220 | 221 | 86 | half | 298 |
-| centurion | 3★ | blade | 219 | 238 | 86 | stand | 88 |
-| dark_elf | 3★ | blade | 206 | 242 | 105 | 89 | 412 |
-| harpy | 3★ | blade | 219 | 105 | 102 | half | 298 |
-| hoplite | 3★ | blade | 97 | 221 | 91 | stand | 88 |
-| jackal_warrior | 3★ | blade | 220 | 238 | 105 | 89 | 412 |
-| shield_maiden | 3★ | blade | 219 | 105 | 86 | half | 298 |
-| light_elf | 3★ | caster | 133 | 136 | 126 | half | 298 |
-| medusa | 3★ | caster | 129 | 125 | 126 | stand | 412 |
-| nymph | 3★ | caster | 133 | 130 | 125 | half | 298 |
-| satyr | 3★ | caster | 129 | 133 | 130 | stand | 412 |
-| siren | 3★ | caster | 136 | 130 | 126 | half | 298 |
-| amazon | 3★ | heavy | 97 | 237 | 238 | 89 | 412 |
-| berserker | 3★ | heavy | 128 | 221 | 102 | half | 298 |
-| cyclops | 3★ | heavy | 128 | 242 | 127 | 85 | 88 |
-| draugr | 3★ | heavy | 219 | 128 | 102 | 89 | 412 |
-| dwarf_smith | 3★ | heavy | 97 | 221 | 238 | half | 298 |
-| einherjar | 3★ | heavy | 128 | 237 | 238 | 85 | 88 |
-| frost_troll | 3★ | heavy | 219 | 128 | 127 | 89 | 412 |
-| minotaur | 3★ | heavy | 128 | 242 | 102 | half | 298 |
-| scarab_knight | 3★ | heavy | 97 | 221 | 127 | 85 | 88 |
-| terracotta_soldier | 3★ | polearm | 97 | 238 | 105 | stand | 298 |
-| valkyrie | 3★ | polearm | 219 | 221 | 102 | 89 | 412 |
-| cobra_priestess | 3★ | robed | 129 | 133 | 125 | stand | 298 |
-| fox_spirit | 3★ | robed | 133 | 136 | 126 | stand | 298 |
-| vestal | 3★ | robed | 129 | 133 | 126 | stand | 412 |
-| gladiator | 3★ | unarmed | 206 | 242 | 86 | 89 | 88 |
-| jiangshi | 3★ | unarmed | 219 | 238 | 91 | half | 412 |
-| mummy | 3★ | unarmed | 97 | 242 | 91 | 89 | 298 |
-| shabti | 3★ | unarmed | 206 | 238 | 105 | half | 88 |
+| family | grade | kind | hand | basic | heavy | ultimate | stance | victory | mirrored |
+|---|---|---|---|---|---|---|---|---|---|
+| ares | 5★ | blade | R | own:ares | own:ares | own:ares | 89 | 412 |  |
+| ares_awakened | 5★ | blade | R | own:ares | own:ares | own:ares | 89 | 412 |  |
+| horus | 5★ | blade | - | 219 | 242 | 102 | half | 412 |  |
+| horus_awakened | 5★ | blade | R | 219 | 242 | 102 | half | 412 |  |
+| loki | 5★ | blade | L | 220 | 242 | 102 | 89 | 88 | basic |
+| mars | 5★ | blade | R | 220 | 238 | 91 | 89 | 412 |  |
+| mars_awakened | 5★ | blade | R | 220 | 238 | 91 | 89 | 412 |  |
+| sekhmet | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | half | 298 |  |
+| sekhmet_awakened | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | half | 298 |  |
+| surtr | 5★ | blade | L | 220 | 242 | 102 | stand | 88 | basic |
+| baldr | 5★ | caster | R | 129 | 130 | 126 | stand | 412 |  |
+| boss_unwrapped_king | 5★ | caster | R | 136 | 125 | 130 | half | 298 |  |
+| hades | 5★ | caster | R | 133 | 136 | 125 | stand | 412 |  |
+| hades_awakened | 5★ | caster | R | 133 | 136 | 125 | stand | 412 |  |
+| minerva | 5★ | caster | - | 129 | 133 | 125 | half | 298 |  |
+| odin | 5★ | caster | R | 136 | 133 | 126 | stand | 88 |  |
+| odin_awakened | 5★ | caster | R | 136 | 133 | 126 | stand | 88 |  |
+| ra | 5★ | caster | R | 133 | 125 | 126 | half | 412 |  |
+| ra_awakened | 5★ | caster | R | 133 | 125 | 126 | half | 412 |  |
+| zeus | 5★ | caster | R | own:zeus | own:zeus | own:zeus | stand | 412 |  |
+| zeus_awakened | 5★ | caster | R | own:zeus | own:zeus | own:zeus | stand | 412 |  |
+| boss_colossus | 5★ | heavy | - | 128 | 237 | 127 | 85 | 88 |  |
+| thor | 5★ | heavy | R | 219 | 128 | 238 | 89 | 412 |  |
+| thor_awakened | 5★ | heavy | R | 219 | 128 | 238 | 89 | 412 |  |
+| athena | 5★ | polearm | R | 219 | 242 | 105 | stand | 412 |  |
+| athena_awakened | 5★ | polearm | R | 219 | 242 | 105 | stand | 412 |  |
+| poseidon | 5★ | polearm | R | 97 | 242 | 102 | half | 298 |  |
+| poseidon_awakened | 5★ | polearm | R | 97 | 242 | 102 | half | 298 |  |
+| sun_wukong | 5★ | polearm | - | 220 | 238 | 86 | stand | 412 |  |
+| freya | 5★ | robed | R | 136 | 133 | 126 | stand | 412 |  |
+| freya_awakened | 5★ | robed | R | 136 | 133 | 126 | stand | 412 |  |
+| frigg | 5★ | robed | R | 129 | 136 | 126 | stand | 298 |  |
+| hera | 5★ | robed | R | 133 | 125 | 126 | stand | 412 |  |
+| hera_awakened | 5★ | robed | R | 133 | 125 | 126 | stand | 412 |  |
+| isis | 5★ | robed | R | 136 | 133 | 126 | stand | 298 |  |
+| isis_awakened | 5★ | robed | R | 136 | 133 | 126 | stand | 298 |  |
+| osiris | 5★ | robed | R | 129 | 136 | 126 | stand | 412 |  |
+| osiris_awakened | 5★ | robed | R | 129 | 136 | 126 | stand | 412 |  |
+| thoth | 5★ | robed | R | own:thoth | own:thoth | own:thoth | stand | 298 |  |
+| thoth_awakened | 5★ | robed | R | own:thoth | own:thoth | own:thoth | stand | 298 |  |
+| artemis | 4★ | archer | L | 224 | 224 | 222 | 89 | 298 |  |
+| diana | 4★ | archer | - | 224 | 224 | 222 | stand | 412 |  |
+| skadi | 4★ | archer | R | 224 | 224 | 222 | 226 | 412 | basic, heavy, ult, stance |
+| ullr | 4★ | archer | L | 224 | 224 | 222 | half | 412 |  |
+| achilles | 4★ | blade | L | 219 | 242 | 102 | 89 | 412 | basic |
+| anhur | 4★ | blade | R | 97 | 242 | 91 | half | 298 |  |
+| anubis | 4★ | blade | R | own:anubis | own:anubis | own:anubis | stand | 88 |  |
+| heimdall | 4★ | blade | R | 206 | 238 | 105 | 89 | 412 |  |
+| mercury | 4★ | blade | L | 220 | 105 | 86 | half | 298 | basic, heavy, ult |
+| nike | 4★ | blade | R | 97 | 238 | 102 | stand | 88 |  |
+| njord | 4★ | blade | L | 220 | 242 | 105 | 89 | 412 | basic, heavy, ult |
+| perseus | 4★ | blade | R | 219 | 105 | 91 | half | 298 |  |
+| set | 4★ | blade | R | 206 | 221 | 91 | stand | 88 |  |
+| sif | 4★ | blade | R | 220 | 221 | 102 | 89 | 412 |  |
+| apollo | 4★ | caster | R | 129 | 136 | 130 | half | 298 |  |
+| bragi | 4★ | caster | R | 136 | 130 | 126 | stand | 88 |  |
+| demeter | 4★ | caster | R | 133 | 125 | 130 | half | 412 |  |
+| dionysus | 4★ | caster | R | 129 | 130 | 125 | stand | 412 |  |
+| hermes | 4★ | caster | R | 136 | 133 | 130 | half | 298 |  |
+| bellona | 4★ | heavy | L | 219 | 221 | 102 | half | 88 | heavy, ult |
+| guan_yu | 4★ | heavy | R | 128 | 242 | 238 | 85 | 88 |  |
+| hephaestus | 4★ | heavy | R | 97 | 128 | 127 | 85 | 412 |  |
+| heracles | 4★ | heavy | R | 219 | 237 | 102 | 89 | 298 |  |
+| khnum | 4★ | heavy | R | 219 | 242 | 127 | half | 88 |  |
+| neptune | 4★ | polearm | R | 219 | 242 | 91 | 89 | 412 |  |
+| nezha | 4★ | polearm | L | 97 | 221 | 91 | half | 298 | basic, heavy |
+| sobek | 4★ | polearm | R | 219 | 238 | 102 | stand | 88 |  |
+| taweret | 4★ | polearm | R | 220 | 242 | 105 | 89 | 88 |  |
+| vidar | 4★ | polearm | R | 97 | 238 | 105 | half | 412 |  |
+| aphrodite | 4★ | robed | R | 133 | 136 | 126 | stand | 298 |  |
+| chang_e | 4★ | robed | R | 136 | 125 | 126 | stand | 412 |  |
+| hathor | 4★ | robed | R | 129 | 133 | 126 | stand | 88 |  |
+| hel | 4★ | robed | - | 129 | 125 | 126 | stand | 298 |  |
+| idunn | 4★ | robed | - | 129 | 136 | 126 | half | 412 |  |
+| maat | 4★ | robed | R | 129 | 133 | 126 | stand | 298 |  |
+| nephthys | 4★ | robed | - | 136 | 133 | 125 | stand | 412 |  |
+| nuwa | 4★ | robed | R | 133 | 125 | 126 | stand | 298 |  |
+| pluto | 4★ | robed | R | 129 | 136 | 126 | stand | 88 |  |
+| ptah | 4★ | robed | R | 136 | 125 | 126 | stand | 298 |  |
+| bastet | 4★ | unarmed | - | 97 | 238 | 86 | 89 | 298 |  |
+| fenrir | 4★ | unarmed | - | 206 | 221 | 91 | half | 88 |  |
+| serqet | 4★ | unarmed | - | 219 | 242 | 105 | 89 | 412 |  |
+| tyr | 4★ | unarmed | R | 97 | 221 | 105 | half | 298 |  |
+| atalanta | 3★ | archer | L | 224 | 224 | 222 | 89 | 412 |  |
+| medjay | 3★ | archer | L | 224 | 224 | 222 | half | 298 |  |
+| bes | 3★ | blade | R | 219 | 242 | 105 | half | 88 |  |
+| centurion | 3★ | blade | L | 97 | 238 | 105 | stand | 88 | basic, heavy, ult |
+| dark_elf | 3★ | blade | L | 220 | 242 | 102 | 89 | 412 | basic |
+| harpy | 3★ | blade | L | 220 | 242 | 102 | half | 88 | basic, heavy |
+| hoplite | 3★ | blade | - | 219 | 221 | 102 | stand | 88 |  |
+| jackal_warrior | 3★ | blade | R | 97 | 105 | 102 | 89 | 412 |  |
+| shield_maiden | 3★ | blade | R | 220 | 238 | 86 | half | 298 |  |
+| light_elf | 3★ | caster | R | 133 | 136 | 126 | half | 412 |  |
+| medusa | 3★ | caster | - | 136 | 130 | 126 | stand | 412 |  |
+| nymph | 3★ | caster | R | 129 | 125 | 130 | stand | 412 |  |
+| satyr | 3★ | caster | R | 133 | 130 | 125 | half | 298 |  |
+| siren | 3★ | caster | R | 129 | 133 | 126 | stand | 412 |  |
+| amazon | 3★ | heavy | L | 97 | 237 | 238 | 89 | 412 | basic, heavy, ult |
+| berserker | 3★ | heavy | - | 128 | 221 | 102 | half | 298 |  |
+| cyclops | 3★ | heavy | R | 128 | 242 | 127 | 85 | 88 |  |
+| draugr | 3★ | heavy | R | 219 | 128 | 102 | 89 | 412 |  |
+| dwarf_smith | 3★ | heavy | R | 97 | 221 | 238 | half | 88 |  |
+| einherjar | 3★ | heavy | R | 128 | 237 | 238 | 85 | 88 |  |
+| frost_troll | 3★ | heavy | - | 219 | 128 | 127 | 89 | 412 |  |
+| minotaur | 3★ | heavy | R | 128 | 242 | 102 | half | 298 |  |
+| scarab_knight | 3★ | heavy | R | 97 | 221 | 127 | 85 | 88 |  |
+| terracotta_soldier | 3★ | polearm | R | 220 | 221 | 102 | stand | 298 |  |
+| valkyrie | 3★ | polearm | R | 219 | 221 | 86 | 89 | 298 |  |
+| cobra_priestess | 3★ | robed | R | 129 | 133 | 126 | half | 88 |  |
+| fox_spirit | 3★ | robed | R | 129 | 136 | 126 | half | 298 |  |
+| vestal | 3★ | robed | R | 129 | 125 | 126 | stand | 412 |  |
+| gladiator | 3★ | unarmed | R | 206 | 242 | 86 | 89 | 88 |  |
+| jiangshi | 3★ | unarmed | - | 219 | 238 | 102 | half | 412 |  |
+| mummy | 3★ | unarmed | - | 97 | 242 | 91 | 89 | 412 |  |
+| shabti | 3★ | unarmed | R | 206 | 238 | 105 | half | 88 |  |
+
+## 10. As rolled out (2026-09-24)
+
+On the owner's word ("go ahead with the motion roll-out"); no credits spent
+(balance 549 before and after; the 108-credit expansion was not bought).
+
+### What shipped
+
+**115 families**, each its own five clips and a standing idle: the 98 base
+families of the serious wave, **Zeus** (the serious Zeus shipped as the test
+before `serious_wave.txt` existed; `EXTRA_ROWS`), and the **16 awakened
+forms**, which wear their family's set on their own rigs. The five gods keep
+their bespoke attack clips untouched (so `contactFraction` keeps their rows);
+they were dealt a stance and a victory only. Every carrier the roll-out wrote
+(663: five clips and the standing idle, the gods' three attacks aside) binds
+exactly as its family's shipped base does, and every standing idle is newer
+than the stance it came from. The cut report of every family is in
+`Art/Motions/shipped/<family>.json` (preset, window, blow, rate, mirror,
+fixes). **Left on their old clips:** the Jötunn and the sandstone sentinel,
+which are not in the serious roster (chibi-era rigs through the proportion
+pass; the deal has no row for them), and the smith's basic (below).
+
+`python3 tools/motion_palette.py roll --bundle Pantheon/Resources/Models --real --jobs 2`
+ships the whole plan (about 17 s a family; 115 in about 18 minutes);
+`roll <families>` ships a few and `--skip-done` resumes. Two faults of the
+first run are guarded against now: the rig was canonicalised at `mesh.py`'s
+1.9 m default instead of the height the family shipped at (the wave's third
+field), which put 90 families' carriers 3-7% short of their bases — `plan`
+carries the shipped height and `ship` refuses any carrier whose bind is more
+than 1 mm off the shipped base's — and a full disk failed 26 families in
+`mkdtemp` (re-shipped).
+
+### Which hand swings
+
+The presets carry their weapon in one hand, and so do the families.
+`PRESET_SIDE` is measured on the donor in the chest's frame (the hand whose
+path and reach lead into the blow): the blade and heavy presets are
+right-handed, the Shield Push shoves with the LEFT (its weapon hand is the
+right), the archery presets hold the bow in the left. **128, the Heavy Hammer
+Swing, is not lateral** — both hands go overhead, and on the boards the
+Minotaur's axe and Thor's hammer go up and down UNmirrored and read worse
+mirrored. `WEAPON_HAND` is measured on each shipped base: the mass the
+forearm and hand own outside the arm's own layer, its elongation and reach,
+every uncertain family looked at on a front render. Fifteen hold theirs in the
+LEFT: Achilles, the Amazon, Bellona (sword; the whip is in the right), the
+Centurion (the vine stick), the Dark Elf, the Harpy, Loki, Mercury (the
+caduceus), Nezha, Njord, Surtr, and the archers Artemis, Atalanta, the Medjay
+and Ullr (bow in the left, as the presets'); Skadi's bow is in her RIGHT.
+Diana (her bow is slung), the Berserker, the Frost Troll, Serqet (a weapon in
+each hand) and the empty-handed hold no side.
+
+A clip whose preset swings the other hand from the family's weapon is
+**mirrored on the donor before the retarget** (`mirror_motion`: clip_fix's
+"delta" reflection, each joint taking its partner's turn since rest), so the
+retarget and `mesh.py`'s grounding treat it like any preset. The carrier
+mirror clip_fix used on the 23rd ("pose" mode) put the Minotaur's hooves 27 cm
+through the floor (a foot 0.32 m off its reflection: his rest pose is
+asymmetric), so it is kept for exactly one judged case, `POSE_MIRROR`:
+**Hephaestus's heavy is the Heavy Hammer Swing mirrored on the carrier**, as
+judged on the 23rd — his hammer arm rests bent across his chest, and every
+swing retargeted from the donor's hanging arm stayed at his shoulder — with
+the Axe Stance, so his five clips stay his own.
+
+Mirrored as shipped: the Amazon, the Centurion, Mercury and Njord (all three
+attacks), Nezha and the Harpy (basic and heavy), Bellona (heavy and ultimate;
+her basic is the right hand's whip crack), Loki, Surtr, Achilles and the Dark
+Elf (the basic only: see the judgments), Skadi (the three attacks and her
+full-draw stance, her bow hand's wrist bent 65-78° after so the bow stands at
+the loose), and Hephaestus's heavy on the carrier.
+
+The other fixes of the 23rd are made by `ship` now, so a re-ship keeps them:
+Sobek's snout is lifted to 75° off his torso's line on every attack (the
+basic's closest was 60°, the heavy's 56°, the ultimate's 45°); Skadi's bow
+wrist (`BOW_WRIST`). `clip_fix.FIXES` no longer names Hephaestus's mirror,
+Skadi's mirror or Sobek's snout (a second run over the palette's clips would
+undo them); its markers record what was applied on the 23rd.
+
+### What each kit fights with
+
+- **Blade** (23): 219, 97, 220, 206 / 242, 221, 238, 105 / 102, 105, 91, 86,
+  the guard, half or stood, and 412, 298 or 88. The Jump Attack's leap only
+  for the fliers and leapers (`JUMPERS`: Bastet, Mercury, Perseus, Achilles,
+  Vidar, the Gladiator, the Shield Maiden, Sun Wukong, Fenrir, the Harpy, the
+  Valkyrie, Nike); Sun Wukong's ultimate is the leap by override.
+- **Polearm** (10): the blade moves with the spear-like 221 and 105 first.
+- **Heavy** (16): 128 (with its synthesized recovery), 237, 127, 238, the Axe
+  Stance, the chest pound.
+- **Unarmed** (8): the claw swipe (97), the kick (206), the spinning kick
+  (238), the pounce.
+- **Caster** (17) and **robed** (19): the six casts; a robed caster never
+  gets 125 as an ultimate now (it lifts a robe with both arms).
+- **Archer** (6): the draw from the quiver (224, the basic cut after the
+  reach), 222's draw from the back, the full-draw stance (226, mirrored for
+  Skadi); a stance that is not at rest gives the stages the guard stood up.
+
+### The re-measure, and the judgments
+
+Every clip was measured on its family's shipped base and LOD against the one
+it replaced (edges stretched past 3x over 32 frames). Totals over the 115
+families (five clips on the base, three attacks on the LOD): **413,805 before,
+422,176 as rolled out (+2.0%), 391,784 as judged (−5.3%)**; 25 families are
+better by more than a tenth, 73 within it, 17 worse by more than a tenth
+(small counts; the largest, Mars, Sun Wukong, Perseus and Poseidon, were
+boarded and show no tear a frame shows).
+
+The 24 clips whose count rose by half again and 100 more, and then 11 more
+whose count rose by a quarter and 250 (the second tier), were boarded old
+beside new at each version's worst frame. Where the new clip visibly tore the
+model more, candidates from the same kit were shipped into scratch, measured,
+and the one that tore least while keeping the family's five clips its own
+replaced it (`JUDGED`, laid over the deal so no other family's deal moves);
+where none measured at or under the old clip, the old file stayed (`KEPT`).
+Kept as rolled out after the board: the Terracotta Soldier's victory (the
+one flagged clip that tears no more than before to the eye), and, boarded as
+checks, Nezha's basic, ultimate and victory (his cloth survey rose), Mercury's
+victory (its cape's own strip), Mars's ultimate, Sun Wukong's basic, Perseus's
+victory and Poseidon's ultimate.
+
+| family | clip | as rolled out | as judged | edges past 3x: before | rolled out | judged |
+|---|---|---|---|---|---|---|
+| achilles | heavy | 221 mirrored | 242 unmirrored | 433 | 759 | 453 |
+| achilles | ultimate | 86 mirrored | 102 unmirrored | 526 | 930 | 549 |
+| aphrodite | ultimate | 125 | 126 | 2221 | 2902 | 1709 |
+| atalanta | heavy | 224 | 224 from f70 (after the quiver reach) | 884 | 1177 | 933 |
+| athena | heavy | 221 | 242 | 476 | 925 | 422 |
+| athena | stance | 89 | guard stood | 358 | 309 | 310 |
+| athena awakened | heavy | 221 | 242 | 10 | 13 | 16 |
+| athena awakened | stance | 89 | guard stood | - | - | - |
+| bellona | basic | 97 mirrored | 219 unmirrored | 1512 | 2226 | 1532 |
+| bellona | victory | 298 | 88 | 1685 | 2294 | 1420 |
+| bes | victory | 298 | 88 | 1419 | 1740 | 696 |
+| bragi | ultimate | 125 | 126 | 2896 | 4128 | 2957 |
+| bragi | victory | 412 | 88 | 3019 | 3108 | 2217 |
+| cobra priestess | stance | guard stood | guard half stood | 18 | 15 | 15 |
+| cobra priestess | ultimate | 125 | 126 | 173 | 393 | 181 |
+| cobra priestess | victory | 298 | 88 | 304 | 355 | 106 |
+| dark elf | basic | 206 mirrored | 220 mirrored | 709 | 725 | 701 |
+| dark elf | heavy | 105 mirrored | 242 unmirrored | 788 | 1030 | 794 |
+| dark elf | ultimate | 91 | 102 unmirrored | 914 | 1015 | 915 |
+| demeter | victory | 298 | 412 | 671 | 1217 | 703 |
+| dwarf smith | victory | 298 | 88 | 994 | 1788 | 710 |
+| dwarf smith | basic | 97 | kept (Meshy's own 219) | 891 | 1560 | 891 |
+| fox spirit | basic | 133 | 129 | 333 | 592 | 314 |
+| fox spirit | stance | guard stood | guard half stood | 221 | 208 | 254 |
+| frigg | ultimate | 125 | 126 | 2454 | 3407 | 2535 |
+| harpy | basic | 206 mirrored | 220 mirrored | 337 | 500 | 251 |
+| harpy | ultimate | 86 mirrored | 102 unmirrored | 493 | 795 | 494 |
+| harpy | victory | 298 | 88 | 616 | 714 | 188 |
+| hathor | ultimate | 125 | 126 | 1074 | 1971 | 1029 |
+| hathor | victory | 412 | 88 | 1668 | 1665 | 686 |
+| horus | victory | 298 | 412 | 185 | 593 | 254 |
+| horus awakened | victory | 298 | 412 | 158 | 525 | 195 |
+| idunn | basic | 133 | 129 | 1059 | 1569 | 1050 |
+| idunn | stance | guard stood | guard half stood | 364 | 36 | 219 |
+| isis | ultimate | 125 | 126 | 1194 | 1954 | 1175 |
+| isis awakened | ultimate | 125 | 126 | 221 | 463 | 212 |
+| jiangshi | ultimate | 91 | 102 | 484 | 817 | 439 |
+| loki | basic | 97 mirrored | 220 mirrored | 560 | 1478 | 420 |
+| loki | heavy | 221 mirrored | 242 unmirrored | 775 | 1409 | 705 |
+| loki | stance | guard stood | 89 | 578 | 636 | 530 |
+| loki | ultimate | 105 mirrored | 102 unmirrored | 857 | 1643 | 804 |
+| medusa | victory | 298 | 412 | 20 | 235 | 45 |
+| mummy | victory | 298 | 412 | 84 | 229 | 92 |
+| odin | victory | 298 | 88 | 1360 | 2384 | 939 |
+| odin awakened | victory | 298 | 88 | 602 | 1055 | 584 |
+| pluto | ultimate | 125 | 126 | 1362 | 2172 | 1439 |
+| pluto | victory | 412 | 88 | 1568 | 1599 | 683 |
+| skadi | victory | 298 | 412 | 269 | 429 | 267 |
+| sun wukong | victory | 88 | 412 | 111 | 299 | 113 |
+| surtr | basic | 206 mirrored | 220 mirrored | 148 | 394 | 130 |
+| surtr | heavy | 105 mirrored | 242 unmirrored | 254 | 604 | 220 |
+| surtr | ultimate | 102 mirrored | 102 unmirrored | 302 | 504 | 272 |
+
+What the table says: **125 as an ultimate lifted every robe** (it tore these
+same robes as their HEAVY before the roll-out); **298's crouch before its hop**
+stretches a kilt, a skirt or a cloak between the legs; and on **Loki, Surtr,
+Achilles and the Dark Elf every mirrored swing drags the cloth or the blade
+welded to the weapon arm's side** into a sheet — only the unmirrored motion
+kept to the old count, so their heavy and ultimate swing as the donor does,
+and their basic is the Shield Push mirrored (the free right hand shoves while
+the weapon arm stays back), which tore least of all.
+
+**The passes, re-measured on the final bundle** (`weapon_pass.py --survey`,
+`--welds --survey`, `cloth_opt.py --survey` and a re-solve; before → after):
+the thirty `WEAPON_FAMILIES` are all clean except Bes 4.9 → 3.8x and Serqet
+4.0 → 3.9x (the Vestal's 2.0 → 1.0); the weld families Hel 15.8 → 11.2x, the
+Hoplite 3.9 → 3.3x, Sif 20.1 → 20.1x, the rest clean. On the mirrored and
+reworked families: Achilles's sword 15.4 → 15.7x (a held piece the pass
+refused on its board on the 23rd), Surtr's 8.2 → 5.1x; welds Achilles 16.0 →
+16.2, the Centurion 28.5 → 23.4, the Dark Elf 33.0 → 33.7, the Harpy 14.5 →
+12.3, Loki 20.0 → 11.1, Njord 25.7 → 23.8, Skadi 17.0 → 16.8, Surtr 9.4 →
+5.4, Hephaestus 5.1 → 5.2, Heracles 31.1 → 30.8. The weld pass re-run on the
+Dark Elf (40x as rolled out) made its own measure worse (40.3 → 42.7) and was
+not applied; the judged clips put him back at 33.7. The cloth optimiser
+re-solved its six against the new clips: the Hoplite, Hades, Ptah, Mercury
+and Nezha are refused by its guard (energy 225 → 226, 219 → 220, 173 → 171,
+893 → 703, 2,178 → 1,695: nothing to gain that clears 75%), and Osiris's
+solve (264 → 171) shows nothing on its board and he measures better than
+before, so it was not applied. Its survey: the Hoplite 12.2 → 9.5x, Osiris
+55 → 54x, Hades 19 → 18x, Ptah 7.0 → 7.2x, Mercury 97 → 105x (fewer free
+points), Nezha 103 → 133x (the flagged Nezha clips show no tear on their
+boards).
+
+### What is left for a human
+
+1. **Variety where the palette runs out.** The robed casters have 9 distinct
+   attack triples for 19 (every robed ultimate is 126 or the three 125s that
+   did not tear; the most shared by five); the archers one triple for six; and
+   four left-handed blades (Loki, Surtr, the Dark Elf, the Harpy) share 220 /
+   242 / 102, told apart by stance and victory. The expansion's five casts
+   (131, 132, 134, 135, 137) and five archery presets (225, 227, 223, 229, 236)
+   are 30 credits of the 108 in §8 step 2.
+2. **Weapons that do not lead.** On Loki, Surtr, Achilles and the Dark Elf the
+   heavy and the ultimate are swung by the empty right hand, and on Bellona
+   the basic by the whip hand, because the weapon arm drags cloth or a blade
+   welded to the thigh. The fix is in the mesh — a remake (§4), or a
+   weapon/cloth pass that frees the piece (Achilles's sword was refused on its
+   board on the 23rd; Loki's dagger is sewn to his coat).
+3. **The smith's basic** is Meshy's own 219, unwarped: its blow is at 0.33 of
+   the clip and the game fires at 0.42, about 0.12 s late.
+4. **Found, older than this work:** the bespoke attack carriers of Ares, the
+   awakened Ares, Thoth, the awakened Thoth, the awakened Zeus and the
+   awakened Sekhmet bind their `head_end` (the awakened Sekhmet's `Head`)
+   0.10-0.25 m off their shipped bases.
+5. **On the phone**: the Jump Attack's leap in the battle frame, the half
+   guard at battle distance, and every blow's timing (CI frames).
+6. Osiris's cloth re-solve is available (`cloth_opt.py osiris --out DIR
+   --board B`, about 3.5 minutes) if the owner wants its small gain.
+
+Boards (session scratchpad, `rollout/boards/`): one per kit from the final
+bundle and one before/after sheet of every judged clip; the judgments'
+old-beside-new boards are in `rollout/judge/`.

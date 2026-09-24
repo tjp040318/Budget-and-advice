@@ -1,0 +1,93 @@
+{
+ "attack_basic": {
+  "preset": "224",
+  "frames": 66,
+  "seconds": 2.2,
+  "blow_source": 0.723,
+  "blow": 0.446,
+  "target": 0.42,
+  "windup_speed": 1.62,
+  "follow_speed": 0.5,
+  "rate": 1.69,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 8e-08
+  },
+  "bow_wrist": {
+   "hand": "RightHand",
+   "degrees": 76,
+   "frame": 29
+  }
+ },
+ "attack_heavy": {
+  "preset": "224",
+  "frames": 91,
+  "seconds": 3.03,
+  "blow_source": 0.744,
+  "blow": 0.55,
+  "target": 0.55,
+  "windup_speed": 1.35,
+  "follow_speed": 0.57,
+  "rate": 1.78,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 8e-08
+  },
+  "bow_wrist": {
+   "hand": "RightHand",
+   "degrees": 76,
+   "frame": 50
+  }
+ },
+ "ultimate": {
+  "preset": "222",
+  "frames": 121,
+  "seconds": 4.03,
+  "blow_source": 0.792,
+  "blow": 0.62,
+  "target": 0.62,
+  "windup_speed": 1.28,
+  "follow_speed": 0.55,
+  "rate": 1.68,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 8e-08
+  },
+  "bow_wrist": {
+   "hand": "RightHand",
+   "degrees": 65,
+   "frame": 74
+  }
+ },
+ "idle_combat": {
+  "preset": "226",
+  "frames": 102,
+  "seconds": 3.4,
+  "loop": true,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 8.2e-08
+  },
+  "bow_wrist": {
+   "hand": "RightHand",
+   "degrees": 78,
+   "frame": 51
+  }
+ },
+ "victory": {
+  "preset": "412",
+  "frames": 119,
+  "seconds": 3.97,
+  "rate": 1.99
+ },
+ "idle": {
+  "preset": "89 stood (the stance is not at rest)",
+  "frames": 39,
+  "seconds": 1.3,
+  "loop": true
+ }
+}

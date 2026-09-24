@@ -20,6 +20,16 @@ family takes its own combination from the archive (Docs/MOTION.md).
         idle_combat=85 victory=88 --bundle /tmp/scratch_bundle
     python3 tools/motion_palette.py board tyr attack_basic,attack_heavy --bundle /tmp/scratch_bundle --out tyr.jpg
     python3 tools/motion_palette.py compare 219 tyr_serious  # our retarget of the archive vs Meshy's own 219 on that rig
+    python3 tools/motion_palette.py plan --markdown          # the deal as shipped (Docs/MOTION.md section 9)
+    python3 tools/motion_palette.py roll --bundle Pantheon/Resources/Models --real --jobs 2   # ship the plan
+    python3 tools/motion_palette.py roll loki surtr --bundle Pantheon/Resources/Models --real # a few families
+
+The roll-out of 2026-09-24 (Docs/MOTION.md section 10): `plan` deals the pools,
+then lays the board judgments over the deal (JUDGED, KEPT); `ship` mirrors a
+preset swung in the other hand from the family's weapon (PRESET_SIDE,
+WEAPON_HAND) on the donor before the retarget, re-makes clip_fix's judged fixes
+(POSE_MIRROR, BOW_WRIST, SNOUT), canonicalises the rig at the height the family
+shipped at, and refuses a carrier whose bind differs from the shipped base's.
 
 `ship` writes nothing under Pantheon/ unless --bundle names it: the clips are
 retargeted onto the family's rig GLB (Art/Models/<asset>.glb) in a work
@@ -431,6 +441,144 @@ def motion_source(value):
     return archive_path(int(value))
 
 
+STANCES_NOT_AT_REST = {"226"}
+
+
+def mirror_motion(motion):
+    """A palette motion reflected on its OWN (donor) rig, before it is cut
+    and retargeted: every joint takes its partner's world-space turn since
+    rest, reflected across the donor's sagittal plane, applied to its own
+    rest (tools/clip_fix.py's "delta" mirror; a Meshy rig's rest is its
+    bind). Mirrored here, the retarget carries it to the family like any
+    preset and mesh.py grounds it on the family's own feet. The same mirror
+    made on the family's carrier AFTER shipping (clip_fix's "pose" mode, as
+    Hephaestus's and Skadi's were) leaves a foot 0.3 m off its place on a
+    rig whose rest pose is asymmetric (the Minotaur's, 0.46 m) and puts the
+    hooves 27 cm through the floor. -> (Motion, round-trip error in m)."""
+    import copy
+    import clip_fix
+    from retarget import Motion
+
+    class Rig:                                  # what mirror_anim reads of a character
+        pass
+    rig = Rig()
+    rig.joints, rig.parents, rig.rest_local = motion.joints, motion.parents, np.asarray(motion.rest_local, dtype=np.float64)
+    rig.anim = {k: (np.asarray(v, dtype=np.float64) if k != "fps" else v) for k, v in motion.anim.items()}
+    rig.joint_world_at_rest = motion.joint_world_at_rest
+    rig.bind = np.asarray(motion.joint_world_at_rest(), dtype=np.float64)
+    anim, _ = clip_fix.mirror_anim(rig, "delta")
+    twice = copy.copy(rig)
+    twice.anim = anim
+    back, _ = clip_fix.mirror_anim(twice, "delta")
+    err = float(max(np.abs(np.asarray(back["T"]) - rig.anim["T"]).max(),
+                    np.abs(np.abs(np.sum(np.asarray(back["R"]) * rig.anim["R"], axis=-1)) - 1).max()))
+    return Motion(motion.joints, motion.parents, motion.rest_local, anim, motion.source + " (mirrored)"), err
+SNOUT_CLIPS = ("attack_basic", "attack_heavy", "ultimate", "victory")
+
+
+def bind_against_base(bundle, family, clips, tol=1e-3):
+    """[problem lines] for each carrier of `clips` whose joints or bind differ
+    from the shipped base's (body joints; the base may carry cape joints)."""
+    import io
+    import contextlib
+    bundle = Path(bundle)
+    base_path = bundle / f"{family}.usdz"
+    if not base_path.exists():
+        base_path = APP_BUNDLE / f"{family}.usdz"
+    if not base_path.exists():
+        return []
+    with contextlib.redirect_stdout(io.StringIO()):
+        base = character.read_usdz(str(base_path))
+    body = character.body_joints(base)
+    out = []
+    for clip in clips:
+        path = bundle / f"{family}_{clip}.usdz"
+        if not path.exists():
+            continue
+        with contextlib.redirect_stdout(io.StringIO()):
+            c = character.read_usdz(str(path))
+        if list(c.joints) != body:
+            out.append(f"{path.name}: joints differ from the base's")
+            continue
+        d = np.abs(c.bind - base.bind[:len(body)]).max(axis=(1, 2))
+        if d.max() > tol:
+            out.append(f"{path.name}: bind {d.max():.3f} off the base's at {c.joints[int(d.argmax())].split('/')[-1]}")
+    return out
+
+
+def stand_in_place(bundle, family, clip, keep=1.0):
+    """tools/stand_idle.py's sum on one carrier, written as <family>_idle."""
+    import io
+    import contextlib
+    from stand_idle import stand
+    with contextlib.redirect_stdout(io.StringIO()):
+        c = character.read_usdz(str(Path(bundle) / f"{family}_{clip}.usdz"))
+    stand(c, keep)
+    c.name = family
+    out = Path(bundle) / f"{family}_idle.usdz"
+    character.write_usdz(c, out)
+    facts = character.verify(out, check_bounds=False, quiet=True)
+    probs = [p for p in facts["problems"] if not p.startswith("feet at")]
+    if probs:
+        print(f"  PROBLEMS in {out.name}: {'; '.join(probs)}")
+
+
+def post_fixes(family, bundle, assign, report):
+    """tools/clip_fix.py's judged fixes, re-made on the palette's carriers
+    (2026-09-24), after the mirror (made before the retarget, mirror_motion):
+    the bow hand's wrist bent on a mirrored archer's clips (BOW_WRIST, at the
+    clip's own blow, which the cut has moved to the slot's contact
+    fraction), and a long snout lifted off the chest (SNOUT). Returns a line
+    per fix; each clip's facts go into its report entry."""
+    import clip_fix
+    bundle = Path(bundle)
+    mirror = [c for c, r in report.items() if r.get("mirrored")]
+    base = None
+    done = []
+    for clip in dict.fromkeys(LATERAL_CLIPS + SNOUT_CLIPS):
+        path = bundle / f"{family}_{clip}.usdz"
+        if clip not in assign or not path.exists():
+            continue
+        if clip in mirror:
+            done.append(f"{clip} mirrored to the {'left' if weapon_hand(family) == 'L' else 'right'} hand")
+        pid = str(assign.get(clip, "")).split("@")[0]
+        do_pose = pid.isdigit() and (family, int(pid)) in POSE_MIRROR
+        do_wrist = clip in mirror and family in BOW_WRIST
+        do_snout = family in SNOUT and clip in SNOUT_CLIPS
+        if not (do_pose or do_wrist or do_snout):
+            continue
+        c = clip_fix.read(path)
+        facts = {}
+        if do_pose:
+            anim, f = clip_fix.mirror_anim(c, "pose")
+            worst, who = clip_fix.check_mirror(c, anim, "pose")
+            c.anim = anim
+            facts["mirrored"] = dict(mode="pose, on the carrier", weapon_hand=weapon_hand(family),
+                                     off_reflection_mm=round(worst * 1000), worst_joint=who, rest_asymmetry_m=f["asymmetry_m"])
+            done.append(f"{clip} mirrored on the carrier (pose; {worst * 1000:.0f} mm off the reflection at {who})")
+        if do_wrist:
+            if base is None:
+                own = bundle / f"{family}.usdz"
+                base = clip_fix.read(own if own.exists() else APP_BUNDLE / f"{family}.usdz")
+            F = len(c.anim["T"])
+            b = report.get(clip, {}).get("blow")
+            blow = int(round(b * (F - 1))) if b is not None else F // 2
+            c.anim, hand, tilt, ext = clip_fix.bow_wrist(c, base, blow)
+            facts["bow_wrist"] = dict(hand=hand, degrees=round(tilt), frame=blow)
+            done.append(f"{clip} bow wrist {hand} {tilt:.0f} deg at f{blow}")
+        if do_snout:
+            c.anim, before, after = clip_fix.lift_snout(c, SNOUT[family])
+            facts["snout"] = dict(limit=SNOUT[family], closest_before=round(before), closest_after=round(after))
+            if before < SNOUT[family]:
+                done.append(f"{clip} snout {before:.0f} -> {after:.0f} deg")
+        c.name = family
+        probs = clip_fix.write_carrier(c, path)
+        if probs:
+            facts["problems"] = probs
+        report.setdefault(clip, {}).update(facts)
+    return done
+
+
 def cmd_ship(a):
     rig = ART / f"{a.asset}.glb"
     if not rig.exists():
@@ -452,6 +600,16 @@ def cmd_ship(a):
     if stance_stand:
         assign["idle_combat"] = "89"          # the guard, then stood up (all the way, or half) and worn as the stance
         stand = True
+    # A stance that is not at rest (226: a bow held at full draw) is no pose
+    # for the stages: their standing idle is the guard (89) stood up instead,
+    # shipped as `idle` and stood in place below.
+    rest_from_guard = stand and str(stance or "").split("@")[0] in STANCES_NOT_AT_REST
+    if rest_from_guard:
+        assign["idle"] = "89"
+    # A preset that carries its weapon in the other hand from the family's is
+    # mirrored before the retarget (PRESET_SIDE, WEAPON_HAND).
+    mirror = [] if a.no_mirror else mirrored_clips(a.family, assign)
+    assign = {clip: value[:-len(NO_MIRROR)] if value.endswith(NO_MIRROR) else value for clip, value in assign.items()}
     prep_dir = WORK / "prepared"
     prep_dir.mkdir(parents=True, exist_ok=True)
     report = {}
@@ -467,7 +625,13 @@ def cmd_ship(a):
                 cut["window"] = tuple(int(x) for x in w.split(":"))
             if b:
                 cut["blow"] = int(b)
-        motion, facts = prepare(Motion.load(source), clip, cut.get("window"), cut.get("blow"), cut.get("loop", False), cut.get("recover", 0))
+        loop = cut.get("loop", False) or clip == "idle"
+        raw = Motion.load(source)
+        if clip in mirror:
+            raw, err = mirror_motion(raw)
+        motion, facts = prepare(raw, clip, cut.get("window"), cut.get("blow"), loop, cut.get("recover", 0))
+        if clip in mirror:
+            facts["mirrored"] = dict(mode="delta, on the donor", weapon_hand=weapon_hand(a.family), round_trip=float(f"{err:.1e}"))
         prepared = prep_dir / f"{a.family}_{clip}.motion.npz"
         motion.save(prepared)
         report[clip] = dict(preset=pid, **facts)
@@ -493,6 +657,22 @@ def cmd_ship(a):
     if r.returncode:
         print(r.stderr[-1500:])
         sys.exit(f"mesh.py failed for {a.family}")
+    # Every carrier just written must bind as the SHIPPED base does (the one in
+    # this bundle, else the app's): the game plays a clip's tracks on the
+    # figure's joints by name, bone lengths and all, so a rig canonicalised at
+    # another height stretches the figure to the clip's.
+    dev = bind_against_base(bundle, a.family, [c for c in assign])
+    if dev:
+        for line in dev:
+            print(f"  PROBLEM: {line}")
+        sys.exit(f"{a.family}: the carriers do not bind as the shipped base does (pass the height it was shipped at: --height)")
+    # The clip fixes, on the carriers mesh.py just wrote: a preset swung in
+    # the other hand from the family's weapon is mirrored to it (the
+    # archer's bow wrist bent after), a long snout kept off the chest.
+    fixed = post_fixes(a.family, bundle, assign, report)
+    if fixed:
+        print("  fixes: " + "; ".join(fixed))
+
     def stand_idle(keep):
         code = ("import sys; from pathlib import Path; sys.path.insert(0, %r); import stand_idle; "
                 "stand_idle.BUNDLE = Path(%r); sys.argv = ['stand_idle.py', %r, '--keep', %r]; stand_idle.main()") % (
@@ -508,11 +688,16 @@ def cmd_ship(a):
         shutil.copyfile(bundle / f"{a.family}_idle.usdz", bundle / f"{a.family}_idle_combat.usdz")
         report["idle_combat"]["preset"] = f"89 {stance}"
         print(f"  the battle stance is the guard stood {'up' if stance == 'stand' else 'half up'} ({a.family}_idle_combat.usdz)")
-    if stand and stance != "stand":
+    if rest_from_guard:
+        stand_in_place(bundle, a.family, "idle")
+        report["idle"]["preset"] = "89 stood (the stance is not at rest)"
+        print(f"  the standing idle is the guard stood up ({a.family}_idle.usdz), not the {stance} stance")
+    elif stand and stance != "stand":
         stand_idle(1.0)                       # the stages' standing idle, from whatever stance shipped
     rp = report_path(bundle, a.family)
     rp.parent.mkdir(parents=True, exist_ok=True)
-    rp.write_text(json.dumps(report, indent=1) + "\n")
+    before = json.loads(rp.read_text()) if rp.exists() else {}
+    rp.write_text(json.dumps({**before, **report}, indent=1) + "\n")
     if not a.keep:
         for clip in assign:
             (src_dir / f"{a.asset}_{clip}.glb").unlink(missing_ok=True)
@@ -742,10 +927,170 @@ BESPOKE = {"anubis", "sekhmet", "zeus", "ares", "thoth"}      # Art/Motions/<fam
 BRUTES = {"minotaur", "cyclops", "frost_troll", "berserker", "draugr", "fenrir", "sobek", "surtr", "heracles", "boss_colossus", "khnum", "taweret"}
 HAND_WRITTEN = {"anubis": 4, "sekhmet": 5, "zeus": 5, "ares": 5, "thoth": 5, "heracles": 4, "perseus": 4,
                 "shabti": 3, "hoplite": 3, "satyr": 3, "harpy": 3}
+# A family the serious wave does not list (the serious Zeus shipped as the
+# test, before serious_wave.txt existed): (asset, family, kind, grade).
+EXTRA_ROWS = [("zeus_serious", "zeus", "caster", 5)]      # his height: mesh.py reads it off UnitDatabase.swift
+# family -> the height (m) its base was shipped at. `ship` must canonicalise
+# the rig at the SAME height, or the carriers' bind (bone lengths, the hips'
+# height) differs from the shipped base's and the game stretches the figure
+# to the clip's: mesh.py's own default for a table family is 1.9 m, which put
+# the first roll-out's carriers 3-7% short on 90 families (2026-09-24).
+ROW_HEIGHTS = {}
+# Jump Attack (86) leaps 2.3 m: dealt only to the fliers and the leapers,
+# where a leap is the character (winged sandals, a cat's pounce, the monkey
+# king), never to a giant, a king or a heavy.
+JUMPERS = {"bastet", "mercury", "perseus", "achilles", "vidar", "gladiator", "shield_maiden", "sun_wukong",
+           "fenrir", "harpy", "valkyrie", "nike"}
+# Where the character asks for a move the deal would not give it (applied after
+# the deal; `plan` still reports any identical set). Diana's bow is slung and
+# bound to her torso (clip_fix --bind-piece), so the archer's held full-draw
+# stance (226) would aim an empty hand: she stands.
+OVERRIDES = {"diana": {"idle_combat": "stand"}, "sun_wukong": {"ultimate": 86},
+             # Hephaestus's hammer arm rests bent across his chest, so a swing
+             # retargeted from the donor's hanging arm stays at his shoulder
+             # (the deal's 237 on the board of 2026-09-24); his judged heavy is
+             # the Heavy Hammer Swing mirrored in pose mode (POSE_MIRROR), which
+             # puts the hammer overhead where the empty hand went. The Axe
+             # Stance keeps his five clips his own (with the guard he had
+             # Draugr's set).
+             "hephaestus": {"attack_heavy": 128, "idle_combat": 85}}
+# The board judgments of 2026-09-24 (Docs/MOTION.md, *As rolled out*). After
+# the roll-out every clip was measured on its family's shipped base and LOD
+# against the clip it replaced (the edges a pose stretches past 3x, over 32
+# frames); the 24 whose count rose by half again (and 100 more) were boarded
+# old beside new at each version's worst frame, and where the new clip
+# visibly tore the model more, candidates from the same kit were shipped into
+# scratch and measured, and the one that tore least while keeping the
+# family's five clips its own REPLACES the deal's clip here - AFTER the deal,
+# so no other family's deal moves. `~nm` is a preset left as the donor swings
+# it (not mirrored to a left-handed family's weapon hand): on Loki, Surtr,
+# Achilles and the Dark Elf every mirrored swing dragged the cloth or the
+# blade welded to the weapon arm's side into a sheet, and only the unmirrored
+# motion kept to the old count; their basic is the Shield Push mirrored (the
+# free right hand shoves, the weapon arm stays back), which tore least of all.
+# An awakened form takes its family's judgment (each was measured).
+JUDGED = {
+    "loki": {"attack_basic": 220, "attack_heavy": "242~nm", "ultimate": "102~nm", "idle_combat": 89},
+    "surtr": {"attack_basic": 220, "attack_heavy": "242~nm", "ultimate": "102~nm"},
+    "achilles": {"attack_heavy": "242~nm", "ultimate": "102~nm"},
+    "dark_elf": {"attack_basic": 220, "attack_heavy": "242~nm", "ultimate": "102~nm"},
+    # 125 (arms straight up) lifts a robe with both arms like wings; it tore
+    # these robes as their HEAVY before the roll-out and as their ultimate
+    # after it. 126 measured at the old count; the victories keep the five
+    # clips distinct from Ma'at's, the Siren's and Osiris's, and tear least
+    # (Hathor 686 edges against 1,668, the Cobra Priestess 106 against 304,
+    # Pluto 683 against 1,568; her half stance 15 against 18).
+    "hathor": {"ultimate": 126, "victory": 88},
+    "isis": {"ultimate": 126},
+    "cobra_priestess": {"ultimate": 126, "victory": 88, "idle_combat": "half"},
+    "pluto": {"ultimate": 126, "victory": 88},
+    # the heavy's 242 made Athena's five Serqet's: she stands (310 edges, as the guard's 309)
+    "athena": {"attack_heavy": 242, "idle_combat": "stand"},
+    "dwarf_smith": {"victory": 88},
+    # 298 crouches before its hop and stretches a kilt, a skirt or a cloak
+    # between the legs; 412 or 88, whichever measured least, and distinct.
+    "demeter": {"victory": 412},
+    "horus": {"victory": 412},
+    "odin": {"victory": 88},
+    "medusa": {"victory": 412},
+    "mummy": {"victory": 412},
+    "sun_wukong": {"victory": 412},
+    "bes": {"victory": 88},
+    "skadi": {"victory": 412},
+    # the second tier: clips whose count rose by a quarter and 250 edges,
+    # boarded and judged the same way
+    "harpy": {"attack_basic": 220, "ultimate": "102~nm", "victory": 88},
+    "bragi": {"ultimate": 126, "victory": 88},
+    "frigg": {"ultimate": 126},
+    "aphrodite": {"ultimate": 126},
+    "jiangshi": {"ultimate": 102},
+    "bellona": {"attack_basic": "219~nm", "victory": 88},      # unmirrored, the right hand's whip cracks
+    "idunn": {"attack_basic": 129, "idle_combat": "half"},
+    "fox_spirit": {"attack_basic": 129, "idle_combat": "half"},
+    # the heavy's draw starts after the quiver reach, which dragged her cloak (933 edges against 1,177)
+    "atalanta": {"attack_heavy": "224@70:140^117"},
+}
+# (family, clip): the pre-palette file stays in the bundle (no candidate from
+# the kit measured at or under it); `roll` does not ship it.
+KEPT = {
+    ("dwarf_smith", "attack_basic"): "Meshy's own 219 (891 edges past 3x; the palette's 219 1,145, 128 1,523, 97 1,560)",
+}
+
+# (family, preset) mirrored on the CARRIER after shipping, in clip_fix's pose
+# mode - each judged on its own board (clip_fix, 2026-09-23): the hand goes
+# exactly where the other hand went whatever the arms' rest poses, which is
+# what a weapon arm bent at rest needs; on an asymmetric pair of LEGS it
+# fails (the Minotaur's hooves, 0.3 m), so it is never the default.
+POSE_MIRROR = {("hephaestus", 128)}
+
+# The hand each preset carries its WEAPON in (the figure's own side, as the
+# joint names say: LeftHand is the figure's left). Measured on the donor in
+# the chest's frame - the hand whose path and reach lead into the blow
+# (scratch lead_hand.py, 2026-09-24). 128, the Heavy Hammer Swing, is NOT
+# lateral: both hands go overhead (the left 0.30 of the height over the head,
+# the right 0.22), and on the boards of 2026-09-24 the Minotaur's axe and
+# Thor's hammer go overhead and down UNmirrored and read worse mirrored;
+# Hephaestus's (mirrored by clip_fix on 2026-09-23) was the exception, his
+# hammer arm bent across his chest at rest, and the deal no longer gives him
+# 128. 220 is the OFF hand's shove:
+# its weapon hand is the right, the one that does not shove. The archery
+# presets hold the bow in the LEFT and draw with the right. A preset not
+# named (91's two blades, the casts, the stances but 226, the victories) is
+# not lateral: it is never mirrored.
+PRESET_SIDE = {219: "R", 97: "R", 242: "R", 221: "R", 105: "R", 102: "R", 86: "R", 237: "R", 238: "R",
+               127: "R", 206: "R", 220: "R", 224: "L", 222: "L", 226: "L"}
+# The hand each family holds its weapon (an archer: its bow) in, measured on
+# the shipped base: the mass the forearm and hand own OUTSIDE the arm's own
+# layer (a blade, a haft, a bow), its elongation and its reach past the
+# wrist, and every uncertain one looked at on a front render (Docs/MOTION.md,
+# *As rolled out*). Default "R". "L": the weapon is in the left hand, so every
+# right-handed preset is mirrored to it. None: nothing in either hand's
+# weights, or a weapon in each (two axes, two clubs, two daggers) - nothing is
+# mirrored. Keyed by the exact family: an awakened mesh holds its own way.
+WEAPON_HAND = {
+    **{f: "L" for f in ("achilles", "amazon", "bellona", "centurion", "dark_elf", "harpy", "loki", "mercury",
+                        "nezha", "njord", "surtr", "artemis", "atalanta", "medjay", "ullr")},
+    **{f: None for f in ("diana", "berserker", "frost_troll", "serqet", "boss_colossus", "bastet", "fenrir",
+                         "hoplite", "horus", "jiangshi", "mummy", "sun_wukong", "hel", "medusa", "minerva",
+                         "idunn", "nephthys")},
+}
+# The clip fixes of 2026-09-23 (tools/clip_fix.py), re-applied by `ship` to the
+# palette's clips so a re-ship keeps them: the bow hand's wrist bent so the
+# bow stands upright at the loose (the concept holds it along the forearm),
+# and a long snout kept `limit` degrees off the torso's line.
+BOW_WRIST = {"skadi"}
+SNOUT = {"sobek": 75.0}
+LATERAL_CLIPS = ("attack_basic", "attack_heavy", "ultimate", "idle_combat")
+NO_MIRROR = "~nm"      # a value's suffix: this clip is NOT mirrored to the family's weapon hand (JUDGED)
+
+
+def weapon_hand(family):
+    return WEAPON_HAND.get(family, "R")
+
+
+def mirrored_clips(family, assign):
+    """The clips of `assign` ({clip: value}) whose preset carries its weapon
+    in the other hand from the family's: those `ship` mirrors."""
+    hand = weapon_hand(family)
+    out = []
+    for clip in LATERAL_CLIPS:
+        v = str(assign.get(clip, ""))
+        if v.endswith(NO_MIRROR):                # judged: this clip stays as the preset swings it
+            continue
+        v = v.split("@")[0]
+        if not v.isdigit() or hand is None:
+            continue
+        side = PRESET_SIDE.get(int(v))
+        if side and side != hand:
+            out.append(clip)
+    return out
 
 
 def roster_rows():
-    """(asset, family, kit field, sentence, grade) for every serious remake."""
+    """(asset, family, kit field, sentence, grade) for every serious remake;
+    the height each was SHIPPED at (the wave's third field, build_asset.sh's
+    --height) goes into ROW_HEIGHTS."""
+    heights = {}
     import re
     sentences = {}
     for line in (REPO / "tools/batch/serious_concepts.tsv").read_text().splitlines():
@@ -762,14 +1107,22 @@ def roster_rows():
             continue
         f = line.split(":")
         asset, kit, family = f[0], f[4], f[-1]
+        heights[family] = float(f[2])
         base = family.replace("_awakened", "")
         grade = grades.get(base, 5 if family.startswith("boss_") else 4)
         rows.append((asset, family, kit, sentences.get(family, ""), grade))
+    ROW_HEIGHTS.update(heights)
+    listed = {r[1] for r in rows}
+    for asset, family, kind, grade in EXTRA_ROWS:
+        if family not in listed:
+            rows.append((asset, family, "kind:" + kind, sentences.get(family, ""), grade))
     return rows
 
 
 def kind_of(family, kit, sentence):
     import re
+    if kit.startswith("kind:"):
+        return kit[5:]
     s = re.sub(r"\bno (great |long )?[a-z]+( and no [a-z]+)?", "", sentence.lower())
     if kit.startswith("archer") or re.search(r"\bbow\b(?! held)", s) and "recurve" in s:
         return "archer"
@@ -787,10 +1140,16 @@ def kind_of(family, kit, sentence):
 
 
 def cmd_plan(a):
+    plan, taken = make_plan()
+    report_plan(a, plan, taken)
+
+
+def make_plan():
     """Every family its own combination: the families of a kind dealt the
     pools so that no two share more slots than they must, the 5-stars first
     (they get the first pick of the kind's signature moves), the five gods'
-    bespoke attacks kept, an awakened form wearing its family's set."""
+    bespoke attacks kept, an awakened form wearing its family's set.
+    -> (plan, taken): plan[family] = {asset, kind, grade, clips, hand, mirror}."""
     import itertools
     archived = {k for k in load_manifest()["presets"] if archive_path(k).exists()}
 
@@ -806,7 +1165,10 @@ def cmd_plan(a):
     slots = ("attack_basic", "attack_heavy", "ultimate", "idle_combat", "victory")
     for asset, family, kit, sentence, grade in order:
         kind = kind_of(family, kit, sentence)
-        pool = {k: [v for v in POOLS[kind][k] if ok(v)] for k in slots}
+        pool = {k: [v for v in POOLS[kind][k] if ok(v) and (family in JUMPERS or str(v).split("@")[0] != "86")]
+                for k in slots}
+        for k, v in OVERRIDES.get(family, {}).items():
+            pool[k] = [v]
         if family in BESPOKE:
             for c in ("attack_basic", "attack_heavy", "ultimate"):
                 pool[c] = [f"Art/Motions/{family}_{c}.motion.npz"]
@@ -834,31 +1196,121 @@ def cmd_plan(a):
                     if str(clips[c]).endswith(".npz"):
                         clips[c] = clips[c]                 # the god's own motion, carried onto the awakened rig
                 plan[family] = dict(asset=asset, kind=base["kind"], grade=grade, clips=clips)
-    def label(v):
-        v = str(v)
-        if v.endswith(".npz"):
-            return "own:" + Path(v).name.split("_")[0]
-        if v in ("stand", "half"):
-            return v
-        return v.split("@")[0]
+    for f, p in plan.items():
+        p["height"] = ROW_HEIGHTS.get(f)
+        base = f.replace("_awakened", "")
+        judged = JUDGED.get(f) or (JUDGED.get(base) if f != base else None) or {}
+        for clip, value in judged.items():
+            p["clips"][clip] = value
+        if judged:
+            p["judged"] = sorted(judged)
+        kept = sorted(c for (fam, c) in KEPT if fam in (f, base))
+        if kept:
+            p["kept"] = kept
+    for f, p in plan.items():
+        p["hand"] = weapon_hand(f)
+        p["mirror"] = mirrored_clips(f, p["clips"])
+    return plan, taken
+
+
+def plan_label(v):
+    v = str(v)
+    if v.endswith(NO_MIRROR):
+        return v[:-len(NO_MIRROR)].split("@")[0]
+    if v.endswith(".npz"):
+        return "own:" + Path(v).name.split("_")[0]
+    if v in ("stand", "half"):
+        return v
+    return v.split("@")[0]
+
+
+def report_plan(a, plan, taken):
+    slots = ("attack_basic", "attack_heavy", "ultimate", "idle_combat", "victory")
+    label = plan_label
     tuples = [tuple(label(v) for v in p["clips"].values()) for f, p in plan.items() if "_awakened" not in f]
     dupes = len(tuples) - len(set(tuples))
+    short = {"attack_basic": "basic", "attack_heavy": "heavy", "ultimate": "ult", "idle_combat": "stance"}
     if a.markdown:
-        print("| family | grade | kind | basic | heavy | ultimate | stance | victory |")
-        print("|---|---|---|---|---|---|---|---|")
+        print("| family | grade | kind | hand | basic | heavy | ultimate | stance | victory | mirrored |")
+        print("|---|---|---|---|---|---|---|---|---|---|")
         for f, p in sorted(plan.items(), key=lambda kv: (-kv[1]["grade"], kv[1]["kind"], kv[0])):
             c = p["clips"]
-            print(f"| {f} | {p['grade']}★ | {p['kind']} | " + " | ".join(label(c[k]) for k in slots) + " |")
+            print(f"| {f} | {p['grade']}★ | {p['kind']} | {p['hand'] or '-'} | " + " | ".join(label(c[k]) for k in slots)
+                  + f" | {', '.join(short[x] for x in p['mirror']) or ''} |")
     else:
         for f, p in sorted(plan.items()):
-            print(f"{f:24s} {p['grade']} {p['kind']:8s} " + "  ".join(f"{k.split('_')[-1]}={label(v)}" for k, v in p["clips"].items()))
+            print(f"{f:24s} {p['grade']} {p['kind']:8s} {p['hand'] or '-'} " + "  ".join(f"{k.split('_')[-1]}={label(v)}" for k, v in p["clips"].items())
+                  + (f"  mirror={','.join(p['mirror'])}" if p["mirror"] else ""))
     from collections import Counter
     print(f"\n{len(plan)} families ({len(tuples)} base); identical five-clip sets: {dupes}", file=sys.stderr)
-    for kind, ts in sorted(taken.items()):
-        trip = Counter(tuple(label(v) for v in t[:3]) for t in ts)
+    # counted on the FINAL deal (JUDGED applied), base families only
+    kinds = {}
+    for f, p in plan.items():
+        if "_awakened" not in f:
+            kinds.setdefault(p["kind"], []).append(tuple(label(p["clips"][k]) for k in slots[:3]))
+    for kind, ts in sorted(kinds.items()):
+        trip = Counter(ts)
         print(f"  {kind:8s} {len(ts):3d} families, {len(trip)} distinct attack triples, the most shared by {max(trip.values())}", file=sys.stderr)
     if a.json:
         Path(a.json).write_text(json.dumps(plan, indent=1) + "\n")
+
+
+def ship_argv(family, p, bundle, real=False):
+    """The `ship` arguments for one family of the plan. A god's attack clips
+    are its bespoke motions, already on its rig and its awakened rig and
+    timed by BattleSceneController.contactFraction's own row, so only its
+    stance and victory are dealt; every family takes the standing idle."""
+    base = family.replace("_awakened", "")
+    argv = [p["asset"], family]
+    for clip, value in p["clips"].items():
+        if base in BESPOKE and clip in ("attack_basic", "attack_heavy", "ultimate"):
+            continue
+        if clip in p.get("kept", ()):
+            continue                            # the pre-palette file stays (KEPT)
+        argv.append(f"{clip}={value}")
+    argv += ["idle=stand", "--bundle", str(bundle)] + (["--real"] if real else [])
+    if p.get("height"):
+        argv += ["--height", str(p["height"])]
+    return argv
+
+
+def cmd_roll(a):
+    """The roll-out (Docs/MOTION.md, *As rolled out*): every family of the
+    plan (or the ones named) shipped through `ship`, `--jobs` at a time, a
+    log per family in WORK/logs; `--skip-done` passes over a family whose
+    report is already written (a resumed run)."""
+    from concurrent.futures import ThreadPoolExecutor
+    plan, _ = make_plan()
+    names = a.families or sorted(plan)
+    missing = [n for n in names if n not in plan]
+    if missing:
+        sys.exit(f"not in the plan: {', '.join(missing)}")
+    bundle = Path(a.bundle).resolve()
+    logs = WORK / "logs"
+    logs.mkdir(parents=True, exist_ok=True)
+    todo = [n for n in names if not (a.skip_done and report_path(bundle, n).exists())]
+    print(f"{len(todo)} famil{'y' if len(todo) == 1 else 'ies'} to ship into {bundle} ({len(names) - len(todo)} done), {a.jobs} at a time")
+
+    def run(name):
+        argv = [sys.executable, str(Path(__file__).resolve()), "ship"] + ship_argv(name, plan[name], bundle, a.real)
+        if a.dry_run:
+            return name, 0, " ".join(argv[2:]), 0.0
+        t = time.time()
+        with open(logs / f"{name}.log", "w") as log:
+            r = subprocess.run(argv, stdout=log, stderr=subprocess.STDOUT, cwd=str(REPO))
+        text = (logs / f"{name}.log").read_text()
+        probs = [l.strip() for l in text.splitlines() if "PROBLEM" in l]
+        return name, r.returncode, "; ".join(probs[:3]), time.time() - t
+
+    failed = []
+    with ThreadPoolExecutor(max_workers=max(1, a.jobs)) as pool:
+        for name, code, note, dt in pool.map(run, todo):
+            if code or note and not a.dry_run:
+                failed.append(name)
+            print(f"  {name:22s} {'ok' if not code else 'FAILED'} {dt:5.0f} s  {note}", flush=True)
+    print(f"{len(todo) - len(failed)} shipped, {len(failed)} failed{': ' + ', '.join(failed) if failed else ''} (logs in {logs})")
+    if failed:
+        sys.exit(1)
 
 
 def main():
@@ -873,17 +1325,21 @@ def main():
     p = sub.add_parser("ship"); p.add_argument("asset"); p.add_argument("family"); p.add_argument("assign", nargs="+", help="clip=preset_id | clip=path.motion.npz | idle=stand")
     p.add_argument("--bundle", required=True); p.add_argument("--height", type=float); p.add_argument("--keep", action="store_true"); p.add_argument("--real", action="store_true")
     p.add_argument("--with-base", action="store_true", help="also build the base (no LOD) from the same rig, so a board in a scratch bundle is self-consistent")
+    p.add_argument("--no-mirror", action="store_true", help="never mirror a clip to the family's weapon hand (WEAPON_HAND), for a before/after board")
     p = sub.add_parser("board"); p.add_argument("family"); p.add_argument("clips"); p.add_argument("--bundle", required=True)
     p.add_argument("--base"); p.add_argument("--out", required=True); p.add_argument("--size", type=int, default=240); p.add_argument("--views", default="front,side")
     p.set_defaults(notes={})
     p = sub.add_parser("board-archive"); p.add_argument("presets", nargs="+"); p.add_argument("--donor"); p.add_argument("--out", required=True)
     p.add_argument("--size", type=int, default=220); p.add_argument("--views", default="front,side"); p.add_argument("--frames", type=int, default=8)
     p = sub.add_parser("compare"); p.add_argument("preset"); p.add_argument("asset"); p.add_argument("--keep", action="store_true")
+    p = sub.add_parser("roll", help="ship the plan onto every family (or the ones named), --jobs at a time")
+    p.add_argument("families", nargs="*"); p.add_argument("--bundle", required=True); p.add_argument("--real", action="store_true")
+    p.add_argument("--jobs", type=int, default=2); p.add_argument("--skip-done", action="store_true"); p.add_argument("--dry-run", action="store_true")
     p = sub.add_parser("plan", help="deal every family its own five clips from the archived palette")
     p.add_argument("--markdown", action="store_true"); p.add_argument("--json")
     a = ap.parse_args()
     {"buy": cmd_buy, "archive": cmd_archive, "free": cmd_free, "list": cmd_list, "ship": cmd_ship,
-     "board": cmd_board, "board-archive": cmd_board_archive, "compare": cmd_compare, "plan": cmd_plan}[a.cmd](a)
+     "board": cmd_board, "board-archive": cmd_board_archive, "compare": cmd_compare, "plan": cmd_plan, "roll": cmd_roll}[a.cmd](a)
 
 
 if __name__ == "__main__":

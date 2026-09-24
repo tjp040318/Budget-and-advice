@@ -1,0 +1,47 @@
+{
+ "attack_basic": {
+  "preset": "97",
+  "frames": 67,
+  "seconds": 2.23,
+  "blow_source": 0.318,
+  "blow": 0.42,
+  "target": 0.42,
+  "windup_speed": 0.76,
+  "follow_speed": 1.18,
+  "rate": 1.72
+ },
+ "attack_heavy": {
+  "preset": "221",
+  "frames": 67,
+  "seconds": 2.23,
+  "blow_source": 0.47,
+  "blow": 0.55,
+  "target": 0.55,
+  "windup_speed": 0.85,
+  "follow_speed": 1.18,
+  "rate": 1.31
+ },
+ "ultimate": {
+  "preset": "127",
+  "frames": 91,
+  "seconds": 3.03,
+  "blow_source": 0.556,
+  "blow": 0.62,
+  "target": 0.62,
+  "windup_speed": 0.9,
+  "follow_speed": 1.17,
+  "rate": 1.26
+ },
+ "idle_combat": {
+  "preset": "85",
+  "frames": 32,
+  "seconds": 1.07,
+  "loop": true
+ },
+ "victory": {
+  "preset": "88",
+  "frames": 117,
+  "seconds": 3.9,
+  "rate": 1.95
+ }
+}
