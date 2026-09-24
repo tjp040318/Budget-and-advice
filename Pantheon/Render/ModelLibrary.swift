@@ -212,6 +212,16 @@ final class ModelLibrary {
         log("memory is short: let go of \(dropped.count) model(s); \(kept) still on a stage")
     }
 
+    /// Drops every cached clip set. Only the tour's memory experiment calls
+    /// it (`-tour-stress-purge`): a fight re-parses each clip it then plays,
+    /// on the main thread, which is why `purge()` keeps them.
+    func purgeClips() {
+        cacheLock.lock()
+        animationCache.removeAll()
+        animationUse.removeAll()
+        cacheLock.unlock()
+    }
+
     /// The kernel's first warning: down to the halved limits, least recently
     /// used first, keeping anything used in the last `recentGrace` seconds
     /// (a fight's warmed waves). Main thread (`MemoryRelief.observeEarly`).

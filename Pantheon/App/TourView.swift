@@ -1371,6 +1371,8 @@ private final class TourStressDriver: ObservableObject {
 
     // MARK: Summons
 
+    private static let purgeEachReveal = ProcessInfo.processInfo.arguments.contains("-tour-stress-purge")
+
     private func summons(_ game: GameStore) async {
         let scroll = Self.banner.scroll
         let needed = Self.singles + Self.tenPulls * 10
@@ -1407,6 +1409,16 @@ private final class TourStressDriver: ObservableObject {
         }
         cover = nil
         await pause(Self.dismissal)
+        // The memory experiment (2026-09-24, -tour-stress-purge): runs
+        // 242-244 grew about 16 MB with every NEW family summoned and nothing
+        // with a repeat, even with the model cache at its cap, so something
+        // keeps each family's pixels outside the cache. Emptying everything
+        // the app itself holds after each reveal says whether it is ours: if
+        // the curve still climbs, it is SceneKit's.
+        if Self.purgeEachReveal {
+            ModelLibrary.shared.purge()
+            ModelLibrary.shared.purgeClips()
+        }
         let what = count == 1
             ? "\(first.stars)★ \(first.blueprint.id)"
             : "\(results.filter { $0.stars >= 4 }.count) of \(results.count) at 4★ or better"

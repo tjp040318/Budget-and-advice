@@ -549,7 +549,12 @@ jobs:
                 await_stress 340; shoot "$step-${names[$step]}-summon"
                 again -tour-stress battle
                 sleep 40; shoot "$step-${names[$step]}-battle-mid"
-                await_stress 480; shoot "$step-${names[$step]}-battle" ;;
+                await_stress 480; shoot "$step-${names[$step]}-battle"
+                # The same summons with everything the app caches emptied
+                # after each reveal (2026-09-24): a curve that still climbs is
+                # memory SceneKit keeps, not ours (PLAN.md, part two).
+                again -tour-stress summon -tour-stress-purge
+                await_stress 340; shoot "$step-${names[$step]}-summon-purged" ;;
               # An ordinary week's band, a week after the Festival Monday.
               events)
                 sleep 5; shoot_lit "$step-${names[$step]}"
