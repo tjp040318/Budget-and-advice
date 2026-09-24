@@ -1375,6 +1375,7 @@ private final class TourStressDriver: ObservableObject {
     // MARK: Summons
 
     private static let purgeEachReveal = ProcessInfo.processInfo.arguments.contains("-tour-stress-purge")
+    private static let warnEachReveal = ProcessInfo.processInfo.arguments.contains("-tour-stress-warn")
 
     private func summons(_ game: GameStore) async {
         let scroll = Self.banner.scroll
@@ -1421,6 +1422,28 @@ private final class TourStressDriver: ObservableObject {
         if Self.purgeEachReveal {
             ModelLibrary.shared.purge()
             ModelLibrary.shared.purgeClips()
+        }
+        // Part four (2026-09-24, -tour-stress-warn): run 248's summon stress
+        // ended at 1,571 MB with no 3D view alive and 440 MB in the model
+        // cache, and reading the files through the importer with nothing
+        // drawn kept nothing (the parse launch). What is left is held by a
+        // framework that lets go only when told memory is short, or it is
+        // freed memory the allocator kept. After each reveal: the simulator's
+        // own memory warning (what Debug → Simulate Memory Warning sends; our
+        // caches purge on it as well), a second for the frameworks to act,
+        // then the allocator asked to hand every free page back.
+        if Self.warnEachReveal {
+            MemoryProbe.log("stress summon \(label) before the warning")
+            let application = UIApplication.shared
+            let simulate = NSSelectorFromString("_performMemoryWarning")
+            if application.responds(to: simulate) {
+                application.perform(simulate)
+            } else {
+                NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: application)
+            }
+            await pause(1.0)
+            let released = malloc_zone_pressure_relief(nil, 0)
+            print("[Tour] stress: the allocator gave back \(released / 1_048_576) MB")
         }
         let what = count == 1
             ? "\(first.stars)★ \(first.blueprint.id)"

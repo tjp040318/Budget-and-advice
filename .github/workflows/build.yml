@@ -569,15 +569,16 @@ jobs:
                 again -tour-stress battle
                 sleep 40; shoot "$step-${names[$step]}-battle-mid"
                 await_stress 480; shoot "$step-${names[$step]}-battle"
-                # The parse experiment (2026-09-24): runs 246 and 247 ran the
-                # summons again with everything the app caches emptied after
-                # each reveal and the curve still climbed, so something below
-                # the app keeps each file it has read. This reads mesh files,
-                # clip files and one mesh again and again with no reveal and
-                # no cache of ours, and prints the footprint after each
-                # (PLAN.md, part two).
-                again -tour-stress parse
-                await_stress 240; shoot "$step-${names[$step]}-parse" ;;
+                # The warning experiment (2026-09-24, part four): run 248's
+                # parse launch read the files through the importer with
+                # nothing drawn and kept nothing, and its summon stress ended
+                # at 1,571 MB with no view alive. This runs the summons again
+                # with the simulator's memory warning and the allocator's
+                # pressure relief after each reveal: whatever comes back was
+                # a framework's cache or freed memory kept, whatever stays is
+                # held (PLAN.md, part four).
+                again -tour-stress summon -tour-stress-warn
+                await_stress 420; shoot "$step-${names[$step]}-warn" ;;
               # An ordinary week's band, a week after the Festival Monday.
               events)
                 sleep 5; shoot_lit "$step-${names[$step]}"

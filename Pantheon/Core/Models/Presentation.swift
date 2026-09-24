@@ -71,9 +71,47 @@ enum BundleArt {
     private static let fullSize: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()
         cache.totalCostLimit = fullSizeBudget
+        cache.delegate = ledger
         return cache
     }()
     static let fullSizeBudget = 160 * 1_048_576
+
+    /// What the two caches hold now, in decoded bytes (2026-09-24, the
+    /// memory hunt): added on the way in and, through the caches' delegate,
+    /// taken off on the way out, since an `NSCache` never says what it holds.
+    /// The [Mem] line prints it (`cacheSummary`).
+    private final class ArtCacheLedger: NSObject, NSCacheDelegate {
+        private let lock = NSLock()
+        private var held: [ObjectIdentifier: Int] = [:]
+
+        func added(_ bytes: Int, to cache: AnyObject) {
+            lock.lock()
+            held[ObjectIdentifier(cache), default: 0] += bytes
+            lock.unlock()
+        }
+
+        func bytes(in cache: AnyObject) -> Int {
+            lock.lock(); defer { lock.unlock() }
+            return held[ObjectIdentifier(cache)] ?? 0
+        }
+
+        func cache(_ cache: NSCache<AnyObject, AnyObject>, willEvictObject obj: Any) {
+            guard let image = obj as? UIImage else { return }
+            let bytes = BundleArt.cost(of: image)
+            lock.lock()
+            held[ObjectIdentifier(cache), default: 0] -= bytes
+            lock.unlock()
+        }
+    }
+    /// The caches' delegate (an `NSCache` holds it weakly).
+    private static let ledger = ArtCacheLedger()
+
+    /// `art N MB, thumbs M MB`: the decoded bytes the two caches hold.
+    static func cacheSummary() -> String {
+        let full = ledger.bytes(in: fullSize) / 1_048_576
+        let thumbs = ledger.bytes(in: thumbnailCache) / 1_048_576
+        return "art \(full) MB, thumbs \(thumbs) MB"
+    }
     /// Names asked for and not found (an `NSCache` cannot hold nil), under
     /// `lock`.
     private static var missing: Set<String> = []
@@ -126,6 +164,7 @@ enum BundleArt {
         Perf.end(started, "full-size load of \(name)", over: 25)
         if let loaded {
             fullSize.setObject(loaded, forKey: name as NSString, cost: cost(of: loaded))
+            ledger.added(cost(of: loaded), to: fullSize)
         } else {
             lock.lock()
             missing.insert(name)
@@ -168,6 +207,7 @@ enum BundleArt {
     private static let thumbnailCache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()
         cache.totalCostLimit = thumbnailBudget
+        cache.delegate = ledger
         return cache
     }()
     static let thumbnailBudget = 64 * 1_048_576
@@ -213,6 +253,7 @@ enum BundleArt {
         if built == nil { built = image(name) }
         if let built {
             thumbnailCache.setObject(built, forKey: key as NSString, cost: cost(of: built))
+            ledger.added(cost(of: built), to: thumbnailCache)
         } else {
             lock.lock()
             missing.insert(key)

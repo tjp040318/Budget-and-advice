@@ -81,6 +81,32 @@ enum MemoryProbe {
         return bytes / 1_048_576
     }
 
+    /// Where the footprint lies (2026-09-24, the memory hunt): the heap's
+    /// live bytes against what the allocator holds, then the kernel's own
+    /// ledgers for graphics memory, anonymous memory and the compressor.
+    /// Run 248's summon stress ended at 1,571 MB with no 3D view alive and
+    /// 440 MB in the model cache, and `gpu` reads 0 in the simulator; these
+    /// say whether the rest is live heap, freed heap the allocator kept, or
+    /// memory outside the heap altogether (Metal, IOSurface).
+    static func breakdown() -> String {
+        var stats = malloc_statistics_t()
+        malloc_zone_statistics(nil, &stats)
+        let live = stats.size_in_use / 1_048_576
+        let held = stats.size_allocated / 1_048_576
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { raw in
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), raw, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return "heap \(live) of \(held) MB" }
+        let graphics = info.ledger_tag_graphics_footprint / 1_048_576
+        let internal = info.internal / 1_048_576
+        let compressed = info.compressed / 1_048_576
+        return "heap \(live) of \(held) MB, graphics \(graphics) MB, internal \(internal) MB, compressed \(compressed) MB"
+    }
+
     /// Bytes the process may still take before iOS kills it; 0 where the OS
     /// gives no figure (the simulator).
     static func availableBytes() -> UInt64 {
@@ -97,7 +123,7 @@ enum MemoryProbe {
     static func log(_ label: String) -> Reading {
         let reading = read()
         state.note(reading, label: label)
-        let line = "[Mem] \(label) footprint \(reading.footprintMB) MB, available \(reading.availableText) MB, peak \(state.peakMB) MB, gpu \(gpuMB()) MB; \(ModelLibrary.shared.cacheSummary()); \(StageRenderGovernor.liveViewSummary())"
+        let line = "[Mem] \(label) footprint \(reading.footprintMB) MB, available \(reading.availableText) MB, peak \(state.peakMB) MB, gpu \(gpuMB()) MB, \(breakdown()); \(ModelLibrary.shared.cacheSummary()); \(BundleArt.cacheSummary()); \(StageRenderGovernor.liveViewSummary())"
         print(line)
         DiagnosticsLog.shared.record(line)
         return reading

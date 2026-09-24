@@ -8273,6 +8273,31 @@ one compact animation file the app reads itself (no importer at all); meshes
 climbing at reading each family once and keeping its node tree while only its
 pixels are evicted.
 
+**Run 248: not the importer either, and what the next run counts
+(2026-09-24).** The parse launch was flat in every phase: 93 MB after eight
+families' meshes read and dropped, 99 MB after eight families' clip files,
+99 MB after the same mesh eight more times. Reading a file keeps nothing;
+drawing it is what the curves have in common. The same run's summon stress
+settled the shape of the rest: the model cache held at its cap (12–14
+files, 440–480 MB) through all three ten-pulls, two reveal views alive at
+once in a ten-pull put 100–250 MB on the footprint for a few seconds and
+gave most of it back, and the stress ENDED at 1,571 MB with no 3D view
+alive — about 1,100 MB that is neither our cache nor a live view, and `gpu`
+reads 0 in the simulator, so the Metal device's own count cannot say
+whether it is textures. Run 249 counts instead of guessing: every [Mem]
+line now carries the heap's live bytes against what the allocator holds
+(`malloc_zone_statistics`), the kernel's graphics, anonymous and compressed
+ledgers (`task_vm_info`), how many of the loader's decoded textures are
+still alive and their size (a weak table beside the cache), and what the
+two card caches really hold (an `NSCache` delegate keeping the books). And
+the summon stress runs a second time with the simulator's memory warning
+and `malloc_zone_pressure_relief` after each reveal (`-tour-stress-warn`,
+replacing the parse launch): what comes back was a framework's cache or
+freed memory the allocator kept, what stays is held. Live heap that grows
+is ours to find by type; a held-but-free heap is the allocator's and
+harmless on a phone that asks for it back; memory outside the heap is
+SceneKit's renderer or Metal, which the warning either empties or does not.
+
 **Where a fight's build time goes (run 247, task #138).** Every build now
 prints one line: cold, the arena's was stage 1.4–1.9 s and 0.5–0.9 s a unit
 (each parsed on the main thread), 3.5–4.9 s in all. In play the stage popup

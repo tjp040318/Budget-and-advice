@@ -105,7 +105,29 @@ final class ModelLibrary {
         let bytes = cache.values.reduce(0) { $0 + $1.bytes }
         let pinned = cache.values.filter { $0.inUse }.count
         let clones = cache.values.reduce(0) { $0 + $1.liveClones }
-        return "cache \(cache.count) files, \(bytes / 1_048_576) MB, \(pinned) pinned, \(clones) clones, \(animationCache.count) clip sets"
+        return "cache \(cache.count) files, \(bytes / 1_048_576) MB, \(pinned) pinned, \(clones) clones, \(animationCache.count) clip sets; \(Self.decodedLiveSummary())"
+    }
+
+    /// Every texture this loader decoded, held WEAKLY (2026-09-24, the
+    /// memory hunt): runs 246-248 showed the summon residue survives emptying
+    /// this cache and is not the importer, so the [Mem] line counts the
+    /// decoded images still alive beside the cache's own count. More alive
+    /// than the cache holds is an image something else keeps.
+    private static let decodedLive = NSHashTable<UIImage>.weakObjects()
+    private static let decodedLiveLock = NSLock()
+
+    private static func noteDecoded(_ image: UIImage) {
+        decodedLiveLock.lock()
+        decodedLive.add(image)
+        decodedLiveLock.unlock()
+    }
+
+    static func decodedLiveSummary() -> String {
+        decodedLiveLock.lock()
+        let alive = decodedLive.allObjects
+        decodedLiveLock.unlock()
+        let bytes = alive.reduce(0) { $0 + byteCost(of: $1) }
+        return "decoded alive \(alive.count), \(bytes / 1_048_576) MB"
     }
 
     private struct WeakClone {
@@ -754,6 +776,7 @@ final class ModelLibrary {
                                 property.contents = ready
                                 decoded += 1
                                 bytes += Self.byteCost(of: ready)
+                                Self.noteDecoded(ready)
                                 if let identity = archive?.identity(of: name) {
                                     decodedTexturesLock.lock()
                                     decodedTextures.setObject(ready, forKey: identity as NSString)
@@ -770,6 +793,7 @@ final class ModelLibrary {
                         property.contents = ready
                         decoded += 1
                         bytes += Self.byteCost(of: ready)
+                        Self.noteDecoded(ready)
                     }
                 }
             }
