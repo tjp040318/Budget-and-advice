@@ -404,7 +404,11 @@ enum StageBuilder {
             stage.addChildNode(air)
         }
 
-        let painting = recipe.backdrop.flatMap { BundleArt.image($0) }
+        // Read for this stage and not kept in `BundleArt`'s cache: the
+        // material holds it for the fight, and a 2048-pixel painting kept
+        // after it (16 MB, one per realm) only walked the app toward its
+        // memory limit.
+        let painting = recipe.backdrop.flatMap { BundleArt.uncachedImage($0) }
         if let painting {
             stage.addChildNode(farBackdrop(painting, yaw: CameraDirector.backdropYaw))
         }
@@ -1175,11 +1179,17 @@ enum StageBuilder {
         return node
     }
 
+    /// Main thread only (every stage builds there). Emptied when memory is
+    /// short (`MemoryRelief`); the clones on a stage keep what they draw.
     private static var propCache: [String: SCNNode] = [:]
+    private static let propRelief: Void = {
+        MemoryRelief.observe { propCache.removeAll() }
+    }()
 
     /// `prop_<name>.usdz` from the bundle, tuned like a character but without
     /// the rim, cached and cloned. Nil when it has not shipped.
     static func loadProp(_ name: String) -> SCNNode? {
+        _ = propRelief
         if let cached = propCache[name] { return cached.clone() }
         // Through the loader's importer lock: a prop parsed on the main thread
         // while a warm pass parsed a figure on another came out wrong once

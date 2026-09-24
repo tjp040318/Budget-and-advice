@@ -256,7 +256,8 @@ struct TrainingView: View {
                 // The altar loads a unit's model the moment it is picked; the
                 // top of the rail is warmed off the main thread so the first
                 // few taps do not stall on parsing.
-                ModelLibrary.shared.warm(units.prefix(6).map(\.blueprint.model), crowded: false, clips: false)
+                ModelLibrary.shared.warm(forms: units.prefix(6).map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }, crowded: false, clips: false)
+                warmAwakening()
                 if mode == .fuse { warmPrizes() }
                 if offersOnOpen, mode == .powerUp, let target {
                     fodder = Set(OfferingRule.pick(for: target.unit, from: store.player.units, keep: keptIDs))
@@ -277,8 +278,10 @@ struct TrainingView: View {
                 // The prizes stand on the altar in Fuse: parse them before
                 // the first tap on the rail asks for one.
                 if now == .fuse { warmPrizes() }
+                warmAwakening()
             }
             .onChange(of: targetID) { previous, _ in
+                warmAwakening()
                 // The first pick is the fallback landing in `.onAppear`, not
                 // the player's: it must not clear an offering the tour's
                 // `offersOnOpen` has just chosen for that same unit.
@@ -867,6 +870,19 @@ struct TrainingView: View {
     /// The six prizes' meshes, parsed off the main thread when Fuse opens.
     private func warmPrizes() {
         ModelLibrary.shared.warm(plans.compactMap { $0.recipe.result?.model }, crowded: false, clips: false)
+    }
+
+    /// The awakened form of the unit on the dais, parsed off the main thread
+    /// while the Awaken ledger is up, so the rite's figure swap
+    /// (`altarAwakened` flips the moment `store.awaken` returns) clones from
+    /// the cache. `warm(forms:)` warms only the form a unit has today, and the
+    /// LRU keeps an unused entry safe for `recentGrace` only, so this runs
+    /// again on every change of mode or target. `clips: true` also warms the
+    /// awakened rig's idle, which `place()` asks for on the main thread.
+    private func warmAwakening() {
+        guard mode == .awaken, let target, !target.unit.isAwakened,
+              target.blueprint.awakening != nil else { return }
+        ModelLibrary.shared.warm(forms: [(spec: target.blueprint.model, awakened: true)], crowded: false, clips: true)
     }
 
     // MARK: - The ledger
@@ -2266,7 +2282,11 @@ struct AltarStageView: UIViewRepresentable {
         let key = blueprint.map { "\($0.id)|\(awakened)" } ?? ""
         guard key != coordinator.figureKey else { return }
         coordinator.figureKey = key
-        coordinator.figure?.removeFromParentNode()
+        // An awakened figure carries a live aura: it leaves the way every
+        // particle carrier does (`VFXLibrary.dismiss`: systems off, hidden
+        // now, removed half a second of frames later), never freed with its
+        // motes alive (2026-09-24).
+        if let old = coordinator.figure { VFXLibrary.dismiss(old, reportsLive: false) }
         coordinator.ring?.removeFromParentNode()
         coordinator.shadow?.removeFromParentNode()
         coordinator.figure = nil

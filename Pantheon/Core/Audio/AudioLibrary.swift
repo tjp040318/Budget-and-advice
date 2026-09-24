@@ -156,7 +156,10 @@ final class AudioLibrary {
         nextVoice[sound] = (index + 1) % players.count
         lock.unlock()
 
-        let player = players[index]
+        // The index is taken modulo THIS pool's size: the launch preload and
+        // a first play can each build a pool for the same sound, and an index
+        // advanced on a larger one must not run past a smaller (2026-09-24).
+        let player = players[index % players.count]
         player.volume = volume
         player.currentTime = 0
         player.play()
@@ -179,7 +182,11 @@ final class AudioLibrary {
                 players.append(player)
             }
         }
-        lock.lock(); pools[sound] = players; lock.unlock()
+        // Check, then store: when another thread built this sound's pool
+        // while this one was, the first stored wins and this one is dropped.
+        lock.lock(); defer { lock.unlock() }
+        if let existing = pools[sound] { return existing }
+        pools[sound] = players
         return players
     }
 }

@@ -724,11 +724,17 @@ struct StageBriefingView: View {
     /// wave and every later one, loaded into the model cache while the
     /// briefing is read so Begin is not followed by a second of parsing.
     private func warmModels() {
-        let team = store.team(store.player.campaignTeam).map { $0.blueprint.model }
+        let team = store.team(store.player.campaignTeam).map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }
         let spawns = stage.enemies + stage.laterWaves.flatMap { $0 }
-        let enemies = spawns.compactMap { UnitDatabase.blueprint($0.blueprintID)?.model }
+        // An enemy is drawn in its awakened form when it is awakened or a
+        // boss (`UnitNode`'s `lit`: a primordial, or anything 3 m tall).
+        let enemies = spawns.compactMap { spawn -> (spec: ModelSpec, awakened: Bool)? in
+            guard let blueprint = UnitDatabase.blueprint(spawn.blueprintID) else { return nil }
+            let lit = spawn.awakened || blueprint.archetype == .primordial || blueprint.model.height >= 3.0
+            return (spec: blueprint.model, awakened: lit)
+        }
         let crowded = ModelLibrary.detail(forCombatantCount: team.count + stage.enemies.count) == .low
-        ModelLibrary.shared.warm(team + enemies, crowded: crowded)
+        ModelLibrary.shared.warm(forms: team + enemies, crowded: crowded)
     }
 
     var body: some View {

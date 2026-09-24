@@ -59,28 +59,78 @@ enum BundleArt {
     /// exactly as before), then load the file `url(_:)` found. The result is
     /// cached because a grid of sixty cards would otherwise decode sixty
     /// 1024-pixel JPEGs on every layout pass.
-    private static var cache: [String: UIImage?] = [:]
+    ///
+    /// BOUNDED since 2026-09-24: it was a dictionary that kept every
+    /// full-size painting the session had drawn — every card on a ten-pull's
+    /// summary, every chapter map (11 MB each), every battle backdrop — for
+    /// the life of the process, one of the two caches that walked the app
+    /// into iOS's memory limit (the model cache is the other). An `NSCache`
+    /// with a cost in decoded bytes lets the oldest go past `fullSizeBudget`
+    /// and empties itself when memory is short; a picture on screen keeps its
+    /// own reference, so nothing drawn disappears.
+    private static let fullSize: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.totalCostLimit = fullSizeBudget
+        return cache
+    }()
+    static let fullSizeBudget = 160 * 1_048_576
+    /// Names asked for and not found (an `NSCache` cannot hold nil), under
+    /// `lock`.
+    private static var missing: Set<String> = []
 
-    /// Both caches are read on the main thread while a list draws and, since
+    /// `missing` is read on the main thread while a list draws and, since
     /// the Arena began warming its cards off the main thread, written from a
-    /// background one; a Swift dictionary is not safe under that without a
-    /// lock. Held only around the lookups, never around a decode.
+    /// background one; a Swift set is not safe under that without a lock.
+    /// Held only around the lookups, never around a decode. (The two
+    /// `NSCache`s are thread-safe on their own.)
     private static let lock = NSLock()
 
+    /// Registered once, the first time either cache is touched.
+    private static let relief: Void = {
+        MemoryRelief.observe {
+            fullSize.removeAllObjects()
+            thumbnailCache.removeAllObjects()
+        }
+    }()
+
+    /// What a picture costs decoded, for the caches' budgets.
+    private static func cost(of image: UIImage) -> Int {
+        if let cg = image.cgImage { return cg.bytesPerRow * cg.height }
+        return Int(image.size.width * image.scale * image.size.height * image.scale) * 4
+    }
+
     static func image(_ name: String) -> UIImage? {
+        _ = relief
+        if let hit = fullSize.object(forKey: name as NSString) { return hit }
         lock.lock()
-        if let hit = cache[name] { lock.unlock(); return hit }
+        let absent = missing.contains(name)
         lock.unlock()
+        if absent { return nil }
         let started = Perf.begin()
         var loaded = UIImage(named: name)
         if loaded == nil, let url = url(name) {
             loaded = UIImage(contentsOfFile: url.path)
         }
         Perf.end(started, "full-size load of \(name)", over: 25)
-        lock.lock()
-        cache[name] = loaded
-        lock.unlock()
+        if let loaded {
+            fullSize.setObject(loaded, forKey: name as NSString, cost: cost(of: loaded))
+        } else {
+            lock.lock()
+            missing.insert(name)
+            lock.unlock()
+        }
         return loaded
+    }
+
+    /// The painting read from its file and NOT kept here: for a caller that
+    /// holds it for as long as it is needed (a battle's backdrop lives in the
+    /// SceneKit material for the fight), so the cache does not keep a 16 MB
+    /// bitmap after the fight has gone. Falls back to `image(_:)` for an
+    /// asset-catalogue image, which has no file.
+    static func uncachedImage(_ name: String) -> UIImage? {
+        if let hit = fullSize.object(forKey: name as NSString) { return hit }
+        if let url = url(name), let read = UIImage(contentsOfFile: url.path) { return read }
+        return image(name)
     }
 
     // MARK: - Thumbnails
@@ -100,7 +150,15 @@ enum BundleArt {
     // the full bitmap, so a 38-point card on a 3x screen costs a 128-pixel
     // thumbnail: sixty-five kilobytes instead of four megabytes, sixty-four
     // times less, and the same again in decode time.
-    private static var thumbnails: [String: UIImage?] = [:]
+    ///
+    /// Bounded like the full-size cache (2026-09-24): `thumbnailBudget` of
+    /// decoded bytes, emptied when memory is short.
+    private static let thumbnailCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.totalCostLimit = thumbnailBudget
+        return cache
+    }()
+    static let thumbnailBudget = 64 * 1_048_576
 
     /// Decode buckets. A handful of sizes rather than one per call site, so
     /// two cards a few points apart share a decode instead of each keeping a
@@ -115,9 +173,12 @@ enum BundleArt {
     static func thumbnail(_ name: String, maxPixel: Int) -> UIImage? {
         let bucket = buckets.first(where: { $0 >= maxPixel }) ?? buckets[buckets.count - 1]
         let key = "\(name)@\(bucket)"
+        _ = relief
+        if let hit = thumbnailCache.object(forKey: key as NSString) { return hit }
         lock.lock()
-        if let hit = thumbnails[key] { lock.unlock(); return hit }
+        let absent = missing.contains(key)
         lock.unlock()
+        if absent { return nil }
         let started = Perf.begin()
         defer { Perf.end(started, "thumbnail \(key)", over: 25) }
 
@@ -138,9 +199,13 @@ enum BundleArt {
         // refuses has no thumbnail; both fall back to the whole picture rather
         // than to nothing.
         if built == nil { built = image(name) }
-        lock.lock()
-        thumbnails[key] = built
-        lock.unlock()
+        if let built {
+            thumbnailCache.setObject(built, forKey: key as NSString, cost: cost(of: built))
+        } else {
+            lock.lock()
+            missing.insert(key)
+            lock.unlock()
+        }
         return built
     }
 

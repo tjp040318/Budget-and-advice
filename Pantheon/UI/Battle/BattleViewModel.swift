@@ -107,7 +107,11 @@ final class BattleViewModel: ObservableObject {
 
     var waveCount: Int { engine.waveCount }
     /// Not private: the result view hands it to the relic drop card.
-    unowned let store: GameStore
+    /// Strong since 2026-09-24: it was `unowned`, and a store rebuilt under a
+    /// live fight (a sign-out from the foreground credential check) trapped
+    /// the delayed `conclude()`. The model lives only as long as its view, so
+    /// holding the store cannot form a cycle.
+    let store: GameStore
 
     // MARK: - Init
 

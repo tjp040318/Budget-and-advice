@@ -1030,7 +1030,7 @@ def check_unknown_types(files, declared, errors):
         "UserNotifications","UNUserNotificationCenter","UNMutableNotificationContent",
         "UNCalendarNotificationTrigger","UNNotificationRequest","UIApplication","UIWindowScene",
         "UIAccessibility","ASAuthorizationControllerDelegate",
-        "ASAuthorizationControllerPresentationContextProviding","NSMapTable",
+        "ASAuthorizationControllerPresentationContextProviding","NSMapTable","NSCache",
         "OBJC_ASSOCIATION_RETAIN_NONATOMIC",
         # The Treasury (2026-09-23, Docs/STORE.md): StoreKit 2's product,
         # its signed-transaction wrapper, the App Store's sync and payment
@@ -1042,6 +1042,15 @@ def check_unknown_types(files, declared, errors):
         # task the last upload runs under, and the XCTest probe that keeps a
         # test run from sending.
         "NotificationCenter","UIBackgroundTaskIdentifier","NSClassFromString",
+        # Crashes and memory that report themselves (2026-09-24,
+        # CrashReporter/MemoryProbe): MetricKit's manager, subscriber,
+        # payloads, crash diagnostic and call-stack tree; the observer token
+        # NotificationCenter hands back; Notification.Name; GCD's memory-
+        # pressure and timer sources; and the Mach constants task_info reads
+        # the process footprint with.
+        "MetricKit","MXMetricManager","MXMetricManagerSubscriber","MXMetricPayload",
+        "MXDiagnosticPayload","MXCrashDiagnostic","MXCallStackTree","NSObjectProtocol","Name",
+        "DispatchSource","KERN_SUCCESS","TASK_VM_INFO",
     }
     used = defaultdict(list)
     for path in files:

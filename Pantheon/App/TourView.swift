@@ -22,6 +22,11 @@ struct TourView: View {
     @State private var arenaModel: BattleViewModel?
     @State private var dungeonModel: BattleViewModel?
     @State private var seeded = false
+    /// Ticks since the step appeared, for its `[Mem]` curve. Not `@State`:
+    /// a state change re-renders the tour every tick, and several steps
+    /// build their screen's data in `body` (the victory's summary, the launch
+    /// screen's progress), which a pinned step never re-rendered before.
+    private static var memoryTicks = 0
 
     /// `-tour-step N` pins the tour to one screen for the whole run. The CI
     /// job launches the app once per step and photographs it, because a
@@ -47,7 +52,7 @@ struct TourView: View {
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
         ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("demigods", 2),
         ("sign_in", 2), ("codex", 2), ("draft", 3), ("shrines", 2),
-        ("treasury", 2),
+        ("treasury", 2), ("stress", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -277,6 +282,14 @@ struct TourView: View {
         .preferredColorScheme(.light)
         .onAppear {
             seedIfNeeded()
+            // The memory curve of every step (2026-09-24): as it appears, and
+            // every twelve seconds after (the timer below), so a step that
+            // climbs — a battle's waves, a reveal's figures — shows it in its
+            // console. `-tour-step` launches the app per step, so each line is
+            // one launch's own.
+            let label = "step \(index) \(current)"
+            MemoryProbe.log("\(label) appeared")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { MemoryProbe.log("\(label) settled") }
             if current == "battle" { startBattle() }
             if current == "arena_battle" { startArenaBattle() }
             if current == "dungeon_battle" { startDungeonBattle() }
@@ -284,6 +297,10 @@ struct TourView: View {
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
+            Self.memoryTicks += 1
+            if Self.memoryTicks % 3 == 0 {
+                MemoryProbe.log("step \(index) \(current) +\(Int(Double(Self.memoryTicks) * Self.tickSeconds)) s")
+            }
             // The battles play themselves a command at a time, so the frames
             // catch a dash, a hit and a flash rather than a line of units
             // waiting for a thumb. Auto-battle would win before the first
@@ -509,6 +526,16 @@ struct TourView: View {
                 ShopView(treasury: true)
                     .onAppear { store.seedTourTreasury() }
             }
+        case "stress":
+            // The memory stress (2026-09-24; the owner: "when I do many
+            // summons, or sometimes when I play chapters, or randomly the app
+            // crashes"). The plain launch is the summon screen at rest, the
+            // baseline; `-tour-stress summon` pulls thirty singles and three
+            // ten-pulls through the summon screen's own calls and reveal, and
+            // `-tour-stress battle` plays six campaign fights on auto-repeat
+            // at the top speed — each printing `[Mem]` after every pull or
+            // fight and `[TourCue] stress-done` at the end (`TourStressView`).
+            TourStressView(mode: Self.argument(after: "-tour-stress"))
         case "draft":
             // The Draft Arena's board mid-draft on the tour's roster (a fixed
             // seed, the player first): the ban phase by default, `-tour-draft
@@ -1128,6 +1155,247 @@ private struct TourSweepScene: View {
             print("[Tour] sweep duat_1_1 runs=\(receipt?.runs ?? -1) "
                   + "mastered=\(SweepService.isMastered(stage, player: store.player)) "
                   + "powered=\(SweepService.isPowered(stage, player: store.player))")
+        }
+    }
+}
+
+/// Tour step 53, the memory stress (2026-09-24). The owner's phone crashes
+/// "when I do many summons, or sometimes when I play chapters, or randomly",
+/// and no CI step had ever done either many times in one launch: every step
+/// is a fresh launch that shows one screen. This one does the work a player
+/// does and prints the process's footprint after every piece of it
+/// (`MemoryProbe`), so the console of each run carries the memory curve,
+/// and a crash on the way leaves its report beside the frames.
+///
+/// `-tour-stress summon`: thirty singles, then three ten-pulls, on the
+/// Endless Scroll (every family, so the most different models), through the
+/// summon screen's own calls — `GameStore.summon`, the first figure warmed,
+/// the 0.45 s wind-up, the reveal in a full-screen cover over the summon
+/// screen. A reveal advances only on a tap, which a tour cannot make, so each
+/// pull of a ten-pull is the reveal of the pulls from it onwards, rebuilt as
+/// a tap would have moved it on (its stage is keyed by the pull and was
+/// rebuilt on a tap too), and it warms the next pull itself; the ten-card
+/// grid a tap on Skip opens is the one screen the loop does not reach.
+///
+/// `-tour-stress battle`: three stages the tour's save has cleared, each on
+/// auto-repeat for two runs (`BattleViewModel(repeatCount:)`, the path the
+/// briefing's run count takes: the engine swapped and the scene rebuilt in
+/// place between runs, a new battle screen per stage) at the top speed, in a
+/// full-screen cover over the chapter map as the map presents it, and the
+/// result panel held three seconds before the cover closes.
+///
+/// Both print `[TourCue] stress-done` at the end; the CI job waits for it.
+private struct TourStressView: View {
+    let mode: String?
+
+    @EnvironmentObject private var store: GameStore
+    @StateObject private var driver = TourStressDriver()
+
+    private var isBattle: Bool { mode == "battle" }
+
+    var body: some View {
+        let tab: RootView.Tab = isBattle ? .campaign : .summon
+        VStack(spacing: 0) {
+            Group {
+                if isBattle {
+                    CampaignView(openingChapter: "duat_1")
+                } else {
+                    SummonView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            GameTabBar(selection: .constant(tab))
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { driver.cover != nil },
+            set: { presented in if !presented { driver.cover = nil } }
+        )) {
+            coverContent
+        }
+        .onAppear {
+            driver.run(mode: mode, with: store)
+        }
+    }
+
+    @ViewBuilder
+    private var coverContent: some View {
+        if let cover = driver.cover {
+            switch cover {
+            case .reveal(let results, let serial):
+                SummonRevealView(results: results, scroll: TourStressDriver.banner.scroll) {
+                    driver.cover = nil
+                }
+                .id(serial)
+                .environmentObject(store)
+            case .battle(let model, let serial):
+                BattleView(model: model)
+                    .id(serial)
+                    .environmentObject(store)
+            }
+        } else {
+            Color.black.ignoresSafeArea()
+        }
+    }
+}
+
+/// The loop behind `TourStressView`, on the main actor like the screens it
+/// drives.
+@MainActor
+private final class TourStressDriver: ObservableObject {
+    enum Cover {
+        case reveal([SummonResult], Int)
+        case battle(BattleViewModel, Int)
+    }
+
+    /// The Endless Scroll: every family in the pool.
+    static let banner = Banner.standard
+    static let singles = 30
+    static let tenPulls = 3
+    /// How long a reveal stands before the tap that moves it on: long enough
+    /// for the stage to build, the charge (0.8–1.25 s) to play and the figure
+    /// to be drawn on its beam.
+    static let singleHold: Double = 2.8
+    static let pullHold: Double = 2.4
+    /// A full-screen cover's dismissal, before the next is presented.
+    static let dismissal: Double = 1.0
+    /// Stages the tour's save has cleared (`GameStore.grantTourRoster`), so
+    /// the level-12 team wins and every run is played to its end.
+    static let battlePlan: [(stage: String, runs: Int)] = [("duat_1_1", 2), ("duat_1_2", 2), ("duat_1_3", 2)]
+    /// The battle's speed button cycles ×1 → ×2 → ×4, so ×4 is its top.
+    static let topSpeed: Double = 4
+    /// A run still going after this is forfeited, so a stuck fight cannot
+    /// hold the step past the job's wait.
+    static let runLimit: Double = 70
+    /// The result panel on screen before the cover closes.
+    static let resultHold: Double = 3
+
+    @Published var cover: Cover?
+    private var serial = 0
+    private var started = false
+
+    func run(mode: String?, with game: GameStore) {
+        guard !started else { return }
+        started = true
+        guard let mode else {
+            MemoryProbe.log("stress baseline (no -tour-stress)")
+            return
+        }
+        Task { @MainActor in
+            // The screen underneath draws and settles first.
+            await pause(3)
+            if mode == "battle" {
+                await battles(game)
+            } else {
+                await summons(game)
+            }
+            MemoryProbe.log("stress \(mode) done")
+            print("[TourCue] stress-done")
+        }
+    }
+
+    private func pause(_ seconds: Double) async {
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+    }
+
+    // MARK: Summons
+
+    private func summons(_ game: GameStore) async {
+        let scroll = Self.banner.scroll
+        let needed = Self.singles + Self.tenPulls * 10
+        let held = game.player.wallet.count(of: scroll)
+        if held < needed {
+            game.update { player in
+                player.wallet.add(scroll, needed - held)
+            }
+        }
+        MemoryProbe.log("stress summon start: \(Self.singles) singles and \(Self.tenPulls) ten-pulls on \(Self.banner.title)")
+        for pull in 1...Self.singles {
+            await summon(game, count: 1, label: "single \(pull)/\(Self.singles)")
+        }
+        for ten in 1...Self.tenPulls {
+            await summon(game, count: 10, label: "ten-pull \(ten)/\(Self.tenPulls)")
+        }
+    }
+
+    /// One press of the summon button, as `SummonView.perform` makes it, and
+    /// its reveal played through.
+    private func summon(_ game: GameStore, count: Int, label: String) async {
+        let results = game.summon(banner: Self.banner, count: count)
+        guard let first = results.first else {
+            print("[Tour] stress: \(label) summoned nothing (\(game.lastError ?? "no error given"))")
+            return
+        }
+        // `SummonView.warmFirstFigure`, then the circle's wind-up.
+        ModelLibrary.shared.warm([first.blueprint.model])
+        await pause(0.45)
+        for position in results.indices {
+            serial += 1
+            cover = .reveal(Array(results[position...]), serial)
+            await pause(count == 1 ? Self.singleHold : Self.pullHold)
+        }
+        cover = nil
+        await pause(Self.dismissal)
+        let what = count == 1
+            ? "\(first.stars)★ \(first.blueprint.id)"
+            : "\(results.filter { $0.stars >= 4 }.count) of \(results.count) at 4★ or better"
+        MemoryProbe.log("stress summon \(label) (\(what))")
+    }
+
+    // MARK: Battles
+
+    private func battles(_ game: GameStore) async {
+        let total = Self.battlePlan.reduce(0) { $0 + $1.runs }
+        MemoryProbe.log("stress battle start: \(total) runs on auto-repeat at ×\(Int(Self.topSpeed))")
+        var fought = 0
+        for plan in Self.battlePlan {
+            guard let stage = StageDatabase.stage(plan.stage) else {
+                print("[Tour] stress: no stage \(plan.stage)")
+                continue
+            }
+            // Energy for every run, so the repeat never stops for it.
+            game.update { player in
+                player.wallet.energy = max(player.wallet.energy, 200)
+            }
+            guard let engine = game.startCampaignBattle(stage: stage) else {
+                print("[Tour] stress: \(plan.stage) would not start (\(game.lastError ?? "no error given"))")
+                continue
+            }
+            let model = BattleViewModel(engine: engine, context: .campaign(stage), store: game, repeatCount: plan.runs)
+            model.speed = Self.topSpeed
+            serial += 1
+            cover = .battle(model, serial)
+            let began = Date()
+            let limit = Self.runLimit * Double(plan.runs)
+            var logged = 0
+            var forfeited = false
+            while true {
+                let session = model.repeatSession
+                while logged < (session?.completed ?? 0) {
+                    logged += 1
+                    fought += 1
+                    MemoryProbe.log("stress battle \(fought)/\(total) \(plan.stage) run \(logged) of \(plan.runs)")
+                }
+                if let session, session.isFinished { break }
+                if session == nil, model.outcome != nil { break }
+                let elapsed = Date().timeIntervalSince(began)
+                if elapsed > limit + 15 {
+                    print("[Tour] stress: \(plan.stage) never ended")
+                    break
+                }
+                if elapsed > limit, !forfeited {
+                    forfeited = true
+                    print("[Tour] stress: \(plan.stage) forfeited after \(Int(elapsed)) s")
+                    model.forfeit()
+                }
+                await pause(0.5)
+            }
+            if let reason = model.repeatSession?.stoppedBecause {
+                print("[Tour] stress: \(plan.stage) stopped: \(reason)")
+            }
+            await pause(Self.resultHold)
+            cover = nil
+            await pause(Self.dismissal)
+            MemoryProbe.log("stress battle \(plan.stage) closed")
         }
     }
 }

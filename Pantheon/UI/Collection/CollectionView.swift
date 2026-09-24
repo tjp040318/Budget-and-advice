@@ -246,7 +246,7 @@ struct CollectionView: View {
     /// rail is warmed off the main thread so the first few taps do not stall
     /// on parsing. The Hall of Ka does the same for its rail.
     private func warmStage(_ list: [ResolvedUnit]) {
-        ModelLibrary.shared.warm(list.prefix(6).map(\.blueprint.model), crowded: false, clips: false)
+        ModelLibrary.shared.warm(forms: list.prefix(6).map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }, crowded: false, clips: false)
     }
 
     // MARK: - Cards: the grid and the plate beside it
@@ -1135,7 +1135,11 @@ struct CollectionStageView: UIViewRepresentable {
         let key = unit.map { "\($0.blueprint.id)|\($0.unit.isAwakened)" } ?? ""
         guard key != coordinator.figureKey else { return }
         coordinator.figureKey = key
-        coordinator.figure?.removeFromParentNode()
+        // An awakened figure carries a live aura: it leaves the way every
+        // particle carrier does (`VFXLibrary.dismiss`: systems off, hidden
+        // now, removed half a second of frames later), never freed with its
+        // motes alive (2026-09-24).
+        if let old = coordinator.figure { VFXLibrary.dismiss(old, reportsLive: false) }
         coordinator.ring?.removeFromParentNode()
         coordinator.shadow?.removeFromParentNode()
         coordinator.figure = nil

@@ -131,6 +131,11 @@ final class ClothChain {
 
     /// Whether the figure this chain belongs to is still alive.
     var isAlive: Bool { model != nil }
+    /// The root of the scene the figure was first found standing in, set by
+    /// `ClothSimulation.step` (under its lock) so later frames compare one
+    /// pointer instead of walking the figure's parents on a render thread
+    /// while the main thread may be rebuilding them (2026-09-24).
+    weak var stageRoot: SCNNode?
 
     // MARK: - Attaching
 
@@ -489,8 +494,20 @@ final class ClothSimulation {
         lock.lock()
         chains.removeAll { !$0.isAlive }
         let live = chains
+        let known = live.map { $0.stageRoot }
         lock.unlock()
-        for chain in live where chain.stands(under: root) {
+        for (chain, stage) in zip(live, known) {
+            // A chain already placed steps only in its own scene; a figure
+            // never moves between scenes. Only one not yet seen in any
+            // scene has its parents walked, once per frame until it is.
+            if let stage {
+                if stage === root { chain.step(at: time) }
+                continue
+            }
+            guard chain.stands(under: root) else { continue }
+            lock.lock()
+            chain.stageRoot = root
+            lock.unlock()
             chain.step(at: time)
         }
     }

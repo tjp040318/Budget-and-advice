@@ -189,7 +189,7 @@ final class BattleSceneController: NSObject {
     func build(combatants: [Combatant], environment: BattleEnvironment) {
         self.environment = environment
         scene.rootNode.removeAction(forKey: "cast_impact")
-        scene.rootNode.childNodes.forEach { $0.removeFromParentNode() }
+        retirePreviousStage()
         ledge = nil
         unitNodes.removeAll()
         homeMarks.removeAll()
@@ -205,6 +205,36 @@ final class BattleSceneController: NSObject {
         registerMaxHealth(combatants)
         place(combatants: combatants)
         startTourAreaDrill()
+    }
+
+    /// Takes the last run's stage out of a scene the view is still drawing,
+    /// the way every other particle carrier leaves the fight.
+    ///
+    /// An auto-repeat lap rebuilds the fight in the SAME scene a second after
+    /// the outcome (`BattleViewModel.conclude` → `restart` → `build`), and
+    /// this used to take every root child off on the spot and free it: the
+    /// weather, the braziers, every awakened unit's and boss's aura, and at
+    /// ×4 a heal's or buff's one-shot motes spawned after the killing blow
+    /// that were still alive — the removal of 2026-09-15's
+    /// `SCNNodeRemoveDeadParticleInstance` crash, and the one path in the
+    /// fight that still skipped `VFXLibrary.dismiss` (2026-09-24). Now the
+    /// old camera goes at once (it carries nothing, and the view must find
+    /// the new one), every other node stops its actions — a stale clip or
+    /// dash completion must not reach the new fight — and moves under one
+    /// holder that `dismiss` strips of its systems, hides this frame and
+    /// removes half a second of frames later, on the main thread.
+    private func retirePreviousStage() {
+        cameraNode.removeFromParentNode()
+        let leaving = scene.rootNode.childNodes
+        guard !leaving.isEmpty else { return }
+        let previous = SCNNode()
+        previous.name = "previous_run"
+        scene.rootNode.addChildNode(previous)
+        for child in leaving {
+            child.enumerateHierarchy { node, _ in node.removeAllActions() }
+            previous.addChildNode(child)
+        }
+        VFXLibrary.dismiss(previous, reportsLive: false)
     }
 
     /// Under the CI tour's `-tour-aoe <effect>:<element>` (`duat_rite:tide`,

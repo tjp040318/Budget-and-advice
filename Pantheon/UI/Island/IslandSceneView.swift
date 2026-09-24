@@ -302,7 +302,13 @@ struct IslandSceneView: UIViewRepresentable {
             let started = Perf.begin()
             defer { Perf.end(started, "island: \(units.count) figures rebuilt", over: 30) }
             let live = !figureNodes.isEmpty
-            figures.childNodes.forEach { $0.removeFromParentNode() }
+            // The old figures stop their strolls and hops and leave through
+            // `VFXLibrary.dismiss`: an awakened one carries a live aura, and a
+            // node freed with its motes alive is 2026-09-15's crash.
+            for child in figures.childNodes {
+                child.enumerateHierarchy { node, _ in node.removeAllActions() }
+                VFXLibrary.dismiss(child, reportsLive: false)
+            }
             figureNodes = []
             figureShadows = []
             figureStands = []
@@ -457,9 +463,45 @@ struct IslandSceneView: UIViewRepresentable {
             node.removeAction(forKey: "hop")
             node.removeAction(forKey: "walk")
             let turn = SCNAction.rotateTo(x: 0, y: CGFloat(yaw), z: 0, duration: 0.25, usesShortestUnitArc: true)
-            let stroll = SCNAction.customAction(duration: duration) { [weak self] node, elapsed in
-                guard let self, var walk = self.walks[index] else { return }
-                let t = min(1, max(0, CGFloat(elapsed) / CGFloat(duration)))
+            // The stroll itself is stepped on the MAIN thread by a timer
+            // (`startStroll(_:node:to:began:duration:)`), not by a custom
+            // action: SceneKit runs an action's block on its render thread,
+            // and this one wrote `walks` and read the layout and the figure
+            // arrays while the main thread rebuilt them for a team change — a
+            // Swift dictionary written from two threads at once (2026-09-24,
+            // the move `UnitNode.swingTrail` made for run 239). The timer also
+            // ENDS the walk: a scene-time wait for the end froze with the
+            // island when the player left it mid-stroll, and the figure came
+            // back walking in place at its goal.
+            node.runAction(turn, forKey: "walk")
+            startStroll(index, node: node, to: to, began: CACurrentMediaTime() + 0.25, duration: duration)
+            node.play(.walk)
+        }
+
+        /// Moves a strolling figure along its walk, sixty times a second on
+        /// the main thread, reading the latest layout each step so a pan or a
+        /// pinch mid-walk carries it along; holds while the island is not on
+        /// screen, and at the end turns the figure back to the viewer with
+        /// its idle. Stops by itself when the walk is over, cut short,
+        /// replaced, or the figures were rebuilt.
+        private func startStroll(_ index: Int, node: UnitNode, to: CGPoint, began: CFTimeInterval, duration: TimeInterval) {
+            // A box, not two captured vars: the timer's block is @Sendable,
+            // and a mutated captured var in one does not compile.
+            let clock = StrollClock(began: began, last: CACurrentMediaTime())
+            let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self, weak node] timer in
+                guard let self, let node,
+                      self.figureNodes.indices.contains(index), self.figureNodes[index] === node,
+                      var walk = self.walks[index], walk.to == to else {
+                    timer.invalidate()
+                    return
+                }
+                let now = CACurrentMediaTime()
+                defer { clock.last = now }
+                guard self.active else {
+                    clock.began += now - clock.last      // the island is away: the walk waits for it
+                    return
+                }
+                let t = min(1, max(0, CGFloat((now - clock.began) / duration)))
                 // Ease at both ends so the figure sets off and arrives
                 // rather than starting at full stride.
                 walk.progress = t * t * (3 - 2 * t)
@@ -467,16 +509,15 @@ struct IslandSceneView: UIViewRepresentable {
                 let spot = self.standingPoint(index, offset: walk.offset)
                 node.position = SCNVector3(Float(spot.point.x), Float(spot.point.y), spot.depth)
                 self.placeShadow(index, at: spot.point, depth: spot.depth)
-            }
-            let face = SCNAction.rotateTo(x: 0, y: 0, z: 0, duration: 0.3, usesShortestUnitArc: true)
-            node.runAction(.sequence([turn, stroll, face]), forKey: "walk") { [weak self] in
-                DispatchQueue.main.async {
-                    guard let self, self.walks[index]?.to == to else { return }
+                if t >= 1 {
+                    timer.invalidate()
+                    node.runAction(SCNAction.rotateTo(x: 0, y: 0, z: 0, duration: 0.3, usesShortestUnitArc: true),
+                                   forKey: "walk")
                     self.settleWalk(index, at: to)
                     node.play(node.restingIdle)
                 }
             }
-            node.play(.walk)
+            RunLoop.main.add(timer, forMode: .common)
         }
 
         /// The walk is over, or cut short by a tap: the figure stands where
@@ -503,7 +544,8 @@ struct IslandSceneView: UIViewRepresentable {
         // MARK: - Decorations
 
         private func rebuildDecor(_ placements: [IslandDecorPlacement]) {
-            decor.childNodes.forEach { $0.removeFromParentNode() }
+            // A brazier's flame is a live particle host (`VFXLibrary.dismiss`).
+            decor.childNodes.forEach { VFXLibrary.dismiss($0, reportsLive: false) }
             decorEntries = []
             flameScales = [:]
             for placement in placements {
@@ -644,7 +686,11 @@ struct IslandSceneView: UIViewRepresentable {
         // MARK: - Weather
 
         private func rebuildWeather(viewSize: CGSize, paintingFrame: CGRect, zoom: CGFloat, isNight: Bool) {
-            weather.childNodes.forEach { $0.removeFromParentNode() }
+            // Every host here carries a live looping system: each leaves the
+            // way a particle carrier does (`VFXLibrary.dismiss`: systems off
+            // on this thread, hidden now, removed half a second of frames
+            // later), never freed on the spot mid-pinch (2026-09-24).
+            weather.childNodes.forEach { VFXLibrary.dismiss($0, reportsLive: false) }
             weatherEntries = []
             let unit = IslandSceneView.stageHeight(paintingFrame: paintingFrame) / 100
 
@@ -774,5 +820,16 @@ struct IslandSceneView: UIViewRepresentable {
             plane.materials = [material]
             return SCNNode(geometry: plane)
         }
+    }
+}
+
+/// A stroll's clock on the island (`startStroll`): when it began, pushed
+/// back by every moment the island was away, and the last tick. Main thread.
+private final class StrollClock {
+    var began: CFTimeInterval
+    var last: CFTimeInterval
+    init(began: CFTimeInterval, last: CFTimeInterval) {
+        self.began = began
+        self.last = last
     }
 }

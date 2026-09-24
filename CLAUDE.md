@@ -920,6 +920,35 @@ environment can and cannot do. The short version:
   a `[VFX] … still carried N particle system(s)` line if one was live and
   stamped `[VFX] HH:mm:ss` retire lines under `-tour` to name the node on
   a repeat. A projectile is dismissed the same way on arrival.
+- **The random crashes were memory (2026-09-24; the owner: "when I do many
+  summons, or sometimes when I play chapters, or randomly the app
+  crashes").** A foreground app over its memory limit is killed with no
+  report, and nothing let go: `ModelLibrary` kept every family it had ever
+  parsed with its 2048 textures decoded (about 32 MB a family) and
+  `BundleArt` every full-size painting. Now the model cache is an LRU —
+  14 files or 480 MB of decoded pixels, halved within 512 MB of the
+  process's limit, an entry any live clone came from never dropped (a
+  weak list of clones), the last 20 s protected — textures shared between
+  a base file and its `_lod` decoded once (by the archive member's CRC),
+  `BundleArt` an `NSCache` with `uncachedImage` for the battle's backdrop,
+  and `MemoryRelief` (Core/Models) the one place a cache hears pressure:
+  `observe` for UIKit's warning and the kernel's CRITICAL level (a full
+  purge; the clip sets stay, a figure fetches its clip on every play),
+  `observeEarly` for the kernel's first warning (a trim to the halved
+  limits). `warm(forms:)` warms the form a unit HAS; a screen about to
+  change the form (the Hall of Ka's Awaken, `warmAwakening`) warms the
+  other one itself. **Seeing it:** `CrashReporter` (MetricKit crash, hang
+  and exit diagnostics saved and replayed into Diagnostics every launch,
+  the crashes before the daily metrics) and `MemoryProbe`
+  (`phys_footprint`, `os_proc_available_memory`, a peak, a clean-exit
+  flag so the next launch says the last one died; in the simulator the
+  kernel's pressure is the HOST's and is only noted) — `[Mem]` and
+  `[Crash]` lines. CI step 53 `stress` relaunches with `-tour-stress
+  summon` (thirty singles, three ten-pulls through the reveal) and
+  `-tour-stress battle` (six auto-repeat runs), a footprint after each;
+  `shots/memory.txt` is every launch's curve and `ciframes.py` prints it
+  as MEMORY, a death as STRESS: THE APP DIED and a wait that ran out as
+  TIMED OUT.
 - **A card's wear scales with the card (2026-09-14).** The owner, of the
   popup's 50-point enemy cards: "Do the elemental symbols need to be so
   big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped

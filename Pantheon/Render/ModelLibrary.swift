@@ -2,6 +2,7 @@ import Foundation
 import SceneKit
 import simd
 import UIKit
+import os
 
 /// Loads and caches character models.
 ///
@@ -25,7 +26,67 @@ final class ModelLibrary {
     /// Untinted source nodes, keyed by asset name. A real export is one shared
     /// mesh for a whole elemental family, so the source is kept neutral and the
     /// element colour is applied per instance below.
-    private var cache: [String: SCNNode] = [:]
+    ///
+    /// BOUNDED since 2026-09-24. It kept every file it had ever parsed for the
+    /// life of the process, and every entry holds its base colour and normal
+    /// map DECODED (`predecodeTextures`: two 2048-pixel bitmaps, about 33 MB),
+    /// so a session of ten-pulls, chapters and the Hall of Ka climbed about
+    /// 33 MB per family it touched and never came down — until iOS killed the
+    /// app for memory, which leaves no crash report (the owner: "when I do
+    /// many summons, or sometimes when I play chapters, or randomly the app
+    /// crashes"). It is now a least-recently-used cache of `prototypeLimit`
+    /// files and `prototypeBudget` decoded bytes (`trimLocked`), emptied of
+    /// everything unused when memory is short (`purge`). An entry a figure on
+    /// a stage was cloned from is never dropped while that figure lives — it
+    /// would free nothing, since the clone shares the images, and a second
+    /// ask would decode a second copy — and nor is one parsed or used in the
+    /// last `recentGrace` seconds, so a warm pass never evicts the files the
+    /// stage it warmed for is about to clone.
+    private var cache: [String: CachedModel] = [:]
+    /// A tick per cache use, for the least-recently-used order.
+    private var useClock: UInt64 = 0
+
+    /// Files kept at most, and decoded bytes kept at most, before the least
+    /// recently used unused entry goes. Fourteen covers the largest single
+    /// warm set (a five-unit team and three waves' enemies, or the Hall of
+    /// Ka's rail and its six fusion prizes) with the island's team beside it.
+    static let prototypeLimit = 14
+    static let prototypeBudget = 480 * 1_048_576
+    /// How long a freshly parsed or used entry is safe from the trim.
+    static let recentGrace: CFTimeInterval = 20
+    /// Clip sets (one per asset, all its clips) kept at most.
+    static let animationLimit = 32
+
+    /// One parsed file, what its decoded textures cost, when it was last
+    /// used, and the clones handed out from it that are still alive.
+    private final class CachedModel {
+        let node: SCNNode
+        let bytes: Int
+        var lastUse: UInt64 = 0
+        var touchedAt: CFTimeInterval = 0
+        /// Weak: a clone that has left its stage and been released drops
+        /// out by itself.
+        private var clones: [WeakClone] = []
+
+        init(node: SCNNode, bytes: Int) {
+            self.node = node
+            self.bytes = bytes
+        }
+
+        func adopt(_ clone: SCNNode) {
+            clones.removeAll { $0.node == nil }
+            clones.append(WeakClone(node: clone))
+        }
+
+        var inUse: Bool {
+            clones.removeAll { $0.node == nil }
+            return !clones.isEmpty
+        }
+    }
+
+    private struct WeakClone {
+        weak var node: SCNNode?
+    }
     /// Assets whose auto-orientation has already been reported, so the log
     /// says it once rather than once per instance.
     private var orientationLogged: Set<String> = []
@@ -34,6 +95,8 @@ final class ModelLibrary {
     /// the colour for all five.
     private var placeholderCache: [String: SCNNode] = [:]
     private var animationCache: [String: [AnimationClip: CAAnimation]] = [:]
+    /// The tick each asset's clips were last asked for (`animationLimit`).
+    private var animationUse: [String: UInt64] = [:]
     private let queue = DispatchQueue(label: "com.pantheon.modellibrary", attributes: .concurrent)
     /// The caches' lock. `node(for:)` and `animation(_:for:)` run on the main
     /// thread as a stage is built; `warm(_:)` fills the same caches from a
@@ -44,11 +107,99 @@ final class ModelLibrary {
 
     private func cachedNode(_ name: String) -> SCNNode? {
         cacheLock.lock(); defer { cacheLock.unlock() }
-        return cache[name]
+        guard let entry = cache[name] else { return nil }
+        touchLocked(entry)
+        return entry.node
     }
 
-    private func store(_ node: SCNNode, as name: String) {
-        cacheLock.lock(); cache[name] = node; cacheLock.unlock()
+    private func store(_ node: SCNNode, bytes: Int, as name: String) {
+        cacheLock.lock()
+        let entry = CachedModel(node: node, bytes: bytes)
+        touchLocked(entry)
+        cache[name] = entry
+        let dropped = trimLocked(protecting: name, force: false)
+        cacheLock.unlock()
+        if !dropped.isEmpty {
+            log("cache over \(Self.prototypeLimit) files or \(Self.prototypeBudget / 1_048_576) MB: let go of \(dropped.joined(separator: ", "))")
+        }
+    }
+
+    /// Records a clone handed out from a cached file, so the trim knows the
+    /// file is on a stage.
+    private func adopt(_ clone: SCNNode, from name: String) {
+        cacheLock.lock()
+        if let entry = cache[name] {
+            entry.adopt(clone)
+            touchLocked(entry)
+        }
+        cacheLock.unlock()
+    }
+
+    /// Under `cacheLock`.
+    private func touchLocked(_ entry: CachedModel) {
+        useClock &+= 1
+        entry.lastUse = useClock
+        entry.touchedAt = CACurrentMediaTime()
+    }
+
+    /// Drops the least recently used entries that nothing on a stage was
+    /// cloned from and nothing used in the last `recentGrace` seconds, while
+    /// the cache is over its count or its bytes — or, with `force`, every
+    /// entry nothing on a stage is using (a memory warning). The limits
+    /// halve when iOS says the process is within 512 MB of its own limit
+    /// (`os_proc_available_memory`, zero in the simulator, where it is
+    /// ignored). Under `cacheLock`; returns the names dropped.
+    private func trimLocked(protecting keep: String?, force: Bool, tight forceTight: Bool = false) -> [String] {
+        let available = os_proc_available_memory()
+        let tight = forceTight || (available > 0 && available < 512 * 1_048_576)
+        let limit = tight ? Self.prototypeLimit / 2 : Self.prototypeLimit
+        let budget = tight ? Self.prototypeBudget / 2 : Self.prototypeBudget
+        var count = cache.count
+        var total = cache.values.reduce(0) { $0 + $1.bytes }
+        guard force || count > limit || total > budget else { return [] }
+        let now = CACurrentMediaTime()
+        let candidates = cache
+            .filter { name, entry in
+                name != keep && !entry.inUse && (force || now - entry.touchedAt > Self.recentGrace)
+            }
+            .sorted { $0.value.lastUse < $1.value.lastUse }
+        var dropped: [String] = []
+        for (name, entry) in candidates {
+            if !force && count <= limit && total <= budget { break }
+            cache.removeValue(forKey: name)
+            count -= 1
+            total -= entry.bytes
+            dropped.append(name)
+        }
+        return dropped
+    }
+
+    /// Lets go of every cached file nothing on a stage is using and every
+    /// placeholder: what iOS's memory warning asks for. Main thread
+    /// (`MemoryRelief`). The clip sets stay: they are small, and a figure
+    /// fetches its clip from here on every play, so dropping them in a
+    /// fight re-parses a clip file on the main thread per attack. A warm
+    /// pass mid-parse simply stores its file afterwards; a stage built later
+    /// parses what it needs again.
+    func purge() {
+        cacheLock.lock()
+        let dropped = trimLocked(protecting: nil, force: true)
+        let kept = cache.count
+        cacheLock.unlock()
+        placeholderCache.removeAll()
+        log("memory is short: let go of \(dropped.count) model(s); \(kept) still on a stage")
+    }
+
+    /// The kernel's first warning: down to the halved limits, least recently
+    /// used first, keeping anything used in the last `recentGrace` seconds
+    /// (a fight's warmed waves). Main thread (`MemoryRelief.observeEarly`).
+    func ease() {
+        cacheLock.lock()
+        let dropped = trimLocked(protecting: nil, force: false, tight: true)
+        cacheLock.unlock()
+        if !dropped.isEmpty {
+            log("memory is getting short: let go of \(dropped.joined(separator: ", "))")
+        }
     }
 
     /// SceneKit's importer is driven from ONE thread at a time.
@@ -94,12 +245,15 @@ final class ModelLibrary {
         return Self.withImporter { () -> SCNNode? in
             if let cached = cachedNode(name) { return cached }
             guard let loaded = loadFromBundle(name) else { return nil }
-            store(loaded, as: name)
-            return loaded
+            store(loaded.node, bytes: loaded.bytes, as: name)
+            return loaded.node
         }
     }
 
-    private init() {}
+    private init() {
+        MemoryRelief.observe { [weak self] in self?.purge() }
+        MemoryRelief.observeEarly { [weak self] in self?.ease() }
+    }
 
     // MARK: - Public API
 
@@ -133,9 +287,12 @@ final class ModelLibrary {
     ///
     /// The LOD costs nothing visible here. The battle camera stands a figure a
     /// quarter of the screen tall — roughly 330 pixels on a 3× phone — and the
-    /// LOD carries 3,500 triangles with a 1,024 texture, which is more texels
+    /// LOD carried 3,500 triangles with a 1,024 texture, which is more texels
     /// than those pixels can show. The full model exists for the screens where
     /// one character fills the frame, and there it is worth every byte.
+    /// (Since 2026-09-17 the LODs ship 6,000 triangles at 2,048 — the same
+    /// maps as the full mesh, byte for byte, which `predecodeTextures` now
+    /// decodes once for both files.)
     static func detail(forCombatantCount count: Int) -> DetailLevel {
         count > 1 ? .low : .high
     }
@@ -152,18 +309,7 @@ final class ModelLibrary {
         let container = SCNNode()
         container.name = "unit_\(spec.assetName)"
 
-        // An awakened unit loads `<asset>_awakened` when that mesh has
-        // shipped and otherwise the base mesh with the awakened look on it:
-        // glowing costume accents, a stronger rim, an aura from the unit node.
-        let baseName = awakened && bundleURL(for: spec.awakenedAssetName) != nil
-            ? spec.awakenedAssetName
-            : spec.assetName
-
-        // Ask for the reduced mesh first when the stage is busy, but never fail
-        // over it: a missing `_lod` file just means the full model is used.
-        let assetName = detail == .low && bundleURL(for: baseName + DetailLevel.low.suffix) != nil
-            ? baseName + DetailLevel.low.suffix
-            : baseName
+        let assetName = meshName(for: spec, detail: detail, awakened: awakened)
 
         let model: SCNNode
         var isStandIn = false
@@ -171,6 +317,7 @@ final class ModelLibrary {
         var isPortraitSprite = false
         if let loaded = loadOrCached(assetName) {
             model = loaded.clone()
+            adopt(model, from: assetName)
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
         } else if let standIn = spec.standInAsset,
                   let loaded = loadOrCached(standIn) {
@@ -179,6 +326,7 @@ final class ModelLibrary {
             // whose own mesh is still on the way fights as a giant of its
             // kind rather than as the primitive rig.
             model = loaded.clone()
+            adopt(model, from: standIn)
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
             if !orientationLogged.contains(assetName) {
                 log("'\(assetName)': no mesh in the bundle; standing in with '\(standIn)' at \(spec.height) m")
@@ -258,6 +406,10 @@ final class ModelLibrary {
     func animation(_ clip: AnimationClip, for assetName: String) -> CAAnimation? {
         cacheLock.lock()
         let hit = animationCache[assetName]?[clip]
+        if hit != nil {
+            useClock &+= 1
+            animationUse[assetName] = useClock
+        }
         cacheLock.unlock()
         if let hit { return hit }
 
@@ -291,6 +443,15 @@ final class ModelLibrary {
             found.fadeOutDuration = 0.30
             cacheLock.lock()
             animationCache[assetName, default: [:]][clip] = found
+            useClock &+= 1
+            animationUse[assetName] = useClock
+            // Bounded like the meshes: the least recently asked-for asset's
+            // clips go. A figure playing one keeps its own reference.
+            while animationCache.count > Self.animationLimit,
+                  let oldest = animationUse.filter({ $0.key != assetName }).min(by: { $0.value < $1.value })?.key {
+                animationCache.removeValue(forKey: oldest)
+                animationUse.removeValue(forKey: oldest)
+            }
             cacheLock.unlock()
         }
         return found
@@ -317,6 +478,24 @@ final class ModelLibrary {
         return spec.standInAsset ?? spec.assetName
     }
 
+    /// The FILE a figure is drawn from, the one choice `node(for:)` and
+    /// `warm(forms:)` both make, so a warm pass parses exactly what the stage
+    /// will clone. An awakened unit loads `<asset>_awakened` when that mesh
+    /// has shipped and otherwise the base mesh with the awakened look on it
+    /// (glowing costume accents, a stronger rim, an aura from the unit node);
+    /// a busy stage asks for the reduced mesh first but never fails over it —
+    /// a missing `_lod` file just means the full model is used. A spec with
+    /// no file of its own gets this name all the same, and `node(for:)`
+    /// falls back to the stand-in.
+    func meshName(for spec: ModelSpec, detail: DetailLevel, awakened: Bool) -> String {
+        let base = awakened && bundleURL(for: spec.awakenedAssetName) != nil
+            ? spec.awakenedAssetName
+            : spec.assetName
+        return detail == .low && bundleURL(for: base + DetailLevel.low.suffix) != nil
+            ? base + DetailLevel.low.suffix
+            : base
+    }
+
     /// Loads a set of specs' meshes and their clips into the caches on a
     /// background queue, so a stage built afterwards clones from the cache
     /// instead of parsing USDZ on the main thread.
@@ -326,21 +505,41 @@ final class ModelLibrary {
     /// first frame of a fight, and the same freeze again when a wave walks
     /// on. The briefing is up for seconds before Begin, which is the time to
     /// spend it in. `crowded` asks for the reduced meshes the stage will ask
-    /// for (`detail(forCombatantCount:)`); the clips are keyed by the base
-    /// name whatever the mesh, as `UnitNode.clipAsset` keys them.
+    /// for (`detail(forCombatantCount:)`). Every form here is an UNAWAKENED
+    /// one; a caller that knows which units are awakened says so through
+    /// `warm(forms:)`.
     func warm(_ specs: [ModelSpec], crowded: Bool = false, clips: Bool = true) {
+        warm(forms: specs.map { (spec: $0, awakened: false) }, crowded: crowded, clips: clips)
+    }
+
+    /// `warm(_:)` with each figure's awakened state: `awakened` is what the
+    /// stage will pass to `node(for:awakened:)` for it.
+    ///
+    /// Until 2026-09-24 the warm pass added the family's FULL `_awakened`
+    /// mesh for every spec that had one shipped, awakened or not — a new
+    /// pull, an enemy, a crowded fight that would draw `_awakened_lod` if
+    /// anything — so each of the sixteen gods cost two cached meshes, one of
+    /// them never drawn, in a cache that never let go (run 239's sweep
+    /// briefing parsed `zeus_awakened` and `sekhmet_awakened` beside the
+    /// LODs the fight used). The file is now the one `meshName` picks, the
+    /// same the stage will ask for.
+    func warm(forms: [(spec: ModelSpec, awakened: Bool)], crowded: Bool = false, clips: Bool = true) {
         var meshes: Set<String> = []
         var clipAssets: Set<String> = []
-        for spec in specs {
-            let shipped = bundleURL(for: spec.assetName) != nil
-            let base = shipped ? spec.assetName : (spec.standInAsset ?? spec.assetName)
-            let reduced = base + DetailLevel.low.suffix
-            meshes.insert(crowded && bundleURL(for: reduced) != nil ? reduced : base)
-            clipAssets.insert(base)
-            if bundleURL(for: spec.awakenedAssetName) != nil {
-                meshes.insert(spec.awakenedAssetName)
-                clipAssets.insert(spec.awakenedAssetName)
+        for form in forms {
+            let name = meshName(for: form.spec, detail: crowded ? .low : .high, awakened: form.awakened)
+            if bundleURL(for: name) != nil {
+                meshes.insert(name)
+            } else if let standIn = form.spec.standInAsset {
+                // What `node(for:)` loads when the spec has no mesh: the
+                // stand-in's full file, never its `_lod`.
+                meshes.insert(standIn)
             }
+            clipAssets.insert(clipAsset(for: form.spec, awakened: form.awakened))
+            // A boss is drawn awakened but plays its base clips
+            // (`UnitNode.clipAsset` reads the combatant's own state), so
+            // both sets go in; clips are small.
+            if form.awakened { clipAssets.insert(clipAsset(for: form.spec, awakened: false)) }
         }
         DispatchQueue.global(qos: .userInitiated).async { [self] in
             let started = Perf.begin()
@@ -374,7 +573,7 @@ final class ModelLibrary {
     /// Parses a mesh file. Called under `importerLock` by `loadOrCached`,
     /// which is the only caller: the lock is not re-entrant, so this must
     /// never take it itself.
-    private func loadFromBundle(_ name: String) -> SCNNode? {
+    private func loadFromBundle(_ name: String) -> (node: SCNNode, bytes: Int)? {
         guard let url = bundleURL(for: name) else {
             log("no file in the bundle for '\(name)' — falling back to a placeholder")
             return nil
@@ -400,10 +599,22 @@ final class ModelLibrary {
             wrapper.addChildNode(child)
         }
         MaterialTuner.tune(wrapper)
-        Self.predecodeTextures(in: wrapper, label: name)
+        let bytes = Self.predecodeTextures(in: wrapper, label: name)
         describe(wrapper, label: name)
-        return wrapper
+        return (wrapper, bytes)
     }
+
+    /// Decoded textures by the archive member's CRC-32 and size, held
+    /// WEAKLY: a family's base mesh and its `_lod` carry byte-identical
+    /// base colour and normal maps (the same members, the same CRC), and
+    /// before 2026-09-24 each file decoded its own copy — 33 MB twice for a
+    /// family seen on the island and in a fight. Now the second file finds
+    /// the first's bitmap while anything (a cached prototype, a figure on a
+    /// stage) still holds it, and SceneKit sees one image. Touched only
+    /// inside `predecodeTextures`, which runs under `importerLock`; its own
+    /// lock is for safety, not need.
+    private static let decodedTextures = NSMapTable<NSString, UIImage>.strongToWeakObjects()
+    private static let decodedTexturesLock = NSLock()
 
     /// Decodes every texture on the model's materials on the thread that
     /// parsed it, so a stage built afterwards uploads pixels instead of
@@ -424,8 +635,14 @@ final class ModelLibrary {
     /// (run 174). The member is read out of the archive by name instead:
     /// a USDZ is a zip with every member stored uncompressed, so the bytes
     /// are a slice of the file (`USDZArchive`).
-    private static func predecodeTextures(in root: SCNNode, label: String) {
+    ///
+    /// Returns the bytes of decoded pixels the model now holds, which is
+    /// what its place in the cache costs (`prototypeBudget`).
+    @discardableResult
+    private static func predecodeTextures(in root: SCNNode, label: String) -> Int {
         var decoded = 0
+        var shared = 0
+        var bytes = 0
         var archives: [String: USDZArchive] = [:]
         root.enumerateHierarchy { child, _ in
             for material in child.geometry?.materials ?? [] {
@@ -451,8 +668,35 @@ final class ModelLibrary {
                         }
                         let candidates = url.fragment.map { [$0] } ?? ["textures/\(role).png", "textures/\(role).jpg"]
                         for name in candidates {
+                            // The same member already decoded for another
+                            // file (the base mesh and its `_lod`).
+                            if let identity = archive?.identity(of: name) {
+                                decodedTexturesLock.lock()
+                                let known = decodedTextures.object(forKey: identity as NSString)
+                                decodedTexturesLock.unlock()
+                                if let known {
+                                    // Charged to the file that decoded it:
+                                    // counted here too, a family seen on
+                                    // the island and in a fight would weigh
+                                    // twice against the budget.
+                                    property.contents = known
+                                    shared += 1
+                                    break
+                                }
+                            }
                             if let data = archive?.member(named: name), let read = UIImage(data: data) {
-                                image = read
+                                if let ready = read.preparingForDisplay() {
+                                    property.contents = ready
+                                    decoded += 1
+                                    bytes += Self.byteCost(of: ready)
+                                    if let identity = archive?.identity(of: name) {
+                                        decodedTexturesLock.lock()
+                                        decodedTextures.setObject(ready, forKey: identity as NSString)
+                                        decodedTexturesLock.unlock()
+                                    }
+                                } else {
+                                    image = read
+                                }
                                 break
                             }
                         }
@@ -463,13 +707,23 @@ final class ModelLibrary {
                     if let image, let ready = image.preparingForDisplay() {
                         property.contents = ready
                         decoded += 1
+                        bytes += Self.byteCost(of: ready)
                     }
                 }
             }
         }
-        if decoded > 0 {
-            shared.log("'\(label)': \(decoded) texture(s) decoded ahead of the first frame")
+        if decoded > 0 || shared > 0 {
+            ModelLibrary.shared.log("'\(label)': \(decoded) texture(s) decoded ahead of the first frame"
+                + (shared > 0 ? ", \(shared) shared with a file already decoded" : "")
+                + " (\(bytes / 1_048_576) MB)")
         }
+        return bytes
+    }
+
+    /// The bytes a decoded image holds.
+    private static func byteCost(of image: UIImage) -> Int {
+        if let cg = image.cgImage { return cg.bytesPerRow * cg.height }
+        return Int(image.size.width * image.scale * image.size.height * image.scale) * 4
     }
 
     /// Points every skinner in a cloned hierarchy at the clone's own bones.
@@ -1149,13 +1403,21 @@ final class StageDoctor: NSObject, SCNSceneRendererDelegate {
 /// caller leaves that texture to SceneKit.
 final class USDZArchive {
     private let data: Data
-    /// Member name → (offset of the local header, size).
-    private var entries: [String: (offset: Int, size: Int)] = [:]
+    /// Member name → (offset of the local header, size, CRC-32).
+    private var entries: [String: (offset: Int, size: Int, crc: UInt32)] = [:]
 
     init?(url: URL) {
         guard let mapped = try? Data(contentsOf: url, options: .alwaysMapped) else { return nil }
         data = mapped
         guard readCentralDirectory() else { return nil }
+    }
+
+    /// A member's CRC-32 and size as one key: two archives whose members
+    /// share it hold the same bytes (a family's mesh and its `_lod` carry
+    /// the same textures). Nil when the member is absent.
+    func identity(of name: String) -> String? {
+        guard let entry = entries[name] else { return nil }
+        return "\(entry.crc)-\(entry.size)"
     }
 
     /// The bytes of a stored member, or nil.
@@ -1198,6 +1460,7 @@ final class USDZArchive {
             // extra length at 30, comment length at 32, local header offset
             // at 42, then the name.
             guard cursor + 46 <= count, u32(cursor) == 0x0201_4B50 else { return false }
+            let crc = u32(cursor + 16)
             let compressed = Int(u32(cursor + 20))
             let nameLength = u16(cursor + 28)
             let extraLength = u16(cursor + 30)
@@ -1206,7 +1469,7 @@ final class USDZArchive {
             let nameStart = cursor + 46
             guard nameStart + nameLength <= count else { return false }
             if let name = String(data: data.subdata(in: nameStart..<nameStart + nameLength), encoding: .utf8) {
-                entries[name] = (offset, compressed)
+                entries[name] = (offset, compressed, crc)
             }
             cursor = nameStart + nameLength + extraLength + commentLength
         }

@@ -38,8 +38,11 @@ jobs:
     # about 3.5 minutes to the tour, so about 45 at the worst — and run 222
     # (2026-09-23) took 50: checkout 3, build 3, tests 7, the tour 37 on a
     # slow simulator. 70 kept a slow day from cancelling a green build until
-    # run 237 (the feature day's 52 steps) left ten minutes spare: 90.
-    timeout-minutes: 90
+    # run 237 (the feature day's 52 steps) left ten minutes spare: 90. The
+    # memory stress (step 53, 2026-09-24) adds about seven minutes and at
+    # most fifteen, when both of its waits run out (a summon run's own
+    # worst case is 212 s before a stall, a battle run's 480): 105.
+    timeout-minutes: 105
     steps:
       - uses: actions/checkout@v4
         with:
@@ -173,10 +176,39 @@ jobs:
               --stdout="$PWD/$tag-out.txt" --stderr="$PWD/$tag-err.txt" \
               "$UDID" com.pantheon.game -tour -tour-step $step "$@" >/dev/null
           }
+          # The memory stress's wait (step 53): up to $1 seconds for the latest
+          # relaunch to print "[TourCue] stress-done", stopping early when the
+          # app is gone — two looks five seconds apart find no process — which
+          # is the step's finding, written to shots/stress-deaths.txt with the
+          # crash report (crash-*.txt) the job collects after the tour.
+          await_stress() {
+            local out="shots/$step-${names[$step]}-again$(printf %03d $relaunches)-out.txt" ticks=0 misses=0
+            local what; what="$(cat "${out%-out.txt}-args.txt" 2>/dev/null)"
+            until grep -q "\[TourCue\] stress-done" "$out" 2>/dev/null; do
+              ticks=$((ticks + 1))
+              if [ $ticks -gt $(( $1 * 10 )) ]; then
+                echo "$(date -u +%T) no stress-done from '$what' in $1 s" | tee -a shots/stress-deaths.txt
+                return 0
+              fi
+              if [ $((ticks % 50)) -eq 0 ]; then
+                if pgrep -f 'Pantheon\.app/Pantheon' >/dev/null; then
+                  misses=0
+                else
+                  misses=$((misses + 1))
+                  if [ $misses -ge 2 ]; then
+                    echo "$(date -u +%T) the app died during '$what'" | tee -a shots/stress-deaths.txt
+                    return 0
+                  fi
+                fi
+              fi
+              sleep 0.1
+            done
+            echo "$(date -u +%T) '$what' done"
+          }
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
-          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken island_decor events regalia allies sign_in codex draft shrines treasury)
+          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken island_decor events regalia allies sign_in codex draft shrines treasury stress)
           # Each launch also writes what the app prints — the [ModelLibrary]
           # block, SceneKit's own errors — to shots/<step>-console.txt, so a
           # frame that came out wrong can be read as well as looked at.
@@ -184,7 +216,7 @@ jobs:
           # the way Xcode's console does.
           TOUR_START="$(date +'%Y-%m-%d %H:%M:%S')"
           touch /tmp/tour-start
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53; do
             SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
               --stdout="$PWD/shots/$step-${names[$step]}-out.txt" \
               --stderr="$PWD/shots/$step-${names[$step]}-err.txt" \
@@ -439,6 +471,23 @@ jobs:
               raids)
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-raid raid_unwrapped_king; sleep 5; shoot "$step-${names[$step]}-umbra" ;;
+              # The memory stress (2026-09-24; the owner: "when I do many
+              # summons, or sometimes when I play chapters, or randomly the app
+              # crashes"). The plain launch is the summon screen at rest, the
+              # baseline. Then thirty singles and three ten-pulls through the
+              # summon screen's calls and reveal, and six campaign runs on
+              # auto-repeat at x4, each relaunch printing [Mem] after every
+              # pull or run and [TourCue] stress-done at the end. A frame 40 s
+              # in (a reveal or a fight in progress) and one at the end. The
+              # whole curve is shots/memory.txt (below).
+              stress)
+                sleep 5; shoot_lit "$step-${names[$step]}"
+                again -tour-stress summon
+                sleep 40; shoot "$step-${names[$step]}-summon-mid"
+                await_stress 340; shoot "$step-${names[$step]}-summon"
+                again -tour-stress battle
+                sleep 40; shoot "$step-${names[$step]}-battle-mid"
+                await_stress 480; shoot "$step-${names[$step]}-battle" ;;
               # An ordinary week's band, a week after the Festival Monday.
               events)
                 sleep 5; shoot_lit "$step-${names[$step]}"
@@ -473,8 +522,25 @@ jobs:
               -exec sh -c 'cp "$1" "shots/crash-$(basename "$1").txt"' _ {} \;
           done
           echo "crash reports: $(ls shots/crash-*.txt 2>/dev/null | wc -l | tr -d ' ')"
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53; do
             base="shots/$step-${names[$step]}"
+            # The memory curve (2026-09-24): every [Mem] and [Crash] line of
+            # every launch, the stress's own lines and any memory warning,
+            # prefixed with the step and the relaunch's arguments, read from
+            # the untruncated stdout before the console below caps it.
+            { grep -h -E '\[(Mem|Crash)\]|\[TourCue\] stress|\[Tour\] stress' "$base-out.txt" 2>/dev/null \
+                | sed "s|^|$step-${names[$step]}: |" || true
+              for args in "$base"-again*-args.txt; do
+                [ -f "$args" ] || continue
+                grep -h -E '\[(Mem|Crash)\]|\[TourCue\] stress|\[Tour\] stress' "${args%-args.txt}-out.txt" 2>/dev/null \
+                  | sed "s|^|$step-${names[$step]} ($(cat "$args")): |" || true
+              done
+              # The awakened reveal's relaunch writes its own stdout (step 5):
+              # one of the heaviest single-figure stages.
+              if [ -f "$base-awakened-out.txt" ]; then
+                grep -h -E '\[(Mem|Crash)\]' "$base-awakened-out.txt" 2>/dev/null \
+                  | sed "s|^|$step-${names[$step]} (-tour-reveal awakened): |" || true
+              fi; } >> shots/memory.txt || true
             { echo "== stdout"; cat "$base-out.txt" 2>/dev/null; echo; echo "== stderr"; cat "$base-err.txt" 2>/dev/null; } \
               | head -c 120000 > "$base-console.txt"
             for args in "$base"-again*-args.txt; do

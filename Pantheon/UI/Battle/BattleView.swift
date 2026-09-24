@@ -670,7 +670,7 @@ struct BattleView: View {
                 Rectangle().fill(accent.opacity(0.9)).frame(height: 2).frame(maxHeight: .infinity, alignment: .bottom)
                 HStack(spacing: 16) {
                     if BundleImage.exists(cutIn.portrait) {
-                        BundleImage(name: cutIn.portrait)
+                        BundleImage(name: cutIn.portrait, renderedAt: 64)
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 64, height: 64)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

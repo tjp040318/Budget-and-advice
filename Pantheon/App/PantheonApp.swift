@@ -302,6 +302,27 @@ struct PantheonApp: App {
     /// it in a default property value would leave that isolation implicit.
     @MainActor
     init() {
+        var touring = false
+        #if DEBUG
+        // Line-buffered stdout, before anything prints (setvbuf must come
+        // before the stream's first use). The CI tour writes the app's
+        // stdout to a file and kills the app at the end of each step; a
+        // block-buffered stdout took the last kilobytes with it — every
+        // run's wave-three loads and the watchdog's lines were in the
+        // buffer, not the file.
+        setvbuf(stdout, nil, _IOLBF, 0)
+        touring = ProcessInfo.processInfo.arguments.contains("-tour")
+        #endif
+
+        // Crashes and kills report themselves (2026-09-24, the owner's
+        // "randomly the app crashes"): MetricKit's report of the last crash
+        // and how the last session ended go to More → Diagnostics as [Crash]
+        // and [Mem] lines. The reporter reads the last session's memory
+        // record, so it goes BEFORE the probe, which clears it.
+        CrashReporter.shared.start(touring: touring)
+        MemoryProbe.start()
+        MemoryProbe.log("launch")
+
         // The two bundled faces, before any view asks `Theme` for a font.
         FontLibrary.registerBundledFonts()
 
@@ -314,10 +335,6 @@ struct PantheonApp: App {
         // The CI tour never signs in: it plays as a fixed guest, held in
         // memory, so every launch of the tour opens the same save and no
         // dialog, no Apple and no CloudKit stand between it and its screen.
-        var touring = false
-        #if DEBUG
-        touring = ProcessInfo.processInfo.arguments.contains("-tour")
-        #endif
         let accounts = AccountService(preset: touring ? AccountService.tourAccount : nil)
         _session = StateObject(wrappedValue: AppSession(accounts: accounts))
         _launch = StateObject(wrappedValue: LaunchProgress())
@@ -346,14 +363,6 @@ struct PantheonApp: App {
         // and its sessions from here on. Nothing under the tour or the tests,
         // nothing with no backend, nothing once the player turns it off.
         AnalyticsService.shared.start()
-
-        #if DEBUG
-        // Line-buffered stdout. The CI tour writes the app's stdout to a
-        // file and kills the app at the end of each step; a block-buffered
-        // stdout took the last kilobytes with it — every run's wave-three
-        // loads and the watchdog's lines were in the buffer, not the file.
-        setvbuf(stdout, nil, _IOLBF, 0)
-        #endif
 
         // Build the unit database and the bundle's resource index before a
         // screen asks for them. `UnitDatabase.all` is three hundred and

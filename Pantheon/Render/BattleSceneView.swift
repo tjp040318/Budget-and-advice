@@ -806,9 +806,21 @@ final class UnitPlate: SKNode {
 enum PlateArt {
 
     private static var cache: [String: SKTexture] = [:]
+    /// The cache is read and written on the MAIN thread (a plate's init, as
+    /// `place` builds a wave) and on SceneKit's RENDER thread (a queued
+    /// `setLevel` drawing a new level badge from `drainPending`), and a
+    /// Swift dictionary written on one thread while another reads it is
+    /// undefined — a crash when an insert grows its storage under the other
+    /// thread's lookup (2026-09-24). Held around the lookup and the insert,
+    /// never around the drawing; two threads that draw the same key at once
+    /// keep the first.
+    private static let lock = NSLock()
 
     private static func texture(_ key: String, size: CGSize, draw: (CGContext, CGRect) -> Void) -> SKTexture {
-        if let cached = cache[key] { return cached }
+        lock.lock()
+        let hit = cache[key]
+        lock.unlock()
+        if let hit { return hit }
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 3
         format.opaque = false
@@ -817,6 +829,8 @@ enum PlateArt {
         }
         let texture = SKTexture(image: image)
         texture.filteringMode = .linear
+        lock.lock(); defer { lock.unlock() }
+        if let won = cache[key] { return won }
         cache[key] = texture
         return texture
     }

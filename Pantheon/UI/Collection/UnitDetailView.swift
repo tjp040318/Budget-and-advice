@@ -1606,7 +1606,7 @@ struct AwakeningSheet: View {
     private func formTile(_ portrait: String, caption: String) -> some View {
         VStack(spacing: 4) {
             if BundleImage.exists(portrait) {
-                BundleImage(name: portrait)
+                BundleImage(name: portrait, renderedAt: 136)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 104, height: 136)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))

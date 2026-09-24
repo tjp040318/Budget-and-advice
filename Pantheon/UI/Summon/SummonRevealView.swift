@@ -912,7 +912,8 @@ struct SummonRevealView: View {
         // The next pull's figure parses on a background queue while this one
         // is on the beam, so its stage clones from the cache.
         if results.indices.contains(index + 1) {
-            ModelLibrary.shared.warm([results[index + 1].blueprint.model])
+            let next = results[index + 1]
+            ModelLibrary.shared.warm(forms: [(spec: next.blueprint.model, awakened: next.isAwakening || next.unit.isAwakened)])
         }
 
         if readyStage == key {
@@ -1067,7 +1068,9 @@ struct SummonRevealView: View {
         return VStack(spacing: 4) {
             ZStack {
                 if BundleImage.exists(result.blueprint.model.portraitName(awakened: result.unit.isAwakened || result.isAwakening)) {
-                    BundleImage(name: result.blueprint.model.portraitName(awakened: result.unit.isAwakened || result.isAwakening))
+                    // Decoded at the tile's 74 points, not the card's 1024
+                    // pixels: a full decode is 4 MB a tile (2026-09-24).
+                    BundleImage(name: result.blueprint.model.portraitName(awakened: result.unit.isAwakened || result.isAwakening), renderedAt: 74)
                         .aspectRatio(contentMode: .fill)
                 } else {
                     RoundedRectangle(cornerRadius: Theme.tightCorner)

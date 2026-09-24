@@ -638,7 +638,7 @@ struct DraftView: View {
     private func beginFight() {
         guard let made = draftBoard.beginFight(store: store) else { return }
         let fighters = made.bout.playerTeam + made.bout.rivalTeam
-        ModelLibrary.shared.warm(fighters.map { $0.blueprint.model }, crowded: true)
+        ModelLibrary.shared.warm(forms: fighters.map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }, crowded: true)
         fightEngine = made.engine
         fightContext = .draft(made.bout)
     }

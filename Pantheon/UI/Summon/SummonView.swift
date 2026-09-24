@@ -679,7 +679,7 @@ struct SummonView: View {
     /// warms each next pull while the one before is on the beam.
     private func warmFirstFigure(_ results: [SummonResult]) {
         guard let first = results.first else { return }
-        ModelLibrary.shared.warm([first.blueprint.model])
+        ModelLibrary.shared.warm(forms: [(spec: first.blueprint.model, awakened: first.isAwakening || first.unit.isAwakened)])
     }
 }
 

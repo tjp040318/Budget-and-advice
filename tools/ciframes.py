@@ -22,7 +22,7 @@ network policy refuses; the branch does not.
 The simulator captures a landscape-only app in a portrait framebuffer, so a
 frame taller than it is wide is stood up here.
 """
-import argparse, glob, json, os, subprocess, sys
+import argparse, glob, json, os, re, subprocess, sys
 
 from PIL import Image, ImageDraw
 
@@ -107,6 +107,51 @@ def main():
         print(f"\n== {title} ==")
         for line in body.splitlines()[:40]:
             print("   " + line[:220])
+        print()
+
+    # The memory curve (2026-09-24): memory.txt holds every [Mem]/[Crash]
+    # line of the tour, prefixed with its step. Printed: the app dying in the
+    # stress, every line of the stress step (step 53: thirty singles, three
+    # ten-pulls, six auto-repeat runs, a footprint after each), any memory
+    # warning or [Crash] line anywhere, and the ten launches that peaked
+    # highest — so a climb that never comes back down reads in one screen.
+    # A wait that ran out is not a death: a slow simulator stalls every
+    # reveal, and the relaunch after it kills the app either way.
+    deaths = os.path.join(frames_dir, "stress-deaths.txt")
+    if os.path.exists(deaths) and open(deaths, errors="replace").read().strip():
+        found = open(deaths, errors="replace").read().splitlines()
+        died = [l for l in found if "no stress-done" not in l]
+        slow = [l for l in found if "no stress-done" in l]
+        if died:
+            print("\n== STRESS: THE APP DIED ==")
+            for line in died:
+                print("   " + line[:220])
+        if slow:
+            print("\n== STRESS: TIMED OUT (the app was still running) ==")
+            for line in slow:
+                print("   " + line[:220])
+    memory = os.path.join(frames_dir, "memory.txt")
+    if os.path.exists(memory):
+        lines = open(memory, errors="replace").read().splitlines()
+        stress = [l for l in lines if l.split(":", 1)[0].startswith("53-")]
+        alarms = [l for l in lines if not l.split(":", 1)[0].startswith("53-")
+                  and ("[Crash]" in l or "memory warning" in l or "memory critical" in l)
+                  and "[Crash] armed" not in l]
+        peaks = {}
+        for l in lines:
+            m = re.search(r"^(.*?): \[Mem\] .*? footprint (\d+) MB", l)
+            if m:
+                peaks[m.group(1)] = max(peaks.get(m.group(1), 0), int(m.group(2)))
+        print(f"\n== MEMORY ({len(lines)} lines in {memory}) ==")
+        for l in alarms[:30]:
+            print("   " + l[:220])
+        if peaks:
+            print("   highest launches: " + ", ".join(f"{k} {v} MB" for k, v in
+                                                     sorted(peaks.items(), key=lambda kv: -kv[1])[:10]))
+        for l in stress[:160]:
+            print("   " + l[:220])
+        if len(stress) > 160:
+            print(f"   … {len(stress) - 160} more stress lines in {memory}")
         print()
 
     # The job also publishes what the app printed during each step. The lines

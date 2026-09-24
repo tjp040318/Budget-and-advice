@@ -150,7 +150,7 @@ struct ArenaView: View {
         // The player's own four fight in every arena bout, so their meshes
         // and clips go into the model cache while the challengers are
         // still being built; the chosen opponent's follow at Fight.
-        ModelLibrary.shared.warm(store.team(store.player.arenaOffenseTeam).map { $0.blueprint.model }, crowded: true)
+        ModelLibrary.shared.warm(forms: store.team(store.player.arenaOffenseTeam).map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }, crowded: true)
         guard !isRefreshing else { return }
         isRefreshing = true
         // The record and the day are read HERE, on the main actor, and handed
@@ -1004,7 +1004,7 @@ struct ArenaView: View {
     }
 
     private func attack(_ opponent: ArenaOpponent) {
-        ModelLibrary.shared.warm(opponent.team.map { $0.blueprint.model }, crowded: true)
+        ModelLibrary.shared.warm(forms: opponent.team.map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }, crowded: true)
         guard let engine = store.startArenaBattle(against: opponent) else { return }
         pendingEngines[opponent.id] = engine
         battle = .arena(opponent)
