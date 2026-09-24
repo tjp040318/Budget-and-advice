@@ -1,5 +1,6 @@
 #if DEBUG
 import Combine
+import SceneKit
 import SwiftUI
 
 /// A self-driving pass through the app's screens, for a machine with no
@@ -1357,6 +1358,8 @@ private final class TourStressDriver: ObservableObject {
             await pause(3)
             if mode == "battle" {
                 await battles(game)
+            } else if mode == "parse" {
+                await parses()
             } else {
                 await summons(game)
             }
@@ -1423,6 +1426,65 @@ private final class TourStressDriver: ObservableObject {
             ? "\(first.stars)★ \(first.blueprint.id)"
             : "\(results.filter { $0.stars >= 4 }.count) of \(results.count) at 4★ or better"
         MemoryProbe.log("stress summon \(label) (\(what))")
+    }
+
+    // MARK: Parses
+
+    /// `-tour-stress parse` (2026-09-24): runs 246 and 247 kept about 11 MB
+    /// a reveal with every cache of ours emptied after each one, a repeat
+    /// family adding next to nothing and a new one ten to forty, and handing
+    /// SceneKit decoded textures instead of files (run 247) did not move the
+    /// slope. So the importer keeps something for each FILE it has read. This
+    /// reads files with no reveal, no view and no cache of ours, one kind at
+    /// a time, each inside its own autorelease pool, and prints the footprint
+    /// after each; the slope of a phase names what is kept. idle: nothing,
+    /// the control. raw: eight families' full meshes by URL, each parsed and
+    /// dropped. clips: eight other families' clip files by URL, with the
+    /// loader's options, each parsed and dropped. repeat: the first raw
+    /// family's mesh eight times more.
+    private func parses() async {
+        let assets = Array(Set(UnitDatabase.summonPool.compactMap { UnitDatabase.blueprint($0)?.model.assetName })).sorted()
+        let meshes = Array(assets.prefix(8))
+        let clipFamilies = Array(assets.dropFirst(8).prefix(8))
+        MemoryProbe.log("stress parse start: \(meshes.count) meshes, \(clipFamilies.count) clip sets, \(assets.count) families in the pool")
+        for tick in 1...4 {
+            await pause(1.5)
+            MemoryProbe.log("stress parse idle \(tick)/4")
+        }
+        for (slot, asset) in meshes.enumerated() {
+            let read = parseOnce(asset, clip: false)
+            await pause(0.8)
+            MemoryProbe.log("stress parse raw \(slot + 1)/\(meshes.count) \(asset)\(read ? "" : " (not found)")")
+        }
+        for (slot, asset) in clipFamilies.enumerated() {
+            var files = 0
+            for clip in AnimationClip.allCases where parseOnce("\(asset)_\(clip.rawValue)", clip: true) {
+                files += 1
+            }
+            await pause(0.8)
+            MemoryProbe.log("stress parse clips \(slot + 1)/\(clipFamilies.count) \(asset) (\(files) files)")
+        }
+        if let first = meshes.first {
+            for time in 1...8 {
+                parseOnce(first, clip: false)
+                await pause(0.8)
+                MemoryProbe.log("stress parse repeat \(time)/8 \(first)")
+            }
+        }
+    }
+
+    /// One file parsed and dropped inside its own autorelease pool, so what
+    /// is left afterwards is what something kept, not what waits for a
+    /// drain. A clip file is read with the loader's options.
+    @discardableResult
+    private func parseOnce(_ name: String, clip: Bool) -> Bool {
+        guard let url = ModelLibrary.shared.tourURL(for: name) else { return false }
+        return autoreleasepool { () -> Bool in
+            let options: [SCNSceneSource.LoadingOption: Any]? = clip
+                ? [.animationImportPolicy: SCNSceneSource.AnimationImportPolicy.playRepeatedly]
+                : nil
+            return (try? ModelLibrary.parseScene(at: url, options: options)) != nil
+        }
     }
 
     // MARK: Battles

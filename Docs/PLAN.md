@@ -8250,6 +8250,36 @@ purging SceneKit by rebuilding the view's renderer (no API reaches its
 image cache). Run 247's summon stress must now plateau once the model cache
 is full, and its purged launch stay flat.
 
+**Run 247: not the maps (2026-09-24).** With the maps decoded into our
+cache (40 MB a file now, capped at twelve files) the summon stress still
+climbed after the cap, and the purged launch's slope did not move: 181 →
+513 MB over thirty singles (run 246: 172 → 518), then 935, 1,275 and
+1,483 MB after the ten-pulls. So SceneKit was never holding the metallic and
+roughness maps it loaded; the fix stays for what it saves (a quarter of those
+two maps' memory, and one texture path instead of two), and the hypothesis is
+withdrawn. What the curves share: a family seen before adds nothing even when
+nothing of ours still holds it, a new one ten to forty megabytes, and the
+number does not depend on what we hand SceneKit — the mark of the importer
+keeping something for each FILE it reads. **Run 248's experiment**
+(`-tour-stress parse`, replacing the purged launch): eight families' meshes
+read by URL and dropped, eight other families' clip files the same way (ten
+files a family), then one mesh read eight more times, each read in its own
+autorelease pool with no view and no cache of ours, the footprint after each.
+A climbing raw phase is the mesh import; a climbing clips phase is the clip
+files (each a whole USD package with a carrier mesh, read for one animation);
+a climbing repeat phase is a cost per READ rather than per file. The fix
+follows from which: clips climbing points at shipping each family's clips as
+one compact animation file the app reads itself (no importer at all); meshes
+climbing at reading each family once and keeping its node tree while only its
+pixels are evicted.
+
+**Where a fight's build time goes (run 247, task #138).** Every build now
+prints one line: cold, the arena's was stage 1.4–1.9 s and 0.5–0.9 s a unit
+(each parsed on the main thread), 3.5–4.9 s in all. In play the stage popup
+and the briefing warm the fight's models while they are read, so the unit
+half is paid off the main thread before Fight; the stage half is the next
+thing to move (the arena's geometry and its runtime textures).
+
 **The battle's first frame (2026-09-24).** Run 243 photographed a fight's
 first moment as white under the HUD: the main thread built the stage for
 about five seconds in CI and the first frames compiled for about four more,

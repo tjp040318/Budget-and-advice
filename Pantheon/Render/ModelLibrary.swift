@@ -592,6 +592,12 @@ final class ModelLibrary {
 
     // MARK: - Loading
 
+    #if DEBUG
+    /// The tour's parse experiment (`-tour-stress parse`, TourView): the
+    /// bundle's file for a model or clip name, found as the loader finds it.
+    func tourURL(for name: String) -> URL? { bundleURL(for: name) }
+    #endif
+
     private func bundleURL(for name: String) -> URL? {
         for ext in Self.searchExtensions {
             if let url = Bundle.main.url(forResource: name, withExtension: ext, subdirectory: Self.modelDirectory) {
