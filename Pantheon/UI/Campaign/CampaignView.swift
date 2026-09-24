@@ -142,8 +142,8 @@ struct CampaignView: View {
                         openingScroll: openingScroll,
                         cardUp: popupStage != nil || sweepReceipt != nil,
                         onSelect: { stage in
-                            Juice.haptic(.light)
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { popupStage = stage }
+                            // The medallion's press ticked on touch-down.
+                            withAnimation(Motion.panel) { popupStage = stage }
                         },
                         onChapter: { id in
                             withAnimation(.easeOut(duration: 0.25)) {
@@ -271,9 +271,9 @@ struct CampaignView: View {
     /// Clears a mastered stage without a battle and shows what it paid.
     private func sweep(_ stage: Stage, runs: Int) {
         guard let receipt = store.sweep(stage: stage, runs: runs), receipt.runs > 0 else { return }
+        // The choice's press ticked on touch-down; the confirm is the "done".
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { sweepReceipt = receipt }
+        withAnimation(Motion.panel) { sweepReceipt = receipt }
     }
 }
 
@@ -920,7 +920,7 @@ struct StageBriefingView: View {
                         } label: {
                             UnitPortraitTile(unit: unit, size: Self.teamTile, isLeader: index == 0 && leads)
                         }
-                        .buttonStyle(PlateButtonStyle())
+                        .buttonStyle(GamePressStyle(.plate))
                         .accessibilityLabel("Take \(unit.blueprint.name) out of the team")
                     }
                     // A "+" only where a unit can go: the cap less the
@@ -1051,6 +1051,10 @@ struct StageBriefingView: View {
                 ForEach(units) { unit in
                     let inTeam = chosen.contains(unit.id)
                     Button {
+                        // The strip scrolls, so its faces wear the quiet
+                        // press and answer a finished tap here (2026-09-24).
+                        Juice.haptic(.light)
+                        AudioLibrary.shared.play(.uiTap)
                         toggle(unit)
                     } label: {
                         UnitPortraitTile(unit: unit, size: Self.rosterTile)
@@ -1064,7 +1068,7 @@ struct StageBriefingView: View {
                                 }
                             }
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.quiet))
                     .accessibilityLabel(inTeam ? "Take \(unit.blueprint.name) out of the team"
                                                : "Put \(unit.blueprint.name) in the team")
                 }
@@ -1299,7 +1303,7 @@ struct StagePopup: View {
                         .overlay(Circle().strokeBorder(Theme.glassRim, lineWidth: 1))
                         .contentShape(Circle())
                 }
-                .buttonStyle(PlateButtonStyle())
+                .buttonStyle(GamePressStyle(.medallion))
                 .accessibilityLabel("Close")
             }
             .padding(.horizontal, 14)
@@ -1422,7 +1426,7 @@ struct StagePopup: View {
                     .frame(width: 30, height: 32)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GamePressStyle(.medallion))
             .accessibilityLabel("Close")
         }
         .padding(.leading, 12)
@@ -1436,7 +1440,6 @@ struct StagePopup: View {
         let label = isMost ? "Max ×\(runs)" : "×\(runs)"
         let spend = cost * runs
         return Button {
-            Juice.haptic(.light)
             withAnimation(.easeOut(duration: 0.15)) { choosingSweep = false }
             onSweep(runs)
         } label: {
@@ -1459,7 +1462,7 @@ struct StagePopup: View {
             .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
             .contentShape(Capsule())
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("Sweep \(runs) times for \(spend) energy")
     }
 

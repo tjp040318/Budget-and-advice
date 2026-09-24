@@ -69,8 +69,9 @@ struct NightMarketBoard: View {
 
     private func buy(_ stall: NightMarketService.Stall) {
         guard let grants = store.buyFromNightMarket(slot: stall.slot) else { return }
+        // The price button's press ticked on touch-down; the confirm is the
+        // "done".
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.light)
         onReceipt(grants)
     }
 
@@ -125,7 +126,6 @@ struct NightMarketReroll: View {
             style: .glass
         ) {
             store.rerollNightMarket()
-            Juice.haptic(.light)
         }
         .frame(width: 204)
     }

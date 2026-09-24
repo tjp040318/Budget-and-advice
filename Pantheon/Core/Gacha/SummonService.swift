@@ -290,6 +290,29 @@ struct SummonResult: Identifiable, Sendable {
     /// The Hall of Ka reuses the reveal for an awakening: the unit's awakened
     /// form comes in on the beam under its new name.
     var isAwakening: Bool = false
+    /// What this pull did as a DUPLICATE (2026-09-24): the skill that rose
+    /// on the copy already owned, or that none could (`SummonSkillUp`). Nil
+    /// for a new unit, and for a path that did not record it; the reveal
+    /// then names no skill-up it cannot vouch for.
+    var skillUp: SummonSkillUp? = nil
+    /// What this pull's Codex page pays when it is claimed, for a form NEW
+    /// to the book (`SummonService.codexPay`). Nil when there is no page to
+    /// claim.
+    var codexDivinity: Int? = nil
+}
+
+/// What a duplicate did to the copy already owned (2026-09-24, Docs/FEEL.md
+/// W1.5). The reveal said "one skill levelled up" of every duplicate, even
+/// when every skill was already at its cap, because the answer of
+/// `ProgressionService.applySkillUp` was thrown away where it was made
+/// (`_ =`). It is kept now, from that one call: which skill rose and to
+/// what, or that none could.
+enum SummonSkillUp: Equatable, Sendable {
+    /// The skill at `skill` in the blueprint's kit rose from `from` to `to`.
+    case levelled(skill: Int, from: Int, to: Int)
+    /// Every skill was already at its cap. Nothing rose; the copy is food
+    /// for the family's Regalia in the Hall of Ka.
+    case maxed
 }
 
 /// Runs the gacha.
@@ -327,9 +350,13 @@ enum SummonService {
         _ = player.wallet.consume(banner.scroll, count)
         var pity = player.summonPity[banner.id] ?? PityState()
         var results: [SummonResult] = []
+        // The families whose first-claim bonus a new page of THIS summon has
+        // already been promised (`codexPay`), so ten pages add up to what
+        // claiming them pays.
+        var promised: Set<String> = []
 
         for _ in 0..<count {
-            let result = single(banner: banner, pity: &pity, player: &player, rng: &rng)
+            let result = single(banner: banner, pity: &pity, player: &player, promised: &promised, rng: &rng)
             results.append(result)
         }
 
@@ -345,6 +372,7 @@ enum SummonService {
         banner: Banner,
         pity: inout PityState,
         player: inout Player,
+        promised: inout Set<String>,
         rng: inout SeededRandom
     ) -> SummonResult {
         pity.totalPulls += 1
@@ -379,14 +407,17 @@ enum SummonService {
 
         let blueprint = pick(stars: stars, banner: banner, pity: &pity, rng: &rng)
         let isNew = !player.codex.contains(blueprint.id)
+        let pagePay: Int? = isNew ? codexPay(for: blueprint.id, player: player, promised: &promised) : nil
         player.codex.insert(blueprint.id)
 
         var unit = Unit(blueprint: blueprint)
         unit.acquiredFrom = banner.id
 
-        // A duplicate becomes a skill-up rather than clutter.
+        // A duplicate becomes a skill-up rather than clutter, and the reveal
+        // is told what it did.
+        var skillUp: SummonSkillUp?
         if !isNew, let existingIndex = player.units.firstIndex(where: { $0.blueprintID == blueprint.id }) {
-            _ = ProgressionService.applySkillUp(to: &player.units[existingIndex], using: &rng)
+            skillUp = duplicateSkillUp(on: existingIndex, player: &player, rng: &rng)
         }
         player.units.append(unit)
 
@@ -398,8 +429,62 @@ enum SummonService {
             stars: unit.stars,
             isNew: isNew,
             isFeatured: banner.featured.contains(blueprint.id),
-            fromPity: fromPity
+            fromPity: fromPity,
+            skillUp: skillUp,
+            codexDivinity: pagePay
         )
+    }
+
+    /// A duplicate's skill-up on the copy already owned at `index`, and what
+    /// it did (2026-09-24). Every path that hands over a unit a player may
+    /// already hold — a scroll, the mileage, a shrine — makes this ONE call,
+    /// and the answer is read off it: the skill `applySkillUp` chose and the
+    /// levels either side of its step, never rolled again or guessed. `nil`
+    /// from `applySkillUp` for a blueprint the tables know means no skill
+    /// had room to rise.
+    static func duplicateSkillUp(on index: Int, player: inout Player, rng: inout SeededRandom) -> SummonSkillUp? {
+        guard player.units.indices.contains(index) else { return nil }
+        let before: [Int] = player.units[index].skillLevels
+        guard let skill = ProgressionService.applySkillUp(to: &player.units[index], using: &rng) else {
+            let known = UnitDatabase.blueprint(player.units[index].blueprintID) != nil
+            return known ? .maxed : nil
+        }
+        let after: [Int] = player.units[index].skillLevels
+        // `applySkillUp` pads a short list with 1s before it steps.
+        let from: Int = before.indices.contains(skill) ? before[skill] : 1
+        let to: Int = after.indices.contains(skill) ? after[skill] : from
+        return .levelled(skill: skill, from: from, to: to)
+    }
+
+    /// What claiming a NEW form's Codex page will pay, exactly as
+    /// `CodexService.claim` pays it (2026-09-24): the page's own divinity,
+    /// and the family's first on top only for the family's FIRST page — none
+    /// of it claimed, no OTHER page of it already in the book, and no
+    /// earlier pull of the same summon promised it (`promised`). The first
+    /// page claimed takes the family's first whichever it is, so what the
+    /// pages promise adds up to what claiming them pays across separate
+    /// summons too. It was the family's claim alone at first, and `promised`
+    /// lives for one call: a fire Anubis left unclaimed and a water Anubis
+    /// the next day both promised the first, which is paid once (review,
+    /// 2026-09-24). A page recorded before this pull and still unclaimed —
+    /// a unit owned from before the Codex — keeps the first, so a new page
+    /// never promises more than it pays. Nil for a form with no page, or a
+    /// page already claimed. Read before anything is claimed; a summon
+    /// claims nothing.
+    static func codexPay(for blueprintID: String, player: Player, promised: inout Set<String>) -> Int? {
+        let pageID = CodexService.claimID(for: blueprintID, kind: .base)
+        guard let page = CodexService.entry(id: pageID) else { return nil }
+        let claims: Set<String> = player.codexClaims ?? []
+        guard !claims.contains(pageID) else { return nil }
+        let own: Int = CodexService.entryDivinity(page)
+        let familyClaim = CodexService.familyClaimID(page.familyKey)
+        let book = CodexService.ledger(for: player)
+        let siblings: [CodexEntry] = CodexService.family(key: page.familyKey)?.entries ?? []
+        let familyRecorded: Bool = siblings.contains { $0.id != pageID && book.isRecorded($0) }
+        guard !claims.contains(familyClaim), !familyRecorded, !promised.contains(page.familyKey) else { return own }
+        promised.insert(page.familyKey)
+        let first: Int = CodexService.familyFirstBonus(stars: page.stars)
+        return own + first
     }
 
     private static func rollStars(scroll: ScrollType, rng: inout SeededRandom) -> Int {

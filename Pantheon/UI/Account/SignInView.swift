@@ -156,8 +156,6 @@ struct SignInView: View {
             )
             .frame(width: 280)
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
                 onGuest()
             } label: {
                 Text("Continue without an account")
@@ -165,7 +163,7 @@ struct SignInView: View {
                     .underline()
                     .foregroundStyle(cream)
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
             .padding(.top, 2)
             Text("A guest's progress lives on this phone only; bind it to your Apple ID later from More → Account.")
                 .font(Theme.body(10))
@@ -312,7 +310,7 @@ struct BindAppleSheet: View {
                     .font(Theme.body(12).weight(.semibold))
                     .foregroundStyle(Theme.textSecondary)
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

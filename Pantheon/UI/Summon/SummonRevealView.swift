@@ -27,8 +27,10 @@ struct SummonRevealView: View {
     /// the charge holds its opening pose — its rings still turning — while
     /// it waits.
     @State private var chargeStart: Date?
-    /// How long this charge runs: 1.25 s for a 4★ or better, 0.8 s under.
-    @State private var chargeDuration: TimeInterval = 1.25
+    /// How long this charge runs: 1.25 s for every grade, 1.4 s for a 5★
+    /// (`ChargeLadder.span`). It was 0.8 s under a 4★, which told a common
+    /// pull by its length alone.
+    @State private var chargeDuration: TimeInterval = ChargeLadder.baseSpan
     /// The sequence whose charge is waiting on its stage to be built.
     @State private var awaitingStage: Int?
     /// The stage in the view tree (`stageKey`). It goes in a beat AFTER the
@@ -125,7 +127,7 @@ struct SummonRevealView: View {
                     Spacer()
                     Button(showAll ? "Done" : "Skip") {
                         AudioLibrary.shared.play(.uiTap)
-                        if showAll { onFinish() } else { sequence += 1; showAll = true }
+                        if showAll { onFinish() } else { enterGrid() }
                     }
                     .font(Theme.title(13))
                     .tracking(1.2)
@@ -139,7 +141,21 @@ struct SummonRevealView: View {
             }
         }
         .preferredColorScheme(.light)
-        .onAppear { revealNext() }
+        .onAppear {
+            LightningArt.prepare()
+            revealNext()
+        }
+        // The stage goes when the reveal does (2026-09-24). A dismissed
+        // full-screen cover can keep its content on iOS 17, and with it the
+        // stage's scene, its figure and every texture it uploaded (run 242:
+        // about 30 MB a reveal, never given back). Unmounting it here hands
+        // it to `SummonStageView.dismantleUIView` whatever the cover does.
+        .onDisappear {
+            sequence += 1
+            awaitingStage = nil
+            mountedStage = nil
+            readyStage = nil
+        }
     }
 
     // MARK: - Backdrop
@@ -219,10 +235,24 @@ struct SummonRevealView: View {
                 // It peaks lower now and falls off inside the frame instead of
                 // at its edge, which also puts a gradient behind the figure
                 // rather than a wash, and the figure reads against it.
+                //
+                // Two glows since 2026-09-24. Through the charge it is the
+                // LADDER's light, read off the charge's clock (`chargeSky`):
+                // it was the grade's colour from the first frame, violet for
+                // a 4★ and gold for a 5★ before a single rung was climbed —
+                // the plainest tell on the screen. On the reveal it blooms in
+                // the grade's colour, which is honest by then.
+                if charging {
+                    TimelineView(.animation) { timeline in
+                        chargeSky(current, at: timeline.date)
+                    }
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                }
                 RadialGradient(
-                    colors: [tint.opacity(revealed ? 0.40 : (charging ? 0.20 : 0)),
-                             tint.opacity(revealed ? 0.19 : (charging ? 0.09 : 0)),
-                             tint.opacity(revealed ? 0.06 : (charging ? 0.03 : 0)),
+                    colors: [tint.opacity(revealed ? 0.40 : 0),
+                             tint.opacity(revealed ? 0.19 : 0),
+                             tint.opacity(revealed ? 0.06 : 0),
                              .clear],
                     center: .init(x: 0.27, y: 0.5),
                     startRadius: 0,
@@ -231,7 +261,6 @@ struct SummonRevealView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
                 .animation(.easeOut(duration: 0.5), value: revealed)
-                .animation(.easeInOut(duration: 0.9), value: charging)
 
                 // The corners go back to the plain ground. A landscape frame
                 // is wide enough that the glow and the rays reach all four of
@@ -290,8 +319,14 @@ struct SummonRevealView: View {
     /// in front of two rune rings turning opposite ways in the element's
     /// colour, a beam rising from the floor where the feet will land, motes
     /// climbing it, and a white flare in the last quarter that the flash
-    /// takes over. The grade sets the scale (`grandeur`): a 3★'s rings are
-    /// dim and slow and its beam thin, a 5★'s are bright, fast and wide.
+    /// takes over. The scale CLIMBS (2026-09-24, `ChargeLadder`): every
+    /// charge opens as a 3★'s did — a cool blue-white, a narrow beam, dim
+    /// slow rings — and a 4★ or better steps up to violet, a 5★ to gold
+    /// with lightning round the beam. It was set by the grade from the first
+    /// frame (`grandeur`), which told the pull before the charge began. The
+    /// element keeps the rings and the pool of light on the floor; the
+    /// ladder's light is the beam's, the motes', the flare's and the
+    /// scroll's glow.
     ///
     /// One blend mode, on the beam alone (`chargeBeamLayer`): its light is
     /// ADDED to the set, as a column of light is in every summon in the
@@ -331,6 +366,33 @@ struct SummonRevealView: View {
         return max(0, date.timeIntervalSince(chargeStart))
     }
 
+    /// How far the charge has gathered at `clock`: the clock itself, or,
+    /// under the CI's hold (`chargeHold`), no further than its fraction of
+    /// the span.
+    private func gatheredClock(_ clock: TimeInterval) -> TimeInterval {
+        let span: TimeInterval = max(0.1, chargeDuration)
+        guard let hold = Self.chargeHold else { return clock }
+        return min(clock, span * hold)
+    }
+
+    /// The sky's glow through the charge (`backdrop`): the ladder's light,
+    /// gathering in over 0.9 s from the pull's first frame and a quarter
+    /// brighter and a little wider for each rung climbed — at gold 0.30,
+    /// under the reveal's own 0.40.
+    private func chargeSky(_ result: SummonResult, at date: Date) -> some View {
+        let gathered: TimeInterval = gatheredClock(chargeClock(at: date))
+        let rgb: ChargeRGB = ChargeLadder.light(stars: result.stars, element: result.blueprint.element, at: gathered)
+        let light: Color = rgb.color
+        let level: CGFloat = ChargeLadder.rung(stars: result.stars, at: gathered)
+        let since: TimeInterval = max(0, date.timeIntervalSince(ambientStart))
+        let gatherIn: Double = min(1, since / 0.9)
+        let lift: Double = 1 + 0.25 * Double(level)
+        let peak: Double = 0.20 * gatherIn * lift
+        let colours: [Color] = [light.opacity(peak), light.opacity(peak * 0.45), light.opacity(peak * 0.15), .clear]
+        let radius: CGFloat = 130 + 25 * level
+        return RadialGradient(colors: colours, center: .init(x: 0.27, y: 0.5), startRadius: 0, endRadius: radius)
+    }
+
     private func chargeScene(_ result: SummonResult, clock: TimeInterval, ambient: TimeInterval,
                              size: CGSize) -> some View {
         let look = chargeLook(result, clock: clock, ambient: ambient, size: size)
@@ -342,6 +404,8 @@ struct SummonRevealView: View {
         return ZStack {
             chargePool(look)
             chargeRings(look)
+            // A Dark 5★'s violet-black, over the rings and under the light.
+            chargeVeil(look)
             // The scroll's glow UNDER the beam and the scroll itself over it
             // (run 234): drawn as the scroll's own shadow, the glow lay over
             // the column and turned it red below the roll, so the pillar
@@ -352,6 +416,7 @@ struct SummonRevealView: View {
             // (the genre's scroll burns in its column; run 221 drew the
             // column under the rings and lost it).
             chargeBeamLayer(look)
+            chargeLightning(look)
             chargeMotes(look)
             chargeFlare(look)
             chargeScrollLayer(result, look: look)
@@ -362,7 +427,15 @@ struct SummonRevealView: View {
     /// Every number the charge draws with, as typed values, so no layer's
     /// view expression holds arithmetic.
     private struct ChargeLook {
+        /// The element's colour: the rings' glyphs and the pool of light.
         let colour: Color
+        /// The ladder's light (`ChargeLadder.light`): the beam's flanks, the
+        /// motes, the flare, the scroll's glow and the sky behind.
+        let light: Color
+        /// The white at the heart of the beam, the flare and the motes;
+        /// pale violet once a Dark 5★ has split.
+        let core: Color
+        /// Where the ladder stands, 0 on the ground to 1 at gold.
         let grand: CGFloat
         let ambient: TimeInterval
         let x: CGFloat
@@ -385,6 +458,11 @@ struct SummonRevealView: View {
         let beamOpacity: Double
         let moteSpread: CGFloat
         let motes: Int
+        /// How many motes are lit: 4 on the ground, 8 at violet, 12 at gold,
+        /// each fading in as the ladder passes it (`chargeMote`).
+        let moteLevel: CGFloat
+        /// How far the motes have risen, in beam-heights (`ChargeLadder.travel`).
+        let moteTravel: Double
         let side: CGFloat
         let flareSide: CGFloat
         let flareRadius: CGFloat
@@ -394,22 +472,63 @@ struct SummonRevealView: View {
         let scrollScale: CGFloat
         let scrollGlow: CGFloat
         let scrollY: CGFloat
+        /// A Dark 5★'s violet-black veil, 0 for every other pull.
+        let shade: Double
+        let veilSide: CGFloat
+        /// The lightning round a 5★'s beam: its strength (0 below gold), its
+        /// colour, its size and place, and the frame each bolt is on.
+        let lightning: Double
+        let boltTint: Color
+        let boltSide: CGFloat
+        let boltY: CGFloat
+        let boltLeftX: CGFloat
+        let boltRightX: CGFloat
+        let boltLeft: Int
+        let boltRight: Int
     }
 
     private func chargeLook(_ result: SummonResult, clock: TimeInterval, ambient: TimeInterval,
                             size: CGSize) -> ChargeLook {
-        let grand: CGFloat = Self.grandeur(stars: result.stars)
-        let colour: Color = result.blueprint.element.color
+        let stars: Int = result.stars
+        let element: Element = result.blueprint.element
+        let colour: Color = element.color
         let span: TimeInterval = max(0.1, chargeDuration)
-        // Held (the CI's charge frame) at seven tenths of the way: the
-        // rings and the motes keep turning, the gathering stops short of the
-        // flare.
-        let gathered: TimeInterval = Self.holdsCharge ? min(clock, span * 0.7) : clock
-        let progress: CGFloat = CGFloat(min(1, gathered / span))
+        // Held (the CI's charge frames, `chargeHold`) at a fraction of the
+        // way: the rings and the motes keep turning at the rung reached, the
+        // gathering stops there.
+        let gathered: TimeInterval = gatheredClock(clock)
+        // The gather runs on the BASE span for every grade (review,
+        // 2026-09-24): over the pull's own span a 5★'s beam rose visibly
+        // slower from the first frame — 12 points shorter at 0.35 s, before
+        // any rung — which read the grade the ladder keeps hidden until the
+        // gold. A 5★ holds at full gather for its extra 0.15 s, and its
+        // flare runs over the LAST 0.35 s of its own span, which a 3★ and a
+        // 4★ start at 0.90 s, as before, and a 5★ at 1.05 s, past the gold.
+        let progress: CGFloat = CGFloat(min(1, gathered / ChargeLadder.baseSpan))
         let rest: CGFloat = 1 - progress
         let gather: CGFloat = 1 - rest * rest * rest
-        let flareRamp: CGFloat = (progress - 0.72) / 0.28
-        let flare: CGFloat = max(0, flareRamp)
+        let flareStart: TimeInterval = span - 0.35
+        let flareRamp: CGFloat = CGFloat((gathered - flareStart) / 0.35)
+        let flare: CGFloat = max(0, min(1, flareRamp))
+
+        // THE LADDER (2026-09-24). `level` is 0 on the ground every charge
+        // opens on, 1 at violet, 2 at gold; `grand` is the same on the 0…1
+        // scale the old `grandeur` used, so a charge that has climbed to its
+        // grade's rung ends exactly as that grade's charge always looked.
+        let level: CGFloat = ChargeLadder.rung(stars: stars, at: gathered)
+        let grand: CGFloat = level / 2
+        let goldReached: CGFloat = stars >= 5 ? ChargeLadder.climbed(ChargeLadder.goldAt, at: gathered) : 0
+        let parted: CGFloat = ChargeLadder.split(stars: stars, element: element, at: gathered)
+        // What a pace that climbs with the ladder has covered: the charge's
+        // own climb to where it is held, then the held rung's pace. The
+        // rings' turn and the motes' rise are read off it, so a step
+        // quickens them without a jump in where they stand.
+        let heldFor: TimeInterval = max(0, clock - gathered)
+        let ladderTravel: CGFloat = ChargeLadder.travel(stars: stars, to: gathered) + level * CGFloat(heldFor)
+        let lightRGB: ChargeRGB = ChargeLadder.light(stars: stars, element: element, at: gathered)
+        let light: Color = lightRGB.color
+        let darkParting: CGFloat = element == .umbra ? parted : 0
+        let core: Color = ChargeRGB.white.mixed(with: ChargeLadder.umbraCore, by: darkParting).color
 
         // The figure's line and height, as the stage's camera is solved
         // (`SummonStageView.frameCamera`): its centre line 26% in from the
@@ -422,10 +541,10 @@ struct SummonRevealView: View {
 
         // A 5★'s pillar is 0.28 of the frame's height across (run 221: at
         // 0.20, and drawn under the rings, it showed as a faint streak below
-        // them); a 3★'s stays a thin shaft. Through the gather a 5★'s
-        // stands at 0.85, a 4★'s at 0.65 and a 3★'s at 0.45, and the flare
-        // lifts each by 15% more: run 234's 5★ gathered at 0.68, and its
-        // white never reached 230.
+        // them); the ground's is a thin shaft, a violet one 0.19. Through the
+        // gather the gold stands at 0.85, the violet at 0.65 and the ground
+        // at 0.45, and the flare lifts each by 15% more: run 234's 5★
+        // gathered at 0.68, and its white never reached 230.
         let beamShare: CGFloat = 0.10 + 0.18 * grand
         let beamWidth: CGFloat = height * beamShare
         let beamRise: CGFloat = 0.30 + 0.70 * gather
@@ -435,11 +554,17 @@ struct SummonRevealView: View {
         let beamFlare: CGFloat = 1 + 0.15 * flare
         let beamLight: CGFloat = min(1, beamBase * beamFlare)
         let beamOpacity: Double = Double(beamLight)
-        // The motes keep the sway they had with the narrower beam.
+        // The motes keep the sway they had with the narrower beam. All
+        // twelve are laid out from the first frame and lit as the ladder
+        // reaches them, so none pops in at a step; they rise at 0.55 of the
+        // beam a second on the ground and 0.85 at gold.
         let spreadShare: CGFloat = 0.10 + 0.10 * grand
         let moteSpread: CGFloat = height * spreadShare
-        let moteCount: CGFloat = (8 * grand).rounded()
-        let motes: Int = 4 + Int(moteCount)
+        let motes: Int = 12
+        let moteLevel: CGFloat = 4 + 8 * grand
+        let moteGround: Double = 0.55 * ambient
+        let moteClimb: Double = 0.15 * Double(ladderTravel)
+        let moteTravel: Double = moteGround + moteClimb
 
         // A pool of the element's light on the floor under the feet.
         let poolSide: CGFloat = height * 0.40
@@ -453,8 +578,12 @@ struct SummonRevealView: View {
         let ringSize: CGFloat = height * ringShare
         let innerRingSize: CGFloat = ringSize * 0.62
         let ringScale: CGFloat = 1.10 - 0.12 * gather
-        let turnRate: Double = Double(24 + 36 * grand)
-        let outerTurn: Double = ambient * turnRate
+        // 24° a second on the ground, 42 at violet, 60 at gold: the rest pace
+        // over the whole wait, and 18° a second more for every rung, over
+        // the time since it was climbed (`ladderTravel`).
+        let groundTurn: Double = 24 * ambient
+        let climbTurn: Double = 18 * Double(ladderTravel)
+        let outerTurn: Double = groundTurn + climbTurn
         let innerTurn: Double = -outerTurn * 1.6
         let outerLight: CGFloat = 0.50 + 0.40 * grand
         let innerLight: CGFloat = 0.36 + 0.40 * grand
@@ -477,18 +606,59 @@ struct SummonRevealView: View {
         let scrollGlow: CGFloat = side * glowShare
         let scrollY: CGFloat = heart + bob
 
+        // A Dark 5★'s split: a veil of violet-black a frame's height across,
+        // at half strength once it has parted.
+        let shade: Double = 0.5 * Double(darkParting)
+        let veilSide: CGFloat = height * 1.1
+
+        // THE LIGHTNING (2026-09-24): a 5★'s tell, from the gold rung on.
+        // `vfx_lightning_sheet`'s sixteen frames, two bolts either side of
+        // the beam half a cycle apart, so one strikes while the other fades.
+        // A cell's bolt comes down from its top to a splash 85% of the way
+        // down it, so a cell standing 0.35 of its side above the feet puts
+        // the splash on the dais beside the beam's foot. Its size, strength
+        // and white are MEASURED: composited as `.plusLighter` adds over run
+        // 242's held 5★ charge (whose beam already clips 7% of the left of
+        // the frame by design), 0.72 of the frame high at 0.8 took the
+        // worst strike to 19% of the left and 13% of the near floor over 240
+        // (framelight's measure); 0.62 at 0.55 with a quarter of white takes
+        // it to about 12% and 7.5%, and the bolt still reads as lightning.
+        // The temple is lit less since the same day (figure-first light), so
+        // the CI frame should clip less than the mock. 24 frames a second;
+        // half the rate and about half the strength under Reduce Motion
+        // (`MotionComfort`), since a flicker is what that setting asks to be
+        // spared.
+        let calm: Bool = MotionComfort.isReduced
+        let boltSide: CGFloat = height * 0.62
+        let boltY: CGFloat = feet - boltSide * 0.35
+        let boltReach: CGFloat = beamWidth * 0.5 + boltSide * 0.12
+        let boltRate: Double = calm ? 12 : 24
+        let boltTick: Int = Int(ambient * boltRate)
+        let cycle: Int = LightningArt.frameCount
+        let boltLeft: Int = boltTick % cycle
+        let boltRight: Int = (boltTick + cycle / 2) % cycle
+        let boltStrength: CGFloat = calm ? 0.3 : 0.55
+        let lightning: Double = Double(goldReached * boltStrength)
+        let boltTint: Color = lightRGB.mixed(with: ChargeRGB.white, by: 0.25).color
+        let boltLeftX: CGFloat = x - boltReach
+        let boltRightX: CGFloat = x + boltReach
+
         return ChargeLook(
-            colour: colour, grand: grand, ambient: ambient,
+            colour: colour, light: light, core: core, grand: grand, ambient: ambient,
             x: x, feet: feet, heart: heart,
             poolSide: poolSide, poolRadius: poolRadius, poolStretch: poolStretch, poolOpacity: poolOpacity,
             ringSize: ringSize, innerRingSize: innerRingSize, ringScale: ringScale,
             outerTurn: outerTurn, innerTurn: innerTurn,
             outerRingOpacity: Double(outerLight), innerRingOpacity: Double(innerLight),
             beamWidth: beamWidth, beamHeight: beamHeight, beamCentre: beamCentre, beamOpacity: beamOpacity,
-            moteSpread: moteSpread, motes: motes,
+            moteSpread: moteSpread, motes: motes, moteLevel: moteLevel, moteTravel: moteTravel,
             side: side, flareSide: flareSide, flareRadius: flareRadius,
             flareScale: flareScale, flareOpacity: flareOpacity,
-            scrollTilt: scrollTilt, scrollScale: scrollScale, scrollGlow: scrollGlow, scrollY: scrollY
+            scrollTilt: scrollTilt, scrollScale: scrollScale, scrollGlow: scrollGlow, scrollY: scrollY,
+            shade: shade, veilSide: veilSide,
+            lightning: lightning, boltTint: boltTint, boltSide: boltSide, boltY: boltY,
+            boltLeftX: boltLeftX, boltRightX: boltRightX,
+            boltLeft: boltLeft, boltRight: boltRight
         )
     }
 
@@ -523,25 +693,73 @@ struct SummonRevealView: View {
     /// The beam, ADDED to whatever is under it: the set, the rings and the
     /// scroll's glow (see `chargeLayer` for why this one layer blends).
     private func chargeBeamLayer(_ look: ChargeLook) -> some View {
-        chargeBeam(colour: look.colour)
+        chargeBeam(light: look.light, core: look.core)
             .frame(width: look.beamWidth, height: look.beamHeight)
             .opacity(look.beamOpacity)
             .blendMode(.plusLighter)
             .position(x: look.x, y: look.beamCentre)
     }
 
-    /// Motes climbing the beam.
+    /// The violet-black a Dark 5★ splits into (2026-09-24): a veil over the
+    /// rings and the set round the beam, drawn PLAINLY — an added layer can
+    /// only brighten, and this is the light going out. Transparent for
+    /// every other pull.
+    private func chargeVeil(_ look: ChargeLook) -> some View {
+        let ink: Color = Self.veilInk
+        let colours: [Color] = [ink.opacity(0.95), ink.opacity(0.55), ink.opacity(0)]
+        let dark = RadialGradient(colors: colours, center: .center, startRadius: 0, endRadius: look.veilSide / 2)
+        return Circle()
+            .fill(dark)
+            .frame(width: look.veilSide, height: look.veilSide)
+            .opacity(look.shade)
+            .position(x: look.x, y: look.heart)
+    }
+
+    /// The lightning round a 5★'s beam (2026-09-24), the genre's nat-5 tell:
+    /// two bolts of `vfx_lightning_sheet`, the right one mirrored, ADDED to
+    /// the set like the beam. Nothing is drawn below the gold rung.
+    private func chargeLightning(_ look: ChargeLook) -> some View {
+        ZStack {
+            chargeBolt(frame: look.boltLeft, mirrored: false, look: look)
+                .position(x: look.boltLeftX, y: look.boltY)
+            chargeBolt(frame: look.boltRight, mirrored: true, look: look)
+                .position(x: look.boltRightX, y: look.boltY)
+        }
+    }
+
+    /// One bolt: the painted frame taken to grey and multiplied by the
+    /// ladder's light lifted toward white, so the sheet's blue bolt strikes
+    /// gold (white-gold or violet once a Light or Dark 5★ has split). The
+    /// frame is read only once `LightningArt` has cut it; until then there
+    /// is no bolt rather than a wait.
+    @ViewBuilder
+    private func chargeBolt(frame: Int, mirrored: Bool, look: ChargeLook) -> some View {
+        if look.lightning > 0, let cell = LightningArt.frame(frame) {
+            Image(uiImage: cell)
+                .resizable()
+                .interpolation(.medium)
+                .saturation(0)
+                .colorMultiply(look.boltTint)
+                .frame(width: look.boltSide, height: look.boltSide)
+                .scaleEffect(x: mirrored ? -1 : 1, y: 1)
+                .opacity(look.lightning)
+                .blendMode(.plusLighter)
+        }
+    }
+
+    /// Motes climbing the beam: all twelve laid out, each lit as the ladder
+    /// reaches it (`moteLevel`).
     private func chargeMotes(_ look: ChargeLook) -> some View {
         ForEach(0..<look.motes, id: \.self) { mote in
-            chargeMote(mote, clock: look.ambient, grand: look.grand, colour: look.colour)
-                .position(Self.motePoint(mote, clock: look.ambient, grand: look.grand,
+            chargeMote(mote, look: look)
+                .position(Self.motePoint(mote, travel: look.moteTravel, clock: look.ambient,
                                          x: look.x, feet: look.feet, spread: look.moteSpread))
         }
     }
 
     /// The flare the flash takes over.
     private func chargeFlare(_ look: ChargeLook) -> some View {
-        let colours: [Color] = [Color.white.opacity(0.9), look.colour.opacity(0.4), look.colour.opacity(0)]
+        let colours: [Color] = [look.core.opacity(0.9), look.light.opacity(0.4), look.light.opacity(0)]
         let light = RadialGradient(colors: colours, center: .center, startRadius: 0, endRadius: look.flareRadius)
         return Circle()
             .fill(light)
@@ -551,13 +769,14 @@ struct SummonRevealView: View {
             .position(x: look.x, y: look.heart)
     }
 
-    /// The scroll's glow: its silhouette in the element's colour at 0.85,
-    /// blurred as far as its shadow was (`scrollGlow`), in the scroll's own
-    /// place and turn. It was the scroll's `.shadow` until run 234, and a
-    /// shadow is drawn with its view, so the glow could not go under the
-    /// beam while the scroll stayed over it (`chargeScene`).
+    /// The scroll's glow: its silhouette in the ladder's light at 0.85 (the
+    /// element's colour until 2026-09-24), blurred as far as its shadow was
+    /// (`scrollGlow`), in the scroll's own place and turn. It was the
+    /// scroll's `.shadow` until run 234, and a shadow is drawn with its
+    /// view, so the glow could not go under the beam while the scroll stayed
+    /// over it (`chargeScene`).
     private func chargeScrollGlow(_ result: SummonResult, look: ChargeLook) -> some View {
-        look.colour.opacity(0.85)
+        look.light.opacity(0.85)
             .frame(width: look.side, height: look.side)
             .mask { chargeScroll(result, side: look.side, colour: look.colour) }
             .rotationEffect(.degrees(look.scrollTilt))
@@ -575,17 +794,15 @@ struct SummonRevealView: View {
             .position(x: look.x, y: look.scrollY)
     }
 
-    /// 0 for a 3★ or under, 0.5 for a 4★, 1 for a 5★ or better.
-    private static func grandeur(stars: Int) -> CGFloat {
-        CGFloat(min(2, max(0, stars - 3))) / 2
-    }
+    /// The violet-black a Dark 5★'s charge parts into (`chargeVeil`).
+    private static let veilInk = Color(hex: "#0C0614")
 
-    /// A column of light: white held flat across the middle fifth of its
-    /// width, the element's colour either side, clear at the edges; full
-    /// from the floor up behind the scroll, fading out over its top third.
-    /// Added to the set (`chargeBeamLayer`), so the core burns to white on
-    /// whatever stands behind it and the colour lights the set rather than
-    /// painting over it.
+    /// A column of light: `core` (white) held flat across the middle fifth
+    /// of its width, the ladder's light either side (the element's colour
+    /// until 2026-09-24), clear at the edges; full from the floor up behind
+    /// the scroll, fading out over its top third. Added to the set
+    /// (`chargeBeamLayer`), so the core burns to white on whatever stands
+    /// behind it and the colour lights the set rather than painting over it.
     ///
     /// Run 234's beam peaked at ONE stop, white at 0.95 between flanks of
     /// the colour at 0.55, so only its centre line was white at all, and
@@ -594,14 +811,14 @@ struct SummonRevealView: View {
     /// frame with the old beam taken out and this one added) reads 252–255
     /// on the axis from the floor to the inner ring, over 230 across 40–55
     /// points; drawn plainly instead, 223–236 across 10–25.
-    private func chargeBeam(colour: Color) -> some View {
+    private func chargeBeam(light: Color, core: Color) -> some View {
         let across: [Gradient.Stop] = [
-            .init(color: colour.opacity(0), location: 0),
-            .init(color: colour.opacity(0.35), location: 0.20),
-            .init(color: Color.white.opacity(0.95), location: 0.40),
-            .init(color: Color.white.opacity(0.95), location: 0.60),
-            .init(color: colour.opacity(0.35), location: 0.80),
-            .init(color: colour.opacity(0), location: 1),
+            .init(color: light.opacity(0), location: 0),
+            .init(color: light.opacity(0.35), location: 0.20),
+            .init(color: core.opacity(0.95), location: 0.40),
+            .init(color: core.opacity(0.95), location: 0.60),
+            .init(color: light.opacity(0.35), location: 0.80),
+            .init(color: light.opacity(0), location: 1),
         ]
         // Top to foot. The last twentieth eases to half into the pool of
         // light under the feet: added white stopping dead on the floor line
@@ -684,47 +901,59 @@ struct SummonRevealView: View {
         }
     }
 
-    /// How far up the beam a mote is, 0 at the floor to 1 at the top.
-    private static func moteRise(_ mote: Int, clock: TimeInterval, grand: CGFloat) -> CGFloat {
-        let speed: Double = 0.55 + 0.30 * Double(grand)
+    /// How far up the beam a mote is, 0 at the floor to 1 at the top:
+    /// `travel` beam-heights risen (`ChargeLook.moteTravel`), each mote a
+    /// golden-ratio step behind the one before. Read off the distance risen
+    /// rather than a clock times a speed, so a rung that quickens the motes
+    /// does not jump them (2026-09-24).
+    private static func moteRise(_ mote: Int, travel: Double) -> CGFloat {
         let phase: Double = Double(mote) * 0.618
-        return CGFloat((clock * speed + phase).truncatingRemainder(dividingBy: 1))
+        return CGFloat((travel + phase).truncatingRemainder(dividingBy: 1))
     }
 
-    private static func motePoint(_ mote: Int, clock: TimeInterval, grand: CGFloat,
+    private static func motePoint(_ mote: Int, travel: Double, clock: TimeInterval,
                                   x: CGFloat, feet: CGFloat, spread: CGFloat) -> CGPoint {
-        let rise: CGFloat = moteRise(mote, clock: clock, grand: grand)
+        let rise: CGFloat = moteRise(mote, travel: travel)
         let sway: CGFloat = CGFloat(sin(Double(mote) * 2.3 + clock * 1.9))
         return CGPoint(x: x + sway * spread * 0.8, y: feet - rise * feet * 0.85)
     }
 
     /// A mote of light: one soft falloff, white at its heart through the
-    /// element's colour to nothing (run 221: a hard white dot on a flat
-    /// disc of colour read as a bullet, not as light).
-    private func chargeMote(_ mote: Int, clock: TimeInterval, grand: CGFloat, colour: Color) -> some View {
-        let rise: CGFloat = Self.moteRise(mote, clock: clock, grand: grand)
-        let dot: CGFloat = 3 + 2 * grand + CGFloat(mote % 3)
-        let fade: CGFloat = min(1, rise * 5) * (1 - rise)
+    /// ladder's light to nothing (run 221: a hard white dot on a flat disc
+    /// of colour read as a bullet, not as light), lit once the ladder has
+    /// reached it.
+    private func chargeMote(_ mote: Int, look: ChargeLook) -> some View {
+        let rise: CGFloat = Self.moteRise(mote, travel: look.moteTravel)
+        let dot: CGFloat = 3 + 2 * look.grand + CGFloat(mote % 3)
+        let lit: CGFloat = min(1, max(0, look.moteLevel - CGFloat(mote)))
+        let fade: CGFloat = min(1, rise * 5) * (1 - rise) * lit
         return Circle()
             .fill(RadialGradient(
-                colors: [Color.white, colour.opacity(0.7), colour.opacity(0)],
+                colors: [look.core, look.light.opacity(0.7), look.light.opacity(0)],
                 center: .center, startRadius: 0, endRadius: dot * 1.3
             ))
             .frame(width: dot * 2.6, height: dot * 2.6)
             .opacity(Double(fade))
     }
 
-    /// `-tour-reveal-hold charge` (DEBUG only): the charge plays and never
-    /// lands, so the CI can photograph the beat whatever second it shoots.
-    private static var holdsCharge: Bool {
+    /// `-tour-reveal-hold charge[:F]` (DEBUG only): the charge plays and
+    /// never lands, its gathering held at F of its span, so the CI can
+    /// photograph a rung whatever second it shoots. `charge` alone holds at
+    /// 0.7, as the flag always did; since 2026-09-24 `charge:0.8` holds a
+    /// 5★'s charge (1.4 s) at 1.12 s, on the gold rung with its lightning,
+    /// and `charge:0.5` at 0.7 s, on the violet one. Nil without the flag.
+    private static let chargeHold: Double? = {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
-        guard let at = args.firstIndex(of: "-tour-reveal-hold"), at + 1 < args.count else { return false }
-        return args[at + 1] == "charge"
+        guard let at = args.firstIndex(of: "-tour-reveal-hold"), at + 1 < args.count else { return nil }
+        let value: String = args[at + 1]
+        guard value == "charge" || value.hasPrefix("charge:") else { return nil }
+        let asked: Double? = Double(String(value.dropFirst("charge:".count)))
+        return min(1, max(0, asked ?? 0.7))
         #else
-        return false
+        return nil
         #endif
-    }
+    }()
 
     // MARK: - One at a time
 
@@ -800,12 +1029,11 @@ struct SummonRevealView: View {
                             .tracking(3.0)
                             .foregroundStyle(Self.nameGold)
                             .shadow(color: .black.opacity(0.9), radius: 1, y: 1)
+                        if let pay = result.codexDivinity, pay > 0 {
+                            codexLine(pay)
+                        }
                     } else {
-                        // Cream on the dusk: the interface's ink-brown
-                        // secondary sat on the dark sky at about 2:1.
-                        Text("Duplicate — one skill levelled up")
-                            .font(Theme.body(12))
-                            .foregroundStyle(Self.duskInk)
+                        duplicateLine(result)
                     }
 
                     if result.fromPity {
@@ -837,6 +1065,112 @@ struct SummonRevealView: View {
         .onTapGesture { advance() }
     }
 
+    // MARK: - What the pull did
+
+    /// What a duplicate did, as the summon did it (2026-09-24,
+    /// `SummonSkillUp`). Every duplicate said "one skill levelled up", even
+    /// when every skill was at its cap. Now: the skill that rose, as its own
+    /// icon, and its levels; or that the kit is capped and the copy is the
+    /// Regalia's; or, for a result that did not record it, only that the
+    /// form is already in the book.
+    @ViewBuilder
+    private func duplicateLine(_ result: SummonResult) -> some View {
+        if let skillUp = result.skillUp {
+            switch skillUp {
+            case .levelled(let skill, let from, let to):
+                skillUpLine(result, skill: skill, from: from, to: to)
+            case .maxed:
+                maxedLine(result)
+            }
+        } else {
+            // Cream on the dusk: the interface's ink-brown secondary sat on
+            // the dark sky at about 2:1.
+            Text("Already in the Codex")
+                .font(Theme.body(12))
+                .foregroundStyle(Self.duskInk)
+        }
+    }
+
+    /// The skill that rose: its icon as the unit sheet draws it (the kit's
+    /// own resolution, `SkillArt.keys`), its name and "Lv 3 → 4", on glass.
+    private func skillUpLine(_ result: SummonResult, skill index: Int, from: Int, to: Int) -> some View {
+        let blueprint: UnitBlueprint = result.blueprint
+        let ranged: Bool = !blueprint.model.melee
+        let keys: [String] = SkillArt.keys(for: blueprint.skills, element: blueprint.element, ranged: ranged)
+        let key: String? = keys.indices.contains(index) ? keys[index] : nil
+        let skill: Skill? = blueprint.skills.indices.contains(index) ? blueprint.skills[index] : nil
+        let name: String = skill?.name ?? "A skill"
+        return HStack(spacing: 10) {
+            if let skill {
+                SkillIcon(skill: skill, element: blueprint.element, ranged: ranged, resolvedKey: key,
+                          size: 38, socket: true)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text("SKILL UP")
+                    .font(Theme.title(11))
+                    .tracking(1.6)
+                    .foregroundStyle(Theme.onGlassEyebrow)
+                Text(name)
+                    .font(Theme.body(12).weight(.semibold))
+                    .foregroundStyle(Theme.onGlass)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Lv \(from) → \(to)")
+                    .font(Theme.numeric(12))
+                    .foregroundStyle(Theme.onGlassGold)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(GlassPlate(radius: 14))
+    }
+
+    /// Every skill at its cap: nothing rose, and the copy is food for the
+    /// family's Regalia in the Hall of Ka, named when the family has one.
+    private func maxedLine(_ result: SummonResult) -> some View {
+        let regalia: String? = RegaliaService.regalia(forBlueprint: result.blueprint.id)?.name
+        return HStack(spacing: 10) {
+            Image(systemName: "crown.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Theme.onGlassGold)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Skills maxed — feed to the Regalia")
+                    .font(Theme.body(12).weight(.semibold))
+                    .foregroundStyle(Theme.onGlass)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let regalia {
+                    Text(regalia)
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.onGlassDim)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(GlassPlate(radius: 14))
+    }
+
+    /// A new form's Codex page and what claiming it pays (2026-09-24,
+    /// `SummonService.codexPay`): the book's own glyph and the divinity as
+    /// the Codex prints it. Paid on the claim in the Codex, never here.
+    private func codexLine(_ pay: Int) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "book.closed.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.onGlassGold)
+            Text("Codex page")
+                .font(Theme.body(12).weight(.semibold))
+                .foregroundStyle(Theme.onGlass)
+            ItemIcon(key: "divinity", size: 20, glow: false)
+            Text("+\(pay) to claim")
+                .font(Theme.numeric(12))
+                .foregroundStyle(Theme.onGlassGold)
+        }
+        .fixedSize()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(GlassPlate(radius: 14))
+    }
+
     // MARK: - Sequencing
 
     private func advance() {
@@ -852,11 +1186,24 @@ struct SummonRevealView: View {
             index += 1
             revealNext()
         } else if results.count > 1 {
-            sequence += 1
-            showAll = true
+            enterGrid()
         } else {
             onFinish()
         }
+    }
+
+    /// The grid of every pull, from Skip or the last pull of a ten-pull.
+    /// Skip mid-charge left `charging` true (review, 2026-09-24), and the
+    /// charge sky's `TimelineView` behind the grid redrew every frame for
+    /// as long as it stood — at 120 Hz on ProMotion — still climbing the
+    /// skipped pull's ladder to violet or gold at the grid's left. The
+    /// charge, its wait for a stage and any flash end here.
+    private func enterGrid() {
+        sequence += 1
+        charging = false
+        awaitingStage = nil
+        flashAt = nil
+        showAll = true
     }
 
     private func completeInstantly(_ result: SummonResult) {
@@ -907,7 +1254,7 @@ struct SummonRevealView: View {
         flashAt = nil
         ambientStart = Date()
         chargeStart = nil
-        chargeDuration = Self.chargeTime(stars: result.stars)
+        chargeDuration = ChargeLadder.span(stars: result.stars)
 
         // The next pull's figure parses on a background queue while this one
         // is on the beam, so its stage clones from the cache.
@@ -961,10 +1308,14 @@ struct SummonRevealView: View {
         awaitingStage = nil
         chargeStart = Date()
         let big = result.stars >= 4
-        let chargeTime = Self.chargeTime(stars: result.stars)
+        let chargeTime = ChargeLadder.span(stars: result.stars)
 
-        AudioLibrary.shared.play(.summonCharge, volume: big ? 1.0 : 0.7)
-        if Self.holdsCharge { return }
+        // One volume for every grade (2026-09-24): a louder start for a 4★
+        // was a tell before the first rung.
+        AudioLibrary.shared.play(.summonCharge, volume: 0.85)
+        let held: TimeInterval? = Self.chargeHold.map { chargeTime * $0 }
+        scheduleRungs(result, mine: mine, until: held)
+        if held != nil { return }
 
         after(chargeTime) {
             guard mine == sequence else { return }
@@ -1019,10 +1370,31 @@ struct SummonRevealView: View {
         }
     }
 
-    /// The charge is longer for a high grade, on purpose. Anticipation is
-    /// the reward; a 5★ should make the player wait a beat.
-    private static func chargeTime(stars: Int) -> TimeInterval {
-        stars >= 4 ? 1.25 : 0.8
+    /// The rungs' sting and touch (2026-09-24), each once, at the second the
+    /// charge's picture climbs it (`ChargeLadder`): at violet `hit_magic`'s
+    /// swell and climbing pings and a medium tap, at gold `thunder` under
+    /// the lightning and a heavy one. The picture is a pure function of the
+    /// clock; these are the side effects, so they are timers like the flash,
+    /// and a skip or the next pull (`sequence`) silences one still waiting.
+    /// A held charge (the CI) sounds only the rungs before its hold. The
+    /// stings borrow two effects the game already has: a sound of their own
+    /// for each rung belongs with the other new sounds in `tools/sfx.py`.
+    private func scheduleRungs(_ result: SummonResult, mine: Int, until hold: TimeInterval?) {
+        let limit: TimeInterval = hold ?? .infinity
+        if result.stars >= 4, ChargeLadder.violetAt <= limit {
+            after(ChargeLadder.violetAt) {
+                guard mine == sequence else { return }
+                AudioLibrary.shared.play(.hitMagic, volume: 0.7)
+                Juice.haptic(.medium)
+            }
+        }
+        if result.stars >= 5, ChargeLadder.goldAt <= limit {
+            after(ChargeLadder.goldAt) {
+                guard mine == sequence else { return }
+                AudioLibrary.shared.play(.thunder, volume: 0.55)
+                Juice.haptic(.heavy)
+            }
+        }
     }
 
     /// How long a pull waits on a stage that never reports before its charge
@@ -1093,6 +1465,10 @@ struct SummonRevealView: View {
                         .foregroundStyle(Theme.ink)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .padding(3)
+                } else if let skillUp = result.skillUp {
+                    SummonDuplicateChip(skillUp: skillUp)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding(3)
                 }
             }
             .frame(width: 74, height: 74)
@@ -1115,6 +1491,51 @@ struct SummonRevealView: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// A duplicate's chip on a summon tile (2026-09-24): what the copy did, in
+/// a word or two — a skill-up it really made, or that the kit is capped
+/// (`SummonSkillUp`). The ten-pull summary of the next wave wears the same
+/// chip beside NEW.
+struct SummonDuplicateChip: View {
+    let skillUp: SummonSkillUp
+
+    var body: some View {
+        Text(label)
+            .font(Theme.body(11).weight(.black))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(chipGround)
+            .foregroundStyle(ink)
+            .fixedSize()
+    }
+
+    private var label: String {
+        switch skillUp {
+        case .levelled(_, let from, let to):
+            let rise: Int = to - from
+            return "SKILL +\(rise)"
+        case .maxed:
+            return "MAXED"
+        }
+    }
+
+    /// Gold ink on dark glass for a skill-up; cream on the deep gold for a
+    /// capped kit, the Regalia's metal.
+    @ViewBuilder
+    private var chipGround: some View {
+        switch skillUp {
+        case .levelled: Capsule().fill(Theme.glass)
+        case .maxed: Capsule().fill(Theme.goldDeep)
+        }
+    }
+
+    private var ink: Color {
+        switch skillUp {
+        case .levelled: return Theme.onGlassGold
+        case .maxed: return Theme.onGlass
         }
     }
 }
@@ -1146,6 +1567,187 @@ struct SummonStageView: UIViewRepresentable {
     /// this set and figure in about two and a half seconds; a phone takes a
     /// fraction of one.
     static let warmUpLimit: TimeInterval = 4.0
+
+    // MARK: Figure-first light (2026-09-24, Docs/FEEL.md L1)
+    //
+    // Principle 1 of the genre, measured on the owner's Summoners War
+    // frames: the figure is the most coloured, best-separated thing on the
+    // screen, and the set is quiet stone. Ours was the other way round on
+    // this stage — the lit columns outshone the god. So the reveal has two
+    // light layers. A node is lit by a light only when their category masks
+    // share a bit, and a category is NOT inherited, so every node of both
+    // is marked (`markFigure`, `separateTheSet`).
+
+    /// The figure's light category, and the temple's.
+    static let figureCategory: Int = 2
+    static let setCategory: Int = 4
+    /// A figure light's mask: the figure's layer and SceneKit's default
+    /// category (1), so anything added to the figure unmarked is still lit
+    /// as the figure is.
+    static let figureLights: Int = figureCategory | 1
+    /// The temple's key, as a share of the figure's.
+    static let templeKeyShare: CGFloat = 0.6
+    /// How far a brazier's fire reaches, in metres: 6 before, which carried
+    /// it 3.6 m to the figure; 3 keeps it on the pillars beside it.
+    static let brazierReach: CGFloat = 3
+    /// The house's dim after the flash: a third of a stop, 2^(-1/3), in
+    /// linear light.
+    static let houseDim: Double = 0.7937
+    /// It begins as the flash starts to clear and eases over most of a
+    /// second, under the push-in and the first stars.
+    static let dimDelay: TimeInterval = 0.3
+    static let dimDuration: TimeInterval = 0.9
+    /// A prop's paint and its white rim on this stage (`tuneSetMaterial`):
+    /// the set at 0.80 of its saturation while the figure keeps its whole
+    /// paint, and the rim `StageBuilder.loadProp` gives a prop (0.18) cut to
+    /// under the figure's own 0.12.
+    static let setSaturation: Double = 0.80
+    static let propRim: Double = 0.06
+
+    /// `-tour-layers off` (DEBUG, the CI lab): the reveal lit as it was
+    /// before 2026-09-24 — one rig for the figure and the temple, the
+    /// braziers at 6 m, no dim — photographed beside the layered rig every
+    /// run (`5-reveal-awakened-layers-off`).
+    static var layersOff: Bool {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-layers"), at + 1 < args.count else { return false }
+        return args[at + 1] == "off"
+        #else
+        return false
+        #endif
+    }
+
+    /// Every node of the figure in the figure's layer. Called as it is built
+    /// and again at the flash: a category is not inherited, so a node the
+    /// model gains later must be marked as well.
+    static func markFigure(_ figure: SCNNode) {
+        figure.enumerateHierarchy { node, _ in
+            node.categoryBitMask = figureCategory
+        }
+    }
+
+    /// The temple as a light layer of its own: every node under the
+    /// summoning circle's `stage` in the set's category, its braziers
+    /// lighting only the set and reaching `brazierReach`, and its lit
+    /// materials the stage's OWN — returned with the colour each takes when
+    /// the house goes down (`Coordinator.dimTheHouse`).
+    ///
+    /// Own copies, because a prop is a clone of `StageBuilder.propCache`'s
+    /// and shares its geometry and materials with every battle that stands
+    /// it: dimmed or re-tuned in place, the columns of the next fight would
+    /// be dimmed too. A copied geometry shares its vertex data, so a copy
+    /// costs a few material records, freed with the stage. A brazier's light
+    /// is copied as well before it is changed, for the same reason; its
+    /// flicker sets whichever light its node carries.
+    static func separateTheSet(in scene: SCNScene) -> [RevealHouseMaterial] {
+        guard let stage = scene.rootNode.childNode(withName: "stage", recursively: false) else { return [] }
+        var house: [RevealHouseMaterial] = []
+        stage.enumerateHierarchy { node, _ in
+            node.categoryBitMask = setCategory
+            if let shared = node.light, let light = shared.copy() as? SCNLight {
+                light.categoryBitMask = setCategory
+                if light.type == .omni {
+                    light.attenuationEndDistance = brazierReach
+                }
+                node.light = light
+            }
+            guard let geometry = node.geometry, let own = geometry.copy() as? SCNGeometry else { return }
+            var materials: [SCNMaterial] = []
+            for shared in geometry.materials {
+                guard let material = shared.copy() as? SCNMaterial else {
+                    materials.append(shared)
+                    continue
+                }
+                materials.append(material)
+                if material.shaderModifiers?[.fragment] != nil {
+                    tuneSetMaterial(material)
+                }
+                if let dimmed = houseDimmed(material) {
+                    house.append(RevealHouseMaterial(material: material, dimmed: dimmed))
+                    holdMultiplyStage(material)
+                }
+            }
+            own.materials = materials
+            node.geometry = own
+        }
+        return house
+    }
+
+    /// A prop's own copy in the set's paint and rim. The uniforms
+    /// `MaterialTuner.tune` binds are bound again by value, as `tune` binds
+    /// them — a prop is never tinted — so the copy renders as the shared
+    /// material did whatever `copy()` keeps of them; then the two the set
+    /// changes.
+    private static func tuneSetMaterial(_ material: SCNMaterial) {
+        let metalMap: Bool = material.metalness.contents != nil && !(material.metalness.contents is NSNumber)
+        material.setValue(NSNumber(value: Float(metalMap ? 1 : 0)), forKey: "hasMetalMap")
+        material.setValue(NSNumber(value: Float(FigureStageLighting.metalShine ? 1 : 0)), forKey: "metalShine")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeHue")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeSaturation")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeMix")
+        material.setValue(NSNumber(value: Float(45.0 / 360.0)), forKey: "costumeSourceHue")
+        material.setValue(NSNumber(value: Float(32.0 / 360.0)), forKey: "costumeBand")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeGlow")
+        material.setValue(NSValue(scnVector3: SCNVector3(1, 1, 1)), forKey: "rimColor")
+        material.setValue(NSNumber(value: Float(MaterialTuner.rimPower)), forKey: "rimPower")
+        material.setValue(NSNumber(value: Float(setSaturation)), forKey: "paintSaturation")
+        material.setValue(NSNumber(value: Float(propRim)), forKey: "rimStrength")
+    }
+
+    /// The colour a set material's `multiply` takes when the house goes
+    /// down: what it multiplies by now (white, or the floor's tint) a third
+    /// of a stop darker in linear light. Nil for what is not lit — a
+    /// constant material is a light of its own (the rune ring, the mist)
+    /// and keeps its brightness — and for a multiply that is a picture.
+    private static func houseDimmed(_ material: SCNMaterial) -> UIColor? {
+        guard material.lightingModel != .constant else { return nil }
+        let now: UIColor
+        if let colour = material.multiply.contents as? UIColor {
+            now = colour
+        } else if material.multiply.contents == nil {
+            now = .white
+        } else {
+            return nil
+        }
+        var red: CGFloat = 1
+        var green: CGFloat = 1
+        var blue: CGFloat = 1
+        var alpha: CGFloat = 1
+        guard now.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return nil }
+        return UIColor(red: darkened(red), green: darkened(green), blue: darkened(blue), alpha: alpha)
+    }
+
+    /// A multiply left white becomes a white SceneKit can see (0.999, which
+    /// no frame can), so the set's shaders carry their multiply stage from
+    /// the build and the warm-up compiles them with it. A material property
+    /// at its default may be left out of the shader SceneKit generates, and
+    /// the dim would then add it at the flash — a compile on the very beat
+    /// the warm-up exists to keep clear (run 221's 21 compiles).
+    private static func holdMultiplyStage(_ material: SCNMaterial) {
+        let now: UIColor? = material.multiply.contents as? UIColor
+        guard material.multiply.contents == nil || now.map(isWhite) == true else { return }
+        material.multiply.contents = UIColor(white: 0.999, alpha: 1)
+    }
+
+    private static func isWhite(_ colour: UIColor) -> Bool {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard colour.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return false }
+        let least: CGFloat = min(red, min(green, blue))
+        return least >= 0.999
+    }
+
+    /// One sRGB component, `houseDim` darker in linear light.
+    private static func darkened(_ value: CGFloat) -> CGFloat {
+        let encoded: Double = Double(min(1, max(0, value)))
+        let linear: Double = encoded <= 0.04045 ? encoded / 12.92 : pow((encoded + 0.055) / 1.055, 2.4)
+        let dimmed: Double = linear * houseDim
+        let back: Double = dimmed <= 0.0031308 ? dimmed * 12.92 : 1.055 * pow(dimmed, 1 / 2.4) - 0.055
+        return CGFloat(back)
+    }
 
     /// The stage's state, and its render delegate (the view holds its
     /// delegate weakly; SwiftUI holds this): it steps the cape, runs the
@@ -1181,6 +1783,13 @@ struct SummonStageView: UIViewRepresentable {
         /// every SwiftUI update would fight the push-in, so it is re-applied
         /// only when the shape actually changes.
         var framedAspect: Float = 0
+        /// The set's own copies of its lit materials and the colour each
+        /// one's `multiply` takes when the house goes down after the flash
+        /// (`dimTheHouse`, `SummonStageView.separateTheSet`); empty under
+        /// `-tour-layers off`.
+        var houseMaterials: [RevealHouseMaterial] = []
+        /// The main queue's alone: the house has gone down.
+        private var houseDown = false
 
         /// Read and written on the render thread and the main one, so only
         /// under `lock`.
@@ -1299,6 +1908,116 @@ struct SummonStageView: UIViewRepresentable {
             if let figure { SummonStageView.settle(figure) }
             onShown?()
         }
+
+        /// THE HOUSE GOES DOWN (2026-09-24, Docs/FEEL.md L1): after the flash
+        /// the set dims a further third of a stop, the way a theatre darkens
+        /// its house when the curtain goes up, and the god is left the one
+        /// lit thing on the stage. Done on the set's MATERIALS
+        /// (`multiply`, which scales what they render after every light and
+        /// the studio environment), not on its lights: the floor, the rock
+        /// and the props are physically based, so the image-based light is
+        /// half of what reaches them, and a scene's environment cannot be
+        /// dimmed for the set without the figure. Main thread, once, over
+        /// `SummonStageView.dimDuration` at SceneKit's own pacing.
+        func dimTheHouse() {
+            guard !houseDown, !houseMaterials.isEmpty else { return }
+            houseDown = true
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = SummonStageView.dimDuration
+            for entry in houseMaterials {
+                entry.material.multiply.contents = entry.dimmed
+            }
+            SCNTransaction.commit()
+        }
+
+        /// Lets go of every node and the scene (`dismantleUIView`), on the
+        /// main thread once the renderer has stopped.
+        func release() {
+            figure = nil
+            scene = nil
+            contactShadow = nil
+            warmBeam = nil
+            cameraNode = nil
+            view = nil
+            onReady = nil
+            onShown = nil
+            houseMaterials = []
+        }
+
+        /// One line per stage gone (2026-09-24): CI run 242's summon stress
+        /// climbed about 30 MB a reveal and never came down, and this is how
+        /// the next run's console says whether each reveal's stage really
+        /// leaves — `[Mem] reveal stage released`, with the model cache's
+        /// live clones beside the footprint. `dismantleUIView` holds this
+        /// coordinator until its teardown is done, so the line is printed
+        /// with the stage already gone.
+        deinit {
+            #if DEBUG
+            MemoryProbe.log("reveal stage released")
+            #endif
+        }
+    }
+
+    /// The renderer's grip on the stage is let go this long after it stops,
+    /// before the graph comes down: past any frame already in flight, and
+    /// the settle an effect's host is given before it leaves
+    /// (`VFXLibrary.retireSettle`).
+    static let teardownSettle: TimeInterval = 0.5
+
+    /// THE STAGE LEAVES WITH ITS VIEW (2026-09-24). CI run 242's memory
+    /// stress took the footprint from 76 MB to 1,439 MB over thirty single
+    /// summons and three ten-pulls, about 30 MB a reveal and never given
+    /// back, while six battles stayed flat: the battle retires its stage,
+    /// and this view had no `dismantleUIView` at all. So each reveal's
+    /// scene, its figure's clone, the temple and every texture the renderer
+    /// had uploaded lived as long as SwiftUI kept the old view, and a live
+    /// clone pins its family's entry in the model cache (a prototype a
+    /// clone came from is never evicted). SwiftUI calls this on the main
+    /// thread as the view leaves.
+    ///
+    /// The order is the render thread's: the renderer stops FIRST, so no
+    /// frame is built while the graph changes; then every particle system
+    /// comes off the way an effect's host leaves the stage
+    /// (`VFXLibrary.dismiss`: its systems off, hidden — a host removed while
+    /// its motes lived crashed the fight twice), and every action and
+    /// animation stops, the figure's idle with them; and only
+    /// `teardownSettle` later do the root's children go, the view let go of
+    /// its scene and the coordinator of its nodes. The cape's chain needs no
+    /// reset: `ClothStepper` holds none, and `ClothSimulation` drops a chain
+    /// the moment its figure is gone.
+    static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
+        uiView.isPlaying = false
+        uiView.rendersContinuously = false
+        uiView.delegate = nil
+        guard let root = uiView.scene?.rootNode else {
+            coordinator.release()
+            return
+        }
+        for child in root.childNodes where carriesParticles(child) {
+            VFXLibrary.dismiss(child, reportsLive: false)
+        }
+        root.enumerateHierarchy { node, _ in
+            node.removeAllActions()
+            node.removeAllAnimations()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + teardownSettle) {
+            for child in root.childNodes {
+                child.removeFromParentNode()
+            }
+            uiView.scene = nil
+            coordinator.release()
+        }
+    }
+
+    /// Whether a node or anything under it carries a particle system.
+    private static func carriesParticles(_ node: SCNNode) -> Bool {
+        var found = false
+        node.enumerateHierarchy { child, stop in
+            guard let systems = child.particleSystems, !systems.isEmpty else { return }
+            found = true
+            stop.pointee = true
+        }
+        return found
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -1381,6 +2100,14 @@ struct SummonStageView: UIViewRepresentable {
         // summoned unit's pantheon and element colour. The SwiftUI glow and
         // rays show through between the pillars.
         StageBuilder.buildSummoningCircle(pantheon: result.blueprint.pantheon, tint: tint, into: scene)
+
+        // The figure and the temple on separate lights (L1), unless the lab
+        // asks for the rig as it was.
+        let layered = !Self.layersOff
+        if layered {
+            Self.markFigure(node)
+            context.coordinator.houseMaterials = Self.separateTheSet(in: scene)
+        }
 
         // What the flash brings, built now so the warm-up draws it: the
         // shadow under the feet, and a twin of the beam's column (the beam
@@ -1506,10 +2233,26 @@ struct SummonStageView: UIViewRepresentable {
         // top of the element recolour and the rim made the fourth tour's
         // Sekhmet one shade of red. The rim carries the colour; the key shows
         // the design.
+        //
+        // FIGURE-FIRST (2026-09-24, Docs/FEEL.md L1). The temple outshone the
+        // god: in `5-reveal-a`, `-b` and `-awakened` the lit columns were
+        // brighter than the figure, because every light here lit both. Now
+        // the figure and the set are two light layers (`markFigure`,
+        // `separateTheSet`): the figure keeps the whole rig — the key, the
+        // cool fill and the tinted rim — and the temple is lit by its own key
+        // at `templeKeyShare` of the figure's, the ambient, the environment
+        // and its braziers, which reach 3 m now and warm only the set.
+        // The key is ONE light at the temple's share, lighting both and
+        // casting the figure's shadow exactly as the whole key did, and a
+        // lift from the same place makes up the figure's own share: that
+        // keeps the shadow on the dais as it was, whatever SceneKit does with
+        // a shadow cast by a light that does not light the ground it falls
+        // on. `-tour-layers off` photographs the rig as it was.
+        let keyColour: UIColor = tint.mixed(with: .white, amount: FigureStageLighting.keyTintMix)
         let key = SCNLight()
         key.type = .directional
-        key.intensity = FigureStageLighting.keyIntensity
-        key.color = tint.mixed(with: .white, amount: FigureStageLighting.keyTintMix)
+        key.intensity = FigureStageLighting.keyIntensity * (layered ? Self.templeKeyShare : 1)
+        key.color = keyColour
         // The one shadow in the scene: the figure's, deferred and soft; the
         // quads never cast (`restrictShadows`, below and in `show`).
         FigureStageLighting.castShadows(from: key)
@@ -1518,6 +2261,17 @@ struct SummonStageView: UIViewRepresentable {
         keyNode.position = SCNVector3(-3, 5, 4)
         keyNode.eulerAngles = SCNVector3(-0.7, -0.6, 0)
         scene.rootNode.addChildNode(keyNode)
+        if layered {
+            let lift = SCNLight()
+            lift.type = .directional
+            lift.intensity = FigureStageLighting.keyIntensity * (1 - Self.templeKeyShare)
+            lift.color = keyColour
+            lift.categoryBitMask = Self.figureLights
+            let liftNode = SCNNode()
+            liftNode.light = lift
+            // A child with no transform of its own: the key's place and aim.
+            keyNode.addChildNode(liftNode)
+        }
 
         // Fill from the other side, cool and weak. Without one, the shadow side
         // of a dark model is crushed to the ambient and the only way to find
@@ -1528,6 +2282,7 @@ struct SummonStageView: UIViewRepresentable {
         fillLight.type = .directional
         fillLight.intensity = FigureStageLighting.fillIntensity
         fillLight.color = UIColor(hex: "#7C93D6") ?? .white
+        if layered { fillLight.categoryBitMask = Self.figureLights }
         let fillNode = SCNNode()
         fillNode.light = fillLight
         fillNode.position = SCNVector3(5, 3, 4)
@@ -1541,6 +2296,9 @@ struct SummonStageView: UIViewRepresentable {
         rim.type = .directional
         rim.intensity = FigureStageLighting.rimIntensity
         rim.color = tint
+        // The figure's alone since 2026-09-24: a directional rim has no
+        // falloff, and it lit the columns behind as hard as the figure.
+        if layered { rim.categoryBitMask = Self.figureLights }
         let rimNode = SCNNode()
         rimNode.light = rim
         rimNode.position = SCNVector3(2, 4, -5)
@@ -1653,6 +2411,16 @@ struct SummonStageView: UIViewRepresentable {
         VFXLibrary.summonBeam(at: SCNVector3(0, 0, 0), in: scene, tint: coordinator.tint)
         // The beam's quads arrived after the figure: they cast nothing.
         FigureStageLighting.restrictShadows(in: scene, to: figure)
+        // Figure-first light (L1): the figure's layer read again as it
+        // arrives — a category is not inherited, so anything the model
+        // gained since the build must carry it too — and, once the flash has
+        // begun to clear, the house goes down.
+        if !coordinator.houseMaterials.isEmpty {
+            Self.markFigure(figure)
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.dimDelay) { [weak coordinator] in
+                coordinator?.dimTheHouse()
+            }
+        }
         // The turn toward the player waits for the figure's first frame on
         // the beam (`settle`, from the coordinator's `figureShown`).
 
@@ -1825,6 +2593,14 @@ struct SummonStageView: UIViewRepresentable {
     }()
 }
 
+/// One of the reveal set's own lit materials and the `multiply` colour it
+/// takes when the house goes down (`SummonStageView.separateTheSet`,
+/// `Coordinator.dimTheHouse`).
+struct RevealHouseMaterial {
+    let material: SCNMaterial
+    let dimmed: UIColor
+}
+
 /// Where a reveal stage's warm-up stands (`SummonStageView.makeUIView`).
 private enum RevealStageWarmUp {
     /// Out of sight, drawing everything the flash will show.
@@ -1864,6 +2640,8 @@ enum RuneLinesArt {
     /// when the summon room appears; the charge reads whatever is ready.
     static func prepare() {
         DispatchQueue.global(qos: .utility).async { _ = image }
+        // The gold rung's lightning, cut on the same visit (2026-09-24).
+        LightningArt.prepare()
     }
 
     private static func keyed() -> UIImage? {
@@ -1921,5 +2699,227 @@ enum RuneLinesArt {
         }
         guard let keyed = context.makeImage() else { return nil }
         return UIImage(cgImage: keyed)
+    }
+}
+
+/// The charge's rarity ladder (2026-09-24, Docs/FEEL.md W1.5).
+///
+/// Until this the grade showed on the FIRST frame: the beam's width, the
+/// rings' pace, the charge's length, the charge sound's volume and the glow
+/// behind it were all read off the stars, so a 3★ was a thin, short, cyan
+/// charge from its first frame and the suspense was over before it began.
+/// The genre does the opposite on purpose. Summoners War gives a 4★ and a
+/// 5★ the same animation so the player asks "is it a 4 or a 5?", and a 5★
+/// breaks into lightning; Genshin's meteor turns from blue or purple to
+/// gold; and the writing on gacha psychology puts the peak of a pull DURING
+/// the animation, not at the reveal. So every charge opens the same — a
+/// cool blue-white, a narrow beam, slow rings — and climbs: at `violetAt` a
+/// 4★ or better turns violet (the beam widens, the rings quicken, a sting
+/// and a tap); at `goldAt` a 5★ breaks into gold with lightning round the
+/// beam; at `splitAt` a Light or Dark 5★ parts white-gold or violet-black.
+/// Each step is a smoothstep over `step` seconds.
+///
+/// The rungs stand at SECONDS into the charge, not at fractions of it: a
+/// 5★'s charge is 0.15 s longer (`span`), and as fractions its violet step
+/// would land 50 ms after a 4★'s, a tell however small. On seconds a 4★ and
+/// a 5★ are the same charge until the gold.
+///
+/// Nothing here is ever faked: a rung is climbed only by the grade that
+/// owns it, read off the pull's own stars — violet means a real 4★ or
+/// better, gold a real 5★. Every function is pure, so the charge stays a
+/// function of the wall clock (`SummonRevealView.chargeLayer`).
+enum ChargeLadder {
+    /// How long a charge runs: every grade the same, a 5★ a beat longer.
+    static let baseSpan: TimeInterval = 1.25
+    static let fiveStarSpan: TimeInterval = 1.4
+    /// The rungs, in seconds into the charge: 35%, 70% and 85% of the base
+    /// span.
+    static let violetAt: TimeInterval = 0.4375
+    static let goldAt: TimeInterval = 0.875
+    static let splitAt: TimeInterval = 1.0625
+    /// How long a step takes.
+    static let step: TimeInterval = 0.15
+
+    /// The ground every charge opens on: a cool blue-white.
+    static let ground = ChargeRGB(0.81, 0.90, 1.0)
+    /// The grade language's own colours (`Rarity.glow`), so the ladder and
+    /// every card frame in the game say a grade the same way.
+    static let violet = ChargeRGB(Rarity(stars: 4).glow)
+    static let gold = ChargeRGB(Rarity(stars: 5).glow)
+    /// A Light 5★ parts into white-gold, a Dark one into a deep violet with
+    /// its veil (`SummonRevealView.chargeVeil`) and a pale violet core.
+    static let radianceSplit = ChargeRGB(1.0, 0.95, 0.80)
+    static let umbraSplit = ChargeRGB(0.48, 0.24, 0.84)
+    static let umbraCore = ChargeRGB(0.85, 0.76, 1.0)
+
+    static func span(stars: Int) -> TimeInterval {
+        stars >= 5 ? fiveStarSpan : baseSpan
+    }
+
+    /// 0 at the foot of the rung at `rungAt`, 1 once it is climbed, a
+    /// smoothstep between.
+    static func climbed(_ rungAt: TimeInterval, at clock: TimeInterval) -> CGFloat {
+        let t: Double = min(1, max(0, (clock - rungAt) / step))
+        let eased: Double = t * t * (3 - 2 * t)
+        return CGFloat(eased)
+    }
+
+    /// Where the ladder stands at `clock` seconds: 0 on the ground, 1 at
+    /// violet, 2 at gold; a grade never climbs past its own rung.
+    static func rung(stars: Int, at clock: TimeInterval) -> CGFloat {
+        var level: CGFloat = 0
+        if stars >= 4 { level += climbed(violetAt, at: clock) }
+        if stars >= 5 { level += climbed(goldAt, at: clock) }
+        return level
+    }
+
+    /// How far a Light or Dark 5★ has parted from the gold, 0…1; 0 for
+    /// every other pull.
+    static func split(stars: Int, element: Element, at clock: TimeInterval) -> CGFloat {
+        guard stars >= 5, element.isLightOrDark else { return 0 }
+        return climbed(splitAt, at: clock)
+    }
+
+    /// The ladder's light at `clock`: the ground's blue-white, mixed to
+    /// violet, then gold, then the Light or Dark split, step by step.
+    static func light(stars: Int, element: Element, at clock: TimeInterval) -> ChargeRGB {
+        var light: ChargeRGB = ground
+        if stars >= 4 { light = light.mixed(with: violet, by: climbed(violetAt, at: clock)) }
+        if stars >= 5 { light = light.mixed(with: gold, by: climbed(goldAt, at: clock)) }
+        let parted: CGFloat = split(stars: stars, element: element, at: clock)
+        if parted > 0 {
+            let far: ChargeRGB = element == .umbra ? umbraSplit : radianceSplit
+            light = light.mixed(with: far, by: parted)
+        }
+        return light
+    }
+
+    /// The area under `rung` from the charge's start to `clock`, in
+    /// rung-seconds: what a pace that quickens with every rung has covered
+    /// beyond the ground's. The rings' turn and the motes' rise are read off
+    /// it, so a step changes their pace without a jump in where they stand.
+    static func travel(stars: Int, to clock: TimeInterval) -> CGFloat {
+        var sum: CGFloat = 0
+        if stars >= 4 { sum += climbedArea(violetAt, to: clock) }
+        if stars >= 5 { sum += climbedArea(goldAt, to: clock) }
+        return sum
+    }
+
+    /// The integral of `climbed(rungAt, at: τ)` for τ from 0 to `clock`:
+    /// `step · (x³ − x⁴/2)` through the step, then half a step plus the
+    /// time since it ended.
+    static func climbedArea(_ rungAt: TimeInterval, to clock: TimeInterval) -> CGFloat {
+        let since: Double = clock - rungAt
+        guard since > 0 else { return 0 }
+        guard since < step else {
+            let after: Double = since - step
+            return CGFloat(step / 2 + after)
+        }
+        let x: Double = since / step
+        let cube: Double = x * x * x
+        let area: Double = step * (cube - cube * x / 2)
+        return CGFloat(area)
+    }
+}
+
+/// A colour as three sRGB numbers, for mixing the ladder's light by the
+/// clock (2026-09-24).
+struct ChargeRGB {
+    var red: Double
+    var green: Double
+    var blue: Double
+
+    static let white = ChargeRGB(1, 1, 1)
+
+    init(_ red: Double, _ green: Double, _ blue: Double) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+    }
+
+    /// A SwiftUI colour's own components, read once through UIKit.
+    init(_ color: Color) {
+        var r: CGFloat = 1
+        var g: CGFloat = 1
+        var b: CGFloat = 1
+        var a: CGFloat = 1
+        _ = UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a)
+        self.init(Double(r), Double(g), Double(b))
+    }
+
+    func mixed(with other: ChargeRGB, by amount: CGFloat) -> ChargeRGB {
+        let t: Double = Double(min(1, max(0, amount)))
+        let r: Double = red + (other.red - red) * t
+        let g: Double = green + (other.green - green) * t
+        let b: Double = blue + (other.blue - blue) * t
+        return ChargeRGB(r, g, b)
+    }
+
+    var color: Color { Color(red: red, green: green, blue: blue) }
+}
+
+/// The sixteen frames of `vfx_lightning_sheet` (2026-09-24), the lightning
+/// the charge's gold rung strikes round the beam (`SummonRevealView
+/// .chargeBolt`). The sheet is the painted 4 × 4 flipbook the fight's
+/// lightning plays (tools/vfx_sheets.py): a bolt forming, striking a
+/// splash of light on the ground, branching, and fading, on a clear ground.
+/// Each cell is drawn once into its own bitmap on a background queue —
+/// cut from the sheet it would have been decoded again on the charge's
+/// frames — about 4 MB for the sixteen, kept for the session. The charge
+/// reads a frame without waiting: until the cut is done it draws no bolt.
+enum LightningArt {
+    static let frameCount = 16
+    private static let lock = NSLock()
+    private static var frames: [UIImage] = []
+    private static var started = false
+
+    /// Cuts the sheet once, off the main thread (the summon room's
+    /// `RuneLinesArt.prepare` and the reveal's appearance both ask).
+    static func prepare() {
+        lock.lock()
+        let first = !started
+        started = true
+        lock.unlock()
+        guard first else { return }
+        DispatchQueue.global(qos: .utility).async {
+            let cut = cutSheet()
+            lock.lock()
+            frames = cut
+            lock.unlock()
+        }
+    }
+
+    /// Frame `number` of the sixteen, once cut; nil until then.
+    static func frame(_ number: Int) -> UIImage? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard frames.indices.contains(number) else { return nil }
+        return frames[number]
+    }
+
+    private static func cutSheet() -> [UIImage] {
+        guard let sheet = BundleArt.uncachedImage("vfx_lightning_sheet")?.cgImage else { return [] }
+        let side: Int = min(sheet.width, sheet.height) / 4
+        guard side > 0 else { return [] }
+        var cut: [UIImage] = []
+        for row in 0..<4 {
+            for column in 0..<4 {
+                let cell = CGRect(x: column * side, y: row * side, width: side, height: side)
+                guard let cropped = sheet.cropping(to: cell),
+                      let drawn = redrawn(cropped, side: side) else { continue }
+                cut.append(UIImage(cgImage: drawn))
+            }
+        }
+        return cut.count == frameCount ? cut : []
+    }
+
+    /// A cell drawn into a bitmap of its own, premultiplied, so drawing it
+    /// never decodes the sheet again.
+    private static func redrawn(_ cell: CGImage, side: Int) -> CGImage? {
+        guard let context = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
+                                      bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        context.draw(cell, in: CGRect(x: 0, y: 0, width: side, height: side))
+        return context.makeImage()
     }
 }

@@ -566,8 +566,6 @@ private struct SocialPillButton: View {
 
     var body: some View {
         Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             action()
         } label: {
             Text(title)
@@ -578,7 +576,10 @@ private struct SocialPillButton: View {
                 .padding(.vertical, 5)
                 .background(Capsule().fill(enabled ? tint : Theme.surface))
         }
-        .buttonStyle(.plain)
+        // A small action at a row's end: the full press, the tap on
+        // touch-down, and half strength when shut as `.plain` drew it
+        // (2026-09-24).
+        .buttonStyle(GamePressStyle(.plate, dimsWhenDisabled: true))
         .disabled(!enabled)
     }
 }
@@ -933,7 +934,6 @@ private struct SocialCrestPicker: View {
         HStack(spacing: 6) {
             ForEach(Guild.crests, id: \.self) { glyph in
                 Button {
-                    Juice.haptic(.light)
                     pick(glyph)
                 } label: {
                     Image(systemName: glyph)
@@ -943,7 +943,7 @@ private struct SocialCrestPicker: View {
                         .background(ScreenChrome.controlShape.fill(glyph == chosen ? Theme.gold : Theme.surfaceHigh))
                         .overlay(ScreenChrome.controlShape.strokeBorder(Theme.goldDim.opacity(0.4), lineWidth: 0.5))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.plate))
             }
         }
     }

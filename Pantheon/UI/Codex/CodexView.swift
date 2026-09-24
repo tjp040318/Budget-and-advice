@@ -263,13 +263,12 @@ struct CodexView: View {
         let standing = CodexService.tierStanding(tier, of: shownPantheon, ledger: book)
         if standing == .ready {
             guard let paid = store.claimCodexTier(tier, of: shownPantheon) else { return }
-            Juice.haptic(.medium)
+            // The medal's press ticked on touch-down; the confirm is the
+            // "done", and a medal that only explains itself says nothing more.
             AudioLibrary.shared.play(.uiConfirm)
             showReceipt(CodexService.merged(paid))
             return
         }
-        Juice.haptic(.light)
-        AudioLibrary.shared.play(.uiTap)
         let prize = CodexService.prizeWords(for: tier)
         if standing == .claimed {
             showNote("\(tier.rawValue)%: \(prize) · claimed")
@@ -283,7 +282,6 @@ struct CodexView: View {
     private func claimEverything() {
         let paid = store.claimAllCodexRewards()
         guard !paid.isEmpty else { return }
-        Juice.haptic(.medium)
         AudioLibrary.shared.play(.uiConfirm)
         showReceipt(paid)
     }

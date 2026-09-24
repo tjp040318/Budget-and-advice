@@ -637,11 +637,11 @@ struct ShopView: View {
     }
 
     /// `chime` is false for the daily's claim, whose `BazaarClaimButton` has
-    /// already played the confirm.
+    /// already played the confirm. No tick here: the price button's press
+    /// ticked on touch-down (2026-09-24).
     private func buy(_ item: ShopService.Item, chime: Bool) {
         guard let grants = store.buy(item) else { return }
         if chime { AudioLibrary.shared.play(.uiConfirm) }
-        Juice.haptic(.light)
         showReceipt(grants)
     }
 
@@ -937,7 +937,6 @@ struct BazaarPriceButton: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         return Button {
-            Juice.haptic(.light)
             action()
         } label: {
             HStack(spacing: 5) {
@@ -952,7 +951,8 @@ struct BazaarPriceButton: View {
             .shadow(color: isLit ? Theme.gold.opacity(0.3) : Color.clear, radius: 5, y: 2)
             .contentShape(shape)
         }
-        .buttonStyle(PlateButtonStyle())
+        // Gold when it can buy: the primary press (2026-09-24).
+        .buttonStyle(GamePressStyle(.primary))
         .disabled(!isLit)
         .accessibilityLabel(accessibilityText)
     }
@@ -1060,8 +1060,8 @@ struct BazaarGoldPlate: View {
 
 /// The Daily Offering's claim: the bazaar's gold plate (`BazaarGoldPlate`,
 /// the BUY plates' and the claims' metal) at a primary action's height of
-/// 46, the painted gift beside CLAIM in ink. It plays the confirm and
-/// the haptic itself, as `ClaimPlate` does.
+/// 46, the painted gift beside CLAIM in ink. It plays the confirm itself,
+/// as `ClaimPlate` does; the press ticks on touch-down.
 struct BazaarClaimButton: View {
     let title: String
     var itemKey: String? = nil
@@ -1070,7 +1070,6 @@ struct BazaarClaimButton: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
         return Button {
-            Juice.haptic(.medium)
             AudioLibrary.shared.play(.uiConfirm)
             action()
         } label: {
@@ -1094,7 +1093,7 @@ struct BazaarClaimButton: View {
             .shadow(color: Color.black.opacity(0.45), radius: 4, y: 3)
             .contentShape(shape)
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.primary))
         .accessibilityLabel(title)
     }
 }

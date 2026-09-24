@@ -1399,7 +1399,7 @@ struct UnitCard: View {
         )
         .shadow(color: isSelected ? Theme.gold.opacity(0.75) : .clear, radius: 10)
         .scaleEffect(isSelected ? 1.04 : 1)
-        .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isSelected)
+        .animation(Motion.select, value: isSelected)
         // The other half of that guard. A `.fill` portrait that is not square
         // draws past its frame, and `.clipShape` above hides an overhang
         // without clipping its hit-testing (the project's own rule), so in a
@@ -1555,13 +1555,201 @@ struct EmptyCollectionSlot: View {
     }
 }
 
-/// Press feedback for anything built to look like a physical plate.
-struct PlateButtonStyle: ButtonStyle {
+/// The game's one press (2026-09-24, `Docs/FEEL.md` W1.8). Sixty-nine
+/// buttons were `.plain` and answered a finger with nothing, sixty more
+/// shrank to 0.97 in silence, and the ~99 hand-written taps played when the
+/// finger LIFTED — a tenth of a second after the eye and the thumb had
+/// already decided the press was dead. Now every button sinks, rings and
+/// ticks the moment it is touched, and springs past its size as it lets go:
+///
+/// - `.primary`: the gold plates. Sink to 0.94, the gloss dimming, a firm
+///   tick; spring to 1.04 and settle.
+/// - `.plate`: cards, tiles, chips, rows that stand still. 0.96, then 1.02.
+/// - `.medallion`: the round doors — back, the header's doors, the tabs.
+///   Deepest, to 0.90, and BRIGHTER as it goes in, the rim catching light.
+/// - `.quiet`: anything in a scrolling rail or list. Brightness only, and
+///   no sound or tick on touch-down, because a scroll view reports a press
+///   under a finger that has only started to drag; its sound stays in its
+///   action, which runs only on a real tap.
+///
+/// The touch-down tap is the press itself; a "done" sound (a confirm, a
+/// claim, a purchase) stays in the action where it belongs. So an action
+/// wearing this style must NOT also play `.uiTap` or `Juice.haptic(.light)`
+/// — that is the press sounding twice.
+///
+/// `PlateButtonStyle()` is this style's old spelling, kept as a typealias so
+/// its call sites compile: the plate's look with the touch-down sound OFF,
+/// because those actions still play their own tap. `GamePressStyle(.plate)`
+/// is the full press; a screen moves over by writing that and deleting its
+/// action's tap.
+struct GamePressStyle: ButtonStyle {
+    enum Kind {
+        case primary, plate, medallion, quiet
+
+        /// The scale the press sinks to.
+        var sink: Double {
+            switch self {
+            case .primary: return 0.94
+            case .plate: return 0.96
+            case .medallion: return 0.90
+            case .quiet: return 1
+            }
+        }
+
+        /// The scale the release springs PAST before settling at 1.
+        var overshoot: Double {
+            switch self {
+            case .primary: return 1.04
+            case .plate: return 1.02
+            case .medallion: return 1.04
+            case .quiet: return 1
+            }
+        }
+
+        /// Darker under the finger, as a plate pressed into its bed; the
+        /// medallion alone gets brighter — a round door's rim catching the
+        /// light as it tips in is what makes it read as metal.
+        var pressedBrightness: Double {
+            switch self {
+            case .primary: return -0.05
+            case .plate: return -0.05
+            case .medallion: return 0.09
+            case .quiet: return -0.06
+            }
+        }
+
+        /// The tick under the thumb: a firmer one for the gold plates, which
+        /// commit to something; none for `.quiet` (see above).
+        var haptic: UIImpactFeedbackGenerator.FeedbackStyle? {
+            switch self {
+            case .primary: return .medium
+            case .plate, .medallion: return .light
+            case .quiet: return nil
+            }
+        }
+    }
+
+    let kind: Kind
+    /// Whether the touch-down plays the tap and the tick.
+    let answersTouchDown: Bool
+    /// Whether a disabled button is drawn at half strength. `.plain`, which
+    /// sixty-nine buttons wore until this style, did that for them; the few
+    /// of those that can be disabled keep the look they had, and every other
+    /// button draws its shut state itself, as it always has.
+    let dimsWhenDisabled: Bool
+
+    /// `PlateButtonStyle()`: the plate's look, silent on touch-down — its
+    /// call sites were written when the action carried the sound.
+    init() {
+        self.kind = .plate
+        self.answersTouchDown = false
+        self.dimsWhenDisabled = false
+    }
+
+    /// The full press. `sounds: false` is for a button whose action does
+    /// nothing while it is shut (a locked tier, stage or city still sinks
+    /// under the finger, but a tick would promise something); `.quiet`
+    /// never sounds on touch-down whatever it is told.
+    init(_ kind: Kind, sounds: Bool = true, dimsWhenDisabled: Bool = false) {
+        self.kind = kind
+        self.answersTouchDown = sounds && kind.haptic != nil
+        self.dimsWhenDisabled = dimsWhenDisabled
+    }
+
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .brightness(configuration.isPressed ? -0.06 : 0)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        GamePressBody(label: configuration.label, isPressed: configuration.isPressed,
+                      kind: kind, answersTouchDown: answersTouchDown, dimsWhenDisabled: dimsWhenDisabled)
+    }
+
+    /// The press's voice: one tick and one tap, the same instrument on every
+    /// button in the game (principle 9).
+    static func answerTouchDown(_ kind: Kind) {
+        guard let haptic = kind.haptic else { return }
+        Juice.haptic(haptic)
+        AudioLibrary.shared.play(.uiTap)
+    }
+}
+
+typealias PlateButtonStyle = GamePressStyle
+
+/// The press, drawn. The scale is ONE keyframe track re-planned every time
+/// the finger goes down or up (the trigger is `isPressed` itself), so the
+/// release starts from wherever the sink had reached, with its velocity: a
+/// quick tap that never reached the bottom still springs out of it, and no
+/// frame is spent at full size between the two. Under Reduce Motion the
+/// sink stays — it is the answer to the finger, not decoration — and the
+/// release returns to 1 with no overshoot.
+private struct GamePressBody: View {
+    let label: ButtonStyleConfiguration.Label
+    let isPressed: Bool
+    let kind: GamePressStyle.Kind
+    let answersTouchDown: Bool
+    let dimsWhenDisabled: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        // The two keyframes, chosen here so the track below has one shape:
+        // a press goes down to the sink and rests there; a release goes up
+        // past its size (or straight home, calm) and settles at 1.
+        let calm: Bool = Motion.isCalm
+        let reach: Double = isPressed ? kind.sink : (calm ? 1 : kind.overshoot)
+        let rest: Double = isPressed ? kind.sink : 1
+        let reachTime: Double = isPressed ? 0.08 : (calm ? 0.14 : 0.1)
+        let settle: Spring = isPressed ? Motion.tapSpring.spring : Motion.settleSpring.spring
+        let shut: Bool = dimsWhenDisabled && !isEnabled
+        return label
+            .environment(\.gamePressed, isPressed)
+            .brightness(isPressed ? kind.pressedBrightness : 0)
+            .opacity(shut ? 0.5 : 1)
+            .animation(Motion.tap, value: isPressed)
+            .keyframeAnimator(initialValue: PressFrame(), trigger: isPressed) { content, frame in
+                content.scaleEffect(frame.scale)
+            } keyframes: { _ in
+                KeyframeTrack(\.scale) {
+                    CubicKeyframe(reach, duration: reachTime)
+                    SpringKeyframe(rest, spring: settle)
+                }
+            }
+            .onChange(of: isPressed) { _, down in
+                if down && answersTouchDown { GamePressStyle.answerTouchDown(kind) }
+            }
+    }
+}
+
+/// The press's animated value (`GamePressBody`'s keyframe track).
+private struct PressFrame {
+    var scale = 1.0
+}
+
+/// Whether the button this view is inside is under a finger, set by
+/// `GamePressStyle` on its label so a part of the label can answer too —
+/// the gold plate's sweep dims (`pressDimmed`) as the plate goes in.
+private struct GamePressedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var gamePressed: Bool {
+        get { self[GamePressedKey.self] }
+        set { self[GamePressedKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Dims this part of a button's label while the button is pressed.
+    func pressDimmed(to opacity: Double = 0.35) -> some View {
+        modifier(PressDimmed(opacity: opacity))
+    }
+}
+
+private struct PressDimmed: ViewModifier {
+    @Environment(\.gamePressed) private var pressed
+    let opacity: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(pressed ? opacity : 1)
+            .animation(Motion.tap, value: pressed)
     }
 }
 
@@ -1577,8 +1765,12 @@ struct GameToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         let state: String = configuration.isOn ? "On" : "Off"
         return Button {
+            // The tick stays in the action: a switch row lives in a
+            // scrolling page, so it wears the quiet press, which never
+            // answers a finger that may only be starting a scroll. A
+            // disabled switch stays at half strength, as `.plain` drew it.
             Juice.haptic(.light)
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+            withAnimation(Motion.select) {
                 configuration.isOn.toggle()
             }
         } label: {
@@ -1589,7 +1781,7 @@ struct GameToggleStyle: ToggleStyle {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.quiet, dimsWhenDisabled: true))
         .accessibilityValue(Text(state))
         .accessibilityAddTraits(.isToggle)
     }
@@ -1637,7 +1829,7 @@ private struct GameSwitch: View {
                 .offset(x: isOn ? Self.travel : -Self.travel)
         }
         .frame(width: Self.width, height: Self.height)
-        .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isOn)
+        .animation(Motion.select, value: isOn)
     }
 }
 
@@ -1681,7 +1873,9 @@ struct PrimaryButton: View {
             .padding(.vertical, 13)
             .padding(.horizontal, 14)
             .background(plate)
-            .overlay(shine)
+            // The sweep dims as the plate goes in: a plate pressed into its
+            // bed is out of the light.
+            .overlay(shine.pressDimmed())
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .strokeBorder(rimColor, lineWidth: 1)
@@ -1692,7 +1886,9 @@ struct PrimaryButton: View {
             .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(PlateButtonStyle())
+        // The touch-down tap and tick are the press; the confirm in the
+        // action is the "done".
+        .buttonStyle(GamePressStyle(.primary))
         .disabled(!isEnabled)
     }
 
@@ -1980,8 +2176,6 @@ struct GameScreen<Bar: View, Content: View>: View {
         HStack(spacing: 10) {
             if let dismiss {
                 Button {
-                    Juice.haptic(.light)
-                    AudioLibrary.shared.play(.uiTap)
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
@@ -1993,7 +2187,7 @@ struct GameScreen<Bar: View, Content: View>: View {
                         .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
                         .stripHitTarget()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.medallion))
             }
 
             // The title is carved gold at a display size (2026-09-22): a
@@ -2120,8 +2314,6 @@ struct BarButton: View {
 
     var body: some View {
         Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             action()
         } label: {
             HStack(spacing: 4) {
@@ -2143,7 +2335,7 @@ struct BarButton: View {
             .background(ScreenChrome.well)
             .stripHitTarget()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel(title)
     }
 
@@ -2180,7 +2372,6 @@ struct ElementFilterTiles: View {
         let isOn = selection == element
         let tint = element?.color ?? Theme.gold
         return Button {
-            Juice.haptic(.light)
             selection = (element != nil && selection == element) ? nil : element
         } label: {
             Group {
@@ -2206,7 +2397,7 @@ struct ElementFilterTiles: View {
             })
             .stripHitTarget()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel(element?.displayName ?? "All elements")
     }
 }
@@ -2285,8 +2476,6 @@ struct BarSegments<T: Hashable>: View {
             ForEach(options, id: \.value) { option in
                 let isOn = selection == option.value
                 Button {
-                    Juice.haptic(.light)
-                    AudioLibrary.shared.play(.uiTap)
                     selection = option.value
                 } label: {
                     // One line at its own width (run 207: "Car… Sta…",
@@ -2302,7 +2491,7 @@ struct BarSegments<T: Hashable>: View {
                             Capsule().fill(isOn ? AnyShapeStyle(Theme.goldPlate) : AnyShapeStyle(Color.clear))
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.plate))
             }
         }
         .padding(3)

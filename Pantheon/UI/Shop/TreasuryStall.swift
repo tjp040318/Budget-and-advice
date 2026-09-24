@@ -463,7 +463,6 @@ struct TreasuryBuyButton: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         return Button {
-            Juice.haptic(.light)
             action()
         } label: {
             HStack(spacing: 5) {
@@ -478,7 +477,9 @@ struct TreasuryBuyButton: View {
             .shadow(color: isLit ? Theme.gold.opacity(0.3) : Color.clear, radius: 5, y: 2)
             .contentShape(shape)
         }
-        .buttonStyle(PlateButtonStyle())
+        // Gold when it can buy: the primary press, its tick and tap on
+        // touch-down (2026-09-24).
+        .buttonStyle(GamePressStyle(.primary))
         .disabled(!isLit)
         .accessibilityLabel(accessibilityText)
     }
@@ -730,7 +731,6 @@ struct TreasuryOddsSheet: View {
                 .fixedSize()
             if let banner = Self.banner(for: scroll) {
                 Button {
-                    Juice.haptic(.light)
                     table = banner
                 } label: {
                     Text("FULL TABLE")
@@ -743,7 +743,8 @@ struct TreasuryOddsSheet: View {
                         .frame(height: 30)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.goldPlate))
                 }
-                .buttonStyle(PlateButtonStyle())
+                // A small action at the row's end: the full press.
+                .buttonStyle(GamePressStyle(.plate))
             }
         }
         .padding(10)

@@ -85,7 +85,6 @@ struct BoonPickerView: View {
                 if let unit, unit.boon != nil {
                     BarButton(title: "Unequip", systemImage: "minus.circle", tint: Theme.textSecondary) {
                         store.unequipBoon(from: unit.id)
-                        AudioLibrary.shared.play(.uiTap)
                     }
                 }
             } content: {
@@ -195,7 +194,8 @@ struct BoonPickerView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(rowBackground(picked: picked))
         }
-        .buttonStyle(.plain)
+        // A row of the scrolling list: quiet, its tick kept (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
     }
 
     private func boonRow(_ boon: Boon) -> some View {
@@ -250,7 +250,7 @@ struct BoonPickerView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(rowBackground(picked: picked))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.quiet))
     }
 
     // MARK: - The panel
@@ -357,13 +357,13 @@ struct BoonPickerView: View {
                     .strokeBorder(Theme.gold.opacity(0.5), lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
     }
 
+    /// The door's press ticked on touch-down; the confirm is the "done".
     private func openDoor(_ cache: BoonCache, choice: Int) {
         guard let boon = store.openBoonCache(cache.id, choice: choice) else { return }
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
         pickedID = boon.id
         flare()
     }
@@ -478,7 +478,7 @@ struct BoonPickerView: View {
                             .strokeBorder(Theme.goldDim.opacity(0.6), lineWidth: 0.5)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.plate))
             }
         }
         .padding(9)
@@ -523,7 +523,7 @@ struct BoonPickerView: View {
                         .strokeBorder(Theme.goldDim.opacity(0.7), lineWidth: 1)
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GamePressStyle(.primary, dimsWhenDisabled: true))
             .disabled(refusal != nil)
             Text(refusal?.errorDescription
                  ?? "You hold \(store.player.wallet.drachma.formatted()) drachma and \(held) \(Aether.name(for: cost.aetherID)).")
@@ -533,16 +533,16 @@ struct BoonPickerView: View {
         }
     }
 
+    /// The push and its choice: each press ticked on touch-down, so the
+    /// confirm alone says it took.
     private func push(_ boon: Boon) {
         guard store.pushBoon(boon.id) != nil else { return }
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
     }
 
     private func takePush(_ boon: Boon, _ offer: BoonService.PushCandidate) {
         guard store.takeBoonPush(boon.id, candidate: offer.id) != nil else { return }
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
         flare()
     }
 
@@ -559,13 +559,11 @@ struct BoonPickerView: View {
                 if boon.equippedBy == unit.id {
                     actionButton("Unequip", "minus.circle", tint: Theme.textSecondary) {
                         store.unequipBoon(from: unit.id)
-                        AudioLibrary.shared.play(.uiTap)
                     }
                 } else {
                     actionButton("Equip on \(unit.name)", "checkmark.circle.fill", tint: Theme.gold) {
                         store.equipBoon(boon.id, on: unit.id)
                         AudioLibrary.shared.play(.uiConfirm)
-                        Juice.haptic(.medium)
                     }
                 }
             }
@@ -600,6 +598,7 @@ struct BoonPickerView: View {
             .background(Capsule().fill(Theme.surface))
             .overlay(Capsule().strokeBorder(tint.opacity(0.4), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        // Sell is disabled on a locked boon: half strength, as `.plain` drew it.
+        .buttonStyle(GamePressStyle(.plate, dimsWhenDisabled: true))
     }
 }

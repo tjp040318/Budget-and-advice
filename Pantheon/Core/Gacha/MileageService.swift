@@ -177,12 +177,17 @@ enum MileageService {
         player.summonMileage = ledger
 
         let isNew = !player.codex.contains(offer.blueprint.id)
+        // What the reveal tells (2026-09-24): the page's pay for a new form,
+        // the skill-up the duplicate really made — the summon's own calls.
+        var promised: Set<String> = []
+        let pagePay: Int? = isNew ? SummonService.codexPay(for: offer.blueprint.id, player: player, promised: &promised) : nil
         player.codex.insert(offer.blueprint.id)
 
         var unit = Unit(blueprint: offer.blueprint)
         unit.acquiredFrom = banner.id
+        var skillUp: SummonSkillUp?
         if !isNew, let index = player.units.firstIndex(where: { $0.blueprintID == offer.blueprint.id }) {
-            _ = ProgressionService.applySkillUp(to: &player.units[index], using: &rng)
+            skillUp = SummonService.duplicateSkillUp(on: index, player: &player, rng: &rng)
         }
         player.units.append(unit)
 
@@ -192,7 +197,9 @@ enum MileageService {
             stars: unit.stars,
             isNew: isNew,
             isFeatured: banner.featured.contains(offer.blueprint.id),
-            fromPity: false
+            fromPity: false,
+            skillUp: skillUp,
+            codexDivinity: pagePay
         )
     }
 }
@@ -284,6 +291,8 @@ enum SelectorService {
         guard candidates().contains(where: { $0.id == blueprint.id }) else { return nil }
 
         let isNew = !player.codex.contains(blueprint.id)
+        var promised: Set<String> = []
+        let pagePay: Int? = isNew ? SummonService.codexPay(for: blueprint.id, player: player, promised: &promised) : nil
         player.codex.insert(blueprint.id)
         var unit = Unit(blueprint: blueprint)
         unit.acquiredFrom = "selector"
@@ -296,7 +305,8 @@ enum SelectorService {
             stars: unit.stars,
             isNew: isNew,
             isFeatured: false,
-            fromPity: false
+            fromPity: false,
+            codexDivinity: pagePay
         )
     }
 }

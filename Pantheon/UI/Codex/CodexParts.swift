@@ -358,7 +358,9 @@ struct CodexPantheonRow: View {
             .background(GlassRowPlate(isOn: isOn))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A row of the pantheons' scrolling rail: quiet, its tap kept in
+        // the action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel("\(pantheon.displayName), \(progress.recorded) of \(progress.total) recorded")
     }
 
@@ -428,7 +430,9 @@ struct CodexFamilyRow: View {
                         } label: {
                             CodexFormTile(entry: page, standing: ledger.standing(page), size: cell)
                         }
-                        .buttonStyle(PlateButtonStyle())
+                        // A face of the table's scrolling list: quiet, its
+                        // tap kept in the action.
+                        .buttonStyle(GamePressStyle(.quiet))
                     } else {
                         Color.clear
                             .frame(width: cell, height: cell)
@@ -488,7 +492,7 @@ struct CodexTierTrack: View {
             .frame(width: Self.marker)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.medallion))
         .accessibilityLabel("\(tier.rawValue)% of the pantheon: \(CodexService.prizeWords(for: tier))")
     }
 

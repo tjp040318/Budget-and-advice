@@ -176,7 +176,7 @@ final class DraftBoardModel: ObservableObject {
         guard var current = session, current.sideToPick == .rival else { return }
         guard let made = current.rivalPicks() else { return }
         rivalLine = DraftWords.pickLine(made, in: current)
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+        withAnimation(Motion.select) {
             session = current
         }
         Juice.haptic(.light)
@@ -205,9 +205,10 @@ final class DraftBoardModel: ObservableObject {
         if pending.count >= current.picksLeftInTurn, !pending.isEmpty {
             pending.removeLast()
         }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+        withAnimation(Motion.select) {
             pending.append(unitID)
         }
+        // The roster's faces wear the quiet press, so a pick ticks here.
         Juice.haptic(.light)
     }
 
@@ -226,7 +227,7 @@ final class DraftBoardModel: ObservableObject {
         pending = []
         inspected = nil
         rivalLine = current.phase == .banning ? DraftWords.sealedLine(current) : nil
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+        withAnimation(Motion.select) {
             session = current
         }
         scheduleRival()
@@ -236,10 +237,11 @@ final class DraftBoardModel: ObservableObject {
     func strike(_ rivalUnitID: UUID) {
         guard let current = session, current.phase == .banning,
               current.picked(.rival).contains(where: { $0.id == rivalUnitID }) else { return }
+        // No tick of its own: the strike card's press and the column's
+        // slot (`DraftSlotRow`) each tick as the finger lands.
         withAnimation(.easeOut(duration: 0.2)) {
             banTarget = banTarget == rivalUnitID ? nil : rivalUnitID
         }
-        Juice.haptic(.light)
     }
 
     /// Both strikes land: the rival's, sealed at the tenth pick, and the
@@ -249,7 +251,7 @@ final class DraftBoardModel: ObservableObject {
         guard current.ban(target) else { return }
         banTarget = nil
         rivalLine = DraftWords.strikeLine(current)
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withAnimation(Motion.panel) {
             session = current
         }
         Juice.haptic(.heavy)
@@ -258,10 +260,10 @@ final class DraftBoardModel: ObservableObject {
     func crown(_ unitID: UUID) {
         guard var current = session else { return }
         guard current.crown(unitID) else { return }
+        // No tick of its own, as `strike`.
         withAnimation(.easeOut(duration: 0.2)) {
             session = current
         }
-        Juice.haptic(.light)
     }
 
     /// A tap on a place in either column: a strike while the bans are open, a

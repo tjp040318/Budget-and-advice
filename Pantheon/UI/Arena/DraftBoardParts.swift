@@ -127,7 +127,8 @@ struct DraftActionButton: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
         return Button {
-            Juice.haptic(.medium)
+            // The primary press ticks and taps on touch-down; the confirm
+            // is the "done", as on `PrimaryButton` (2026-09-24).
             AudioLibrary.shared.play(.uiConfirm, volume: 0.7)
             action()
         } label: {
@@ -151,7 +152,7 @@ struct DraftActionButton: View {
             .clipShape(shape)
             .shadow(color: glowColor, radius: 6, y: 2)
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.primary))
         .disabled(!isEnabled)
         .accessibilityLabel(title)
     }
@@ -591,7 +592,9 @@ struct DraftRosterTile: View {
                     badge
                 }
         }
-        .buttonStyle(PlateButtonStyle())
+        // A face of the roster's scrolling grid: quiet, and the board's
+        // `tap` keeps its tick for a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel("\(unit.name), \(DraftRole(unit.role).displayName), power \(unit.power)")
     }
 
@@ -633,7 +636,6 @@ struct DraftRoleTiles: View {
     private func tile(_ role: DraftRole) -> some View {
         let isOn = selection == role
         return Button {
-            Juice.haptic(.light)
             selection = isOn ? nil : role
         } label: {
             Image(systemName: role.glyph)
@@ -650,7 +652,7 @@ struct DraftRoleTiles: View {
                 })
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel(role.displayName)
     }
 }

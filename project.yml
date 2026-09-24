@@ -44,6 +44,12 @@ targets:
         # and SHA-256 hashing, which is exempt, so App Store Connect stops
         # asking at every upload.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # ProMotion (2026-09-24, Docs/FEEL.md W1.8): without this key an
+        # iPhone never draws faster than 60 Hz, and GraphicsSettings hides
+        # the 120 choice. Two projects report the generator drops this
+        # INFOPLIST_KEY_ form (it carries only keys Xcode knows); if the
+        # built Info.plist lacks it, the key goes in an INFOPLIST_FILE.
+        INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone: YES
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleLightContent
         INFOPLIST_KEY_UIRequiresFullScreen: YES

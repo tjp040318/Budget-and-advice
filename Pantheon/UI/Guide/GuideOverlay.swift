@@ -823,7 +823,9 @@ struct LessonsView: View {
             .background(MarbleRowPlate(radius: Theme.tightCorner).opacity(given ? 1 : 0.55))
             .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
         }
-        .buttonStyle(PlateButtonStyle())
+        // A plate of the library's scrolling grid: quiet, its tap kept in
+        // the action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
         .allowsHitTesting(given)
         .accessibilityLabel(spoken)
     }

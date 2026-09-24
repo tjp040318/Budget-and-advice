@@ -8158,3 +8158,94 @@ numbers are in its own document:
   only wins. `AnalyticsTests` (19). The Support board's "Share anonymous
   play data" toggle lists what is sent under it.
 - **The remakes** are recorded below as they land.
+
+## The random crashes, part two: a stage that never left (2026-09-24)
+
+The owner: "when I do many summons, or sometimes when I play chapters, or
+randomly the app crashes." Part one (commit 1b1bf74, CLAUDE.md's memory
+bullet) bounded the model cache and taught every cache to hear pressure.
+Run 242 was the first to measure the owner's two paths in one launch
+(tour step 53, `-tour-stress summon|battle`), and it split them cleanly:
+
+| Path | Footprint | Read |
+|---|---|---|
+| 30 singles + 3 ten-pulls through the reveal | 76 → 1,439 MB, never given back | about 30 MB a reveal: a leak |
+| 3 stages × 2 auto-repeat runs, a cover each | 340 → 391 → 417 MB after each close | ambiguous: the cache filling with new enemies would do the same |
+
+**The cause.** A `UIViewRepresentable` whose view is an `SCNView` and which
+has no `dismantleUIView` keeps its scene, its figure's clone and every
+texture the renderer uploaded for as long as SwiftUI keeps the old view,
+and a live clone pins its family's entry in the model cache (an entry a
+clone came from is never evicted, by design). The reveal had no
+`dismantleUIView`; neither did the altar, the collection's Stage, the
+chest or the battle's own view.
+
+**The options.**
+1. `onDisappear` on the SwiftUI side. Rejected: it can fire when a
+   full-screen cover goes OVER the stage, and the stage comes back.
+2. One shared `SCNView` reused by every reveal. Rejected for now: a large
+   change to the one screen the owner's spending runs through, and the
+   leak is the missing teardown, not the number of views.
+3. **`static func dismantleUIView` on every 3D stage, chosen.** SwiftUI
+   calls it once, on the main thread, when the view leaves for good. The
+   order is the render thread's: the renderer stops FIRST; every particle
+   host comes off through `VFXLibrary.dismiss` (a host removed while its
+   motes lived crashed the fight twice); every action and animation stops;
+   and only `SummonStageView.teardownSettle` (0.5 s) later, past the cover's
+   slide and any frame in flight, the root's children go, the view lets go
+   of its scene and the coordinator of its nodes. The reveal, the altar and
+   the collection's Stage take their own graphs down; the chest the same.
+   The battle's view does NOT take its graph apart — the battle's model
+   owns the controller and its scene — it only stops, and drops the scene,
+   the plates and its links.
+
+**How the next run says whether it worked.** Every `[Mem]` line now ends
+with the model cache (`cache N files, M MB, P pinned, C clones, S clip
+sets`, commit 1ddf8ea), and two lines are printed as a stage really goes:
+`[Mem] reveal stage released` (the reveal's coordinator's `deinit`) and
+`[Mem] battle stage released` (`BattleSceneController.deinit`). The
+summon stress must plateau with one release line per reveal; the battle
+stress must print one release line per closed stage, and the cache
+summary says how much of the climb is the cache.
+
+## The premium feel, Wave 1 (2026-09-24; `Docs/FEEL.md`)
+
+The owner: "do more research and really study games and summoners war and
+come up with more upgrades to enhance the feel and look of the game."
+`Docs/FEEL.md` is that research and its roadmap: what makes the genre feel
+premium, where this game stands area by area, three waves ranked by impact
+per hour, and what costs money. Wave 1 as built so far:
+
+- **W1.4, the silent fight gets its sounds** (commit 7b6a3db): 21
+  synthesised effects (`tools/sfx.py`) on the heal, each status, a counter,
+  an extra turn, a revive, a death, each realm's wave horn, a boss's
+  arrival and the player's turn, and a level-up fanfare waiting for W1.6;
+  victory plays once. The
+  listening page is the artifact *Pantheon Battle Sounds*.
+- **W1.5, the summon's rarity ladder and honest duplicates:** the charge
+  climbs blue → violet (0.44 s, a real 4★ or better) → gold with lightning
+  (0.88 s, a real 5★) → the Light & Dark split (1.06 s), so the rung
+  reached IS the grade and nothing tells it earlier (`ChargeLadder`); a
+  duplicate says what it did (`SummonSkillUp`: the skill it levelled on the
+  first copy, or MAXED) and a new page what claiming it will pay
+  (`codexDivinity`, the family's first bonus promised once, counting pages
+  already in the book). `SummonHonestyTests`.
+- **The reveal half of L1:** the figure and the set on their own light
+  categories (2 and 4), the house dimmed after the flash.
+- **W1.8, one press language:** `GamePressStyle(.primary | .plate |
+  .medallion | .quiet)` on every button (sink, spring back, a tick and a
+  haptic on touch-down, the sound off inside a scroll), the springs as
+  `Motion` tokens in `Theme.swift` (`tap`, `select`, `pop`, `panel`,
+  `exit`, `celebrate`), and swiftcheck's `check_chrome_springs` fails a
+  spring written by hand in `Pantheon/UI` or `Pantheon/App`. 120 Hz by
+  `INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone`; the CI job reads
+  the built `Info.plist` and writes `PROMOTION KEY MISSING` to
+  `build-errors.txt` if Xcode dropped it. `PressTests`.
+- **W1.10, the unit sheet stands the god up:** the unit's real figure,
+  idling, in a dark glass well on the sheet (`CollectionStageView`'s
+  `.column` framing).
+
+Still to build, the battle's half: W1.1 speed ×1/×2/×3 with the juice kept,
+W1.2 damage numbers, W1.3 the hit-stop and impact frame, W1.9 the turn
+circle and skill banner, W1.7 the end of a fight, W1.6 the level-up
+fanfare, and L1's battle half.

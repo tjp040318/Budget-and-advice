@@ -219,24 +219,22 @@ struct CodexPageView: View {
             HStack(spacing: 6) {
                 ForEach(skills.indices, id: \.self) { slot in
                     Button {
-                        Juice.haptic(.light)
                         pickedSkill = slot
                     } label: {
                         skillTile(skills[slot], key: slot < icons.count ? icons[slot] : nil,
                                   element: entry.element, ranged: ranged, icon: icon,
                                   selected: pickedSkill != Self.leaderSlot && slot == chosen)
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                     .accessibilityLabel(skills[slot].name)
                 }
                 if leader != nil {
                     Button {
-                        Juice.haptic(.light)
                         pickedSkill = Self.leaderSlot
                     } label: {
                         leaderTile(icon: icon, selected: pickedSkill == Self.leaderSlot)
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                     .accessibilityLabel("Leader skill")
                 }
                 Spacer(minLength: 0)

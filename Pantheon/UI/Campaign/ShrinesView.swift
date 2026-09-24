@@ -301,7 +301,9 @@ struct ShrinesWing: View {
                 .background(GlassRowPlate(isOn: isOn))
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A row of the shrines' scrolling rail: quiet, its tap kept in the
+        // action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel(label)
     }
 
@@ -702,8 +704,8 @@ struct ShrinesWing: View {
     // MARK: - Doing things
 
     private func fight(_ shrine: HiddenShrine, runs: Int) {
+        // Fight's press ticked on touch-down.
         guard let start = store.startShrineBattle(shrine) else { return }
-        Juice.haptic(.light)
         fightingForm = shrine.blueprintID
         piecesBefore = ShrineService.pieces(of: shrine.blueprintID, player: store.player)
         repeatRuns = max(1, runs)
@@ -720,7 +722,7 @@ struct ShrinesWing: View {
         let held = ShrineService.pieces(of: form, player: store.player)
         let gained = held - piecesBefore
         guard gained > 0 else { return }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+        withAnimation(Motion.panel) {
             receipt = ShrineReceipt(blueprintID: form, gained: gained, held: held)
         }
     }
@@ -728,7 +730,6 @@ struct ShrinesWing: View {
     private func summon(_ blueprintID: String) {
         guard let result = store.summonFromPieces(blueprintID) else { return }
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
         reveal = result
     }
 

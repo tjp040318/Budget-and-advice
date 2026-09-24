@@ -22,6 +22,19 @@ final class BattleSceneController: NSObject {
     let scene = SCNScene()
     weak var delegate: BattleSceneDelegate?
 
+    /// One line per fight gone (2026-09-24): a chapter is fight after fight,
+    /// each in its own cover, and the owner's phone crashed "sometimes when
+    /// I play chapters". CI's battle stress climbed 340 → 391 → 417 MB over
+    /// three stages, which the model cache filling would also do; this line
+    /// says whether each fight's stage really leaves — `[Mem] battle stage
+    /// released`, with the cache's files and live clones beside the
+    /// footprint.
+    deinit {
+        #if DEBUG
+        MemoryProbe.log("battle stage released")
+        #endif
+    }
+
     /// 1.0 is normal, 2.0 is the fast-forward toggle, 4.0 is "skip animation".
     ///
     /// It used to divide the event queue's holds and nothing else: every

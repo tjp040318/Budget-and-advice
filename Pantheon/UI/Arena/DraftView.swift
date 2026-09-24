@@ -451,7 +451,7 @@ struct DraftView: View {
             .frame(width: size + 12)
             .shadow(color: .black.opacity(0.7), radius: 1, y: 1)
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("Strike \(unit.name)")
     }
 
@@ -477,7 +477,7 @@ struct DraftView: View {
                                     .strokeBorder(unit.id == session.playerLeader ? Theme.gold : Color.clear, lineWidth: 2)
                             )
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                     .accessibilityLabel("Crown \(unit.name)")
                 }
             }
@@ -647,7 +647,7 @@ struct DraftView: View {
 
     private func claimChest() {
         guard let paid = store.claimDraftChest() else { return }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withAnimation(Motion.celebrate) {
             chestShown = paid
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {

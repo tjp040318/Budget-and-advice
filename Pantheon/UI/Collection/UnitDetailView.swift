@@ -34,9 +34,32 @@ private let ringColumnWidth: CGFloat = 212
 /// frame has to hold.
 private let slotTileSize: CGFloat = 60
 
-/// The largest face the identity column draws: its 158 less the panel's 12
-/// a side is 134, and 120 leaves the rarity frame air inside it.
-private let identityFaceMaximum: CGFloat = 120
+/// The left column: the figure's well, the level and the three rows.
+private let identityColumnWidth: CGFloat = 158
+
+/// The figure's well across (2026-09-24): the card's old footprint. The
+/// column's 158 less the panel's 12 a side is 134, but the painted panel's
+/// corner ornaments reach 18.6 points in and 16.9 down (`panelBottomInset`'s
+/// measurement, and the top corners are the same scroll), so a well at the
+/// full 134, 8 points under the top band, would stand its corners on them;
+/// at 120 they are 19 in, where the card's were.
+private let wellWidth: CGFloat = 120
+
+/// The well's greatest height, one and a half times its width. No phone
+/// reaches it — a Pro Max gives the well 162, a family with no awakening 170
+/// on an iPhone 16 Pro — but an iPad's sheet would stand the figure, whose
+/// size the width sets (`Framing.column`), at the foot of a shaft; past it
+/// the spacer over the rows takes the room, as it did for the card.
+private let wellTallest: CGFloat = 180
+
+/// The well's corner: the glass plates' tight corner and a little more, so
+/// the thumbnail inside it, 5 points in, sits concentric with it.
+private let wellCorner: CGFloat = Theme.tightCorner + 2
+
+/// The card's thumbnail in the well's top-left corner: the 44 points of
+/// Apple's smallest touch target, the whole of it the tap.
+private let wellThumbnail: CGFloat = 44
+private let wellThumbnailInset: CGFloat = 5
 
 /// The fade at the foot of a panel body that scrolls (`SheetPanelScroll`),
 /// and the room its last line keeps under it so it can scroll clear.
@@ -254,13 +277,65 @@ private struct RelicFigures {
     var note: String?
 }
 
-/// One unit on one screen, the way the genre lays it out: the card and its
-/// progress on the left, the six relic slots in a ring in the middle, the
-/// stats with their relic bonuses on the right, and the skills along the
-/// bottom with their words a tap away. The sheet is one landscape frame;
-/// only a panel's overflow scrolls, inside the panel (`SheetPanelScroll`).
-/// The lore sits behind the book, and the fodder pickers open as sheets. A
-/// relic slot opens the picker for that slot.
+/// What stands behind the figure in the unit sheet's well (2026-09-24): the
+/// summoning hall's floor, soft, under dark glass.
+///
+/// A figure on the cream panel reads as a cut-out (FEEL.md W1.10), and the
+/// premium pass's rule is cream for chrome and dark glass over art. The
+/// ground is the painting the collection's Stage stands its figures in, so
+/// the two screens are one place: its floor medallion — measured with a grid
+/// at (0.50, 0.82) of the painting, `CollectionView.stageGround` — is laid
+/// under the figure's feet, the painting drawn at 1.4 times the well's
+/// height so the floor and the columns' bases fill it, and blurred, so the
+/// figure is the one sharp thing in it. Decoded at 512 pixels, since a blur
+/// of five points leaves nothing a larger one would add. Over it, the
+/// glass: darker at the top, where the head stands, as a lit floor under a
+/// dark hall is. Never takes a tap.
+private struct FigureWellGround: View {
+    /// Where the figure's feet stand in the well, in 0…1 of it.
+    let feet: UnitPoint
+
+    private static let painting = "summon_hall_bg"
+    private static let medallion = CGPoint(x: 0.5, y: 0.82)
+    private static let paintingAspect: CGFloat = 2048.0 / 1152.0
+    private static let zoom: CGFloat = 1.4
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: wellCorner, style: .continuous)
+        let feet = self.feet
+        return ZStack {
+            shape.fill(Color(hex: "#0E0B08"))
+            // Covers any well up to two and a half times as wide as it is
+            // tall: at 1.4, with the feet at 0.86, the painting's top is
+            // 0.29 of the well's height above the well's top and its foot
+            // 0.11 below the well's foot.
+            GeometryReader { frame in
+                let height: CGFloat = frame.size.height * Self.zoom
+                let width: CGFloat = height * Self.paintingAspect
+                BundleImage(name: Self.painting, renderedAt: 160)
+                    .frame(width: width, height: height)
+                    .offset(x: frame.size.width * feet.x - width * Self.medallion.x,
+                            y: frame.size.height * feet.y - height * Self.medallion.y)
+            }
+            .clipped()
+            .blur(radius: 5)
+            LinearGradient(colors: [Color.black.opacity(0.4), Color.black.opacity(0)],
+                           startPoint: .top, endPoint: .center)
+            GlassPlate(radius: wellCorner, opacity: 0.55)
+        }
+        .clipShape(shape)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// One unit on one screen, the way the genre lays it out: the unit's own
+/// figure (its card a tap away) and its progress on the left, the six relic
+/// slots in a ring in the middle, the stats with their relic bonuses on the
+/// right, and the skills along the bottom with their words a tap away. The
+/// sheet is one landscape frame; only a panel's overflow scrolls, inside the
+/// panel (`SheetPanelScroll`). The lore sits behind the book, and the fodder
+/// pickers open as sheets. A relic slot opens the picker for that slot.
 struct UnitDetailView: View {
     let unitID: UUID
 
@@ -282,6 +357,21 @@ struct UnitDetailView: View {
     /// The skill whose words are shown, by its place in the kit — or
     /// `leaderSlot` for the leader skill's own tile.
     @State private var selectedSkill = 0
+    /// The figure's turn in its well, in points of drag: what earlier drags
+    /// left it at, and the drag in progress (the collection Stage's pair).
+    @State private var spinBase: CGFloat = 0
+    @State private var spinDrag: CGFloat = 0
+    /// The well's turn, in degrees about its upright: 0 with the figure to
+    /// the front, 180 with the card; 90 is edge on, where the faces swap
+    /// (`flipWell`).
+    @State private var wellTurn: Double = 0
+    /// Which face of the well is up: the card, or the figure.
+    @State private var showsCard = false
+    /// A turn in progress, which a second tap does not start again.
+    @State private var wellTurning = false
+    /// Whether the figure stands in the well yet: a beat after the sheet
+    /// opens (`standFigure`).
+    @State private var figureStands = false
 
     /// A slot number that can drive a sheet.
     struct SlotPick: Identifiable {
@@ -326,9 +416,11 @@ struct UnitDetailView: View {
                 // so another unit can wear them. Worded since run 216: a bare
                 // ⊖ read as "remove", not as the relics coming off, and the
                 // strip has the room now that its title is the short name.
+                // No sound in the action (2026-09-24): `BarButton` taps on
+                // touch-down now (`GamePressStyle(.plate)`), and a second tap
+                // on the release played the press twice.
                 BarButton(title: "Unequip all", systemImage: "minus.circle", tint: Theme.textSecondary) {
                     store.unequipAll(unitID)
-                    AudioLibrary.shared.play(.uiTap)
                 }
                 BarButton(
                     title: isLocked ? "Locked" : "Unlocked",
@@ -363,7 +455,7 @@ struct UnitDetailView: View {
                         let height = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
                         HStack(alignment: .top, spacing: 8) {
                             identity(unit, height: height)
-                                .frame(width: 158)
+                                .frame(width: identityColumnWidth)
                             relicRing(unit)
                                 .frame(width: ringColumnWidth)
                             VStack(spacing: 8) {
@@ -418,28 +510,36 @@ struct UnitDetailView: View {
             } message: {
                 Text(unit?.blueprint.lore ?? "")
             }
+            .task {
+                await standFigure()
+            }
         }
     }
 
-    // MARK: - Left: the card and what to do with it
+    // MARK: - Left: the figure and what to do with it
 
-    /// The face, its level, and the three things to do with a unit.
+    /// The figure, its level, and the three things to do with a unit.
     ///
     /// Fitted to the frame rather than scrolled: the buttons are pinned at
-    /// the panel's foot and the FACE takes what they leave, up to 120 points
-    /// — 120 on an iPhone 16 Pro and on an iPhone 16 with all three rows.
-    /// It is the face alone (`UnitPortraitTile`), no caption and no level
-    /// badge: the card's caption printed the name the strip prints, the
-    /// level the bar under it prints and the power the ring prints, all
-    /// within 150 pixels (run 216), and its 41 points are the face's now,
-    /// 93 → 120.
+    /// the panel's foot and the figure's WELL takes what they leave — 120
+    /// across and 134 tall on an iPhone 16 Pro with all three rows, 125 on
+    /// an iPhone 16, 170 on a 16 Pro for a family with no awakening.
+    ///
+    /// The well was the card's face (`UnitPortraitTile`, up to 120 points)
+    /// until 2026-09-24 (FEEL.md W1.10): the whole roster was remade in the
+    /// serious style between the 18th and the 23rd, the owner's largest
+    /// spend on the game, and the screen a player opens most still showed
+    /// the chibi bust. The unit stands there now in its own figure, and the
+    /// face is the well's thumbnail and its back (`figureWell`). No caption
+    /// and no level on either: the strip prints the name, the bar under the
+    /// well the level and the ring the power (run 216).
     private func identity(_ unit: ResolvedUnit, height: CGFloat) -> some View {
         // The fixed parts: the panel's 8 and 18, the level bar's 23, the 6
         // over it and the spacer's least 6 under it, and the rows — Power
         // up's 46 and 32 for each row under it with 4 between.
         let rows: CGFloat = unit.blueprint.awakening != nil ? 118 : 82
         let room = height - 61 - rows
-        let card = max(64, min(identityFaceMaximum, room.rounded(.down)))
+        let well = CGSize(width: wellWidth, height: min(wellTallest, max(64, room.rounded(.down))))
         // `grantExperience` zeroes the stored experience at the cap, so a
         // maxed unit's bar read "0 / 1400" under a full level — the same
         // lie the fodder footer was fixed for. Fill it and say MAX.
@@ -447,7 +547,7 @@ struct UnitDetailView: View {
             level: unit.level, stars: unit.stars
         ))
         return VStack(spacing: 0) {
-            UnitPortraitTile(unit: unit, size: card, showsLevel: false)
+            figureWell(unit, size: well)
                 .padding(.bottom, 6)
             StatBar(
                 value: unit.unit.isMaxLevel ? toNextLevel : Double(unit.unit.experience),
@@ -493,6 +593,7 @@ struct UnitDetailView: View {
                         "sun.max.fill",
                         achieved: unit.unit.isAwakened
                     ) {
+                        warmAwakenedForm(unit)
                         showAwakening = true
                     }
                 }
@@ -505,6 +606,215 @@ struct UnitDetailView: View {
         // edge, so it needs the ornament's 17 points rather than the band's 8.
         .padding(.bottom, panelBottomInset)
         .panelBackground(radius: Theme.tightCorner)
+    }
+
+    // MARK: - The well: the figure, and the card behind it
+
+    /// The unit's own figure in a dark glass well, and the card on the
+    /// well's back (2026-09-24; FEEL.md W1.10).
+    ///
+    /// The figure is the collection's stage in a narrow framing
+    /// (`CollectionStageView`, `Framing.column`): the serious mesh, the
+    /// awakened one with its own rig's clips for an awakened unit, the
+    /// figure stages' light and shadow, and its resting idle started the
+    /// `startLoop` way — the figure is stood in the live scene a beat after
+    /// the sheet opens (`standFigure`), the order that plays. It is turned a
+    /// three-quarter toward the relic ring, and a drag across the well turns
+    /// it at the collection's rate. The card is a 44-point thumbnail in the
+    /// well's top-left corner; a tap turns the well over to the card, and a
+    /// tap on the card turns it back — the genre's card-and-figure pair,
+    /// the card one tap away rather than gone.
+    ///
+    /// Both faces stay in the hierarchy and only the one that is up is
+    /// drawn, takes taps and is read to VoiceOver: taking the figure's face
+    /// out while the card showed would dismantle its stage, and the turn
+    /// back would parse and fade the figure in afresh.
+    private func figureWell(_ unit: ResolvedUnit, size: CGSize) -> some View {
+        ZStack {
+            figureFace(unit, size: size)
+                .opacity(showsCard ? 0 : 1)
+                .allowsHitTesting(!showsCard)
+                .accessibilityHidden(showsCard)
+            // The well's back: a half turn of its own, so it reads the right
+            // way round once the well has turned it to the front — and none
+            // while the well stands square, which is where a Reduce Motion
+            // cross-fade shows it.
+            cardFace(unit, size: size)
+                .rotation3DEffect(.degrees(wellTurn == 0 ? 0 : 180), axis: (x: 0, y: 1, z: 0))
+                .opacity(showsCard ? 1 : 0)
+                .allowsHitTesting(showsCard)
+                .accessibilityHidden(!showsCard)
+        }
+        .frame(width: size.width, height: size.height)
+        .rotation3DEffect(.degrees(wellTurn), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
+    }
+
+    /// Where the column framing stands the figure's feet in the well, for
+    /// the ground to lay the hall's floor medallion under them.
+    private static var wellFeet: UnitPoint {
+        let framing = CollectionStageView.Framing.column
+        return UnitPoint(x: CGFloat(framing.across), y: CGFloat(framing.down))
+    }
+
+    /// The front: the figure over the hall's floor, the drag across it, the
+    /// card's thumbnail in the corner and the turn's hint in the other.
+    private func figureFace(_ unit: ResolvedUnit, size: CGSize) -> some View {
+        let shape = RoundedRectangle(cornerRadius: wellCorner, style: .continuous)
+        return ZStack {
+            FigureWellGround(feet: Self.wellFeet)
+            CollectionStageView(
+                unit: figureStands ? unit : nil,
+                spin: Float((spinBase + spinDrag) * CollectionStageView.spinPerPoint),
+                framing: .column,
+                // Stopped while the card is up: nobody can see the figure.
+                playing: !showsCard
+            )
+            .allowsHitTesting(false)
+            // The drag turns the figure about its own axis, left for left,
+            // and it stays where the finger left it — the collection's
+            // Stage's gesture on the collection's Stage's figure.
+            Color.clear
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 4)
+                        .onChanged { value in
+                            spinDrag = value.translation.width
+                        }
+                        .onEnded { value in
+                            spinBase += value.translation.width
+                            spinDrag = 0
+                        }
+                )
+                .accessibilityHidden(true)
+        }
+        .frame(width: size.width, height: size.height)
+        .clipShape(shape)
+        // The hint the collection's Stage spells out as DRAG TO TURN, as its
+        // glyph alone: the well is 120 points across, and a capsule of words
+        // would stand on the figure's ring. Top right, level with the
+        // thumbnail: the ring's ellipse reaches into both bottom corners
+        // (on the feet's line its tips are 6 points from the right edge and
+        // 13 from the left), and the figure's head and shoulders stand 30
+        // points clear of this one.
+        .overlay(alignment: .topTrailing) {
+            Image(systemName: "arrow.left.and.right")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.onGlassDim.opacity(0.75))
+                .shadow(color: .black.opacity(0.6), radius: 1, y: 0.5)
+                .padding(7)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        // Outside the clip, so the grade's glow round the thumbnail is not
+        // cut at the well's edge.
+        .overlay(alignment: .topLeading) {
+            Button {
+                flipWell()
+            } label: {
+                UnitPortraitTile(unit: unit, size: wellThumbnail, showsLevel: false)
+                    .shadow(color: .black.opacity(0.55), radius: 3, y: 1)
+            }
+            .buttonStyle(GamePressStyle(.plate))
+            .accessibilityLabel("Show the card of \(unit.nameWithoutEpithet)")
+            .padding(wellThumbnailInset)
+        }
+    }
+
+    /// The back: the card as the sheet drew it before the figure stood
+    /// here — the face in its grade's metal with its element and stars — on
+    /// the same glass, the whole well a tap that turns it back.
+    private func cardFace(_ unit: ResolvedUnit, size: CGSize) -> some View {
+        let shape = RoundedRectangle(cornerRadius: wellCorner, style: .continuous)
+        // Four points of glass round it: 112 on a 120-point well.
+        let card = max(wellThumbnail, min(size.width, size.height) - 8)
+        return Button {
+            flipWell()
+        } label: {
+            ZStack {
+                FigureWellGround(feet: Self.wellFeet)
+                UnitPortraitTile(unit: unit, size: card, showsLevel: false)
+                    .shadow(color: .black.opacity(0.5), radius: 6, y: 3)
+            }
+            .frame(width: size.width, height: size.height)
+            .contentShape(shape)
+        }
+        .buttonStyle(GamePressStyle(.plate))
+        .accessibilityLabel("Show the figure of \(unit.nameWithoutEpithet)")
+    }
+
+    /// Turns the well over: to the card from the figure, to the figure from
+    /// the card, and back the way it came.
+    ///
+    /// A quarter turn to edge on, gathering speed; the faces swap there,
+    /// where neither is seen; then the rest of the turn, settling — 0.4 s
+    /// in all, a card turned over on a table. The swap waits on the first
+    /// quarter's completion rather than on a clock, so a slow frame cannot
+    /// show the wrong face at an angle. Under Reduce Motion the well stands
+    /// square and the faces cross-fade. The turn away is `Motion.exit` and
+    /// the cross-fade `Motion.calm` (FEEL.md W1.8); the settle is the
+    /// turn's own 0.22-second ease-out.
+    private func flipWell() {
+        guard !wellTurning else { return }
+        // No tick or tap here (2026-09-24): both buttons that call this wear
+        // `GamePressStyle(.plate)`, which answers on touch-down.
+        // A card that faded up under Reduce Motion stands square, unturned,
+        // and fades back down even if Reduce Motion has been turned off since:
+        // turned from there, its own half turn would show it mirrored.
+        if MotionComfort.isReduced || (showsCard && wellTurn == 0) {
+            wellTurn = 0
+            withAnimation(Motion.calm) {
+                showsCard.toggle()
+            }
+            return
+        }
+        wellTurning = true
+        let toCard = !showsCard
+        withAnimation(Motion.exit) {
+            wellTurn = 90
+        } completion: {
+            showsCard = toCard
+            withAnimation(.easeOut(duration: 0.22)) {
+                wellTurn = toCard ? 180 : 0
+            } completion: {
+                wellTurning = false
+            }
+        }
+    }
+
+    /// Stands the figure in its well a beat after the sheet opens.
+    ///
+    /// The unit's mesh is parsed off the main thread from the moment the
+    /// sheet appears (`ModelLibrary.warm(forms:)`, the form the unit has,
+    /// the way the collection warms its Stage), and the figure is placed
+    /// 0.35 s later, when the sheet has finished rising. Placed at once, in
+    /// the stage's `makeUIView`, a family not yet in the cache would be
+    /// parsed on the main thread inside the sheet's first layout, before the
+    /// sheet could start to move; a warm pass started in `onAppear` comes
+    /// after that layout, too late to help. A family already cached is
+    /// cloned in a moment either way. The figure then goes into a scene that
+    /// is already rendering, which is the order `SCNNode.startLoop` exists
+    /// for, and fades in over the stage's own 0.35 s. On the main actor
+    /// whatever the SDK makes of a view's methods, so the state it sets is
+    /// set there.
+    @MainActor
+    private func standFigure() async {
+        if let unit {
+            ModelLibrary.shared.warm(forms: [(spec: unit.blueprint.model, awakened: unit.unit.isAwakened)],
+                                     crowded: false, clips: false)
+        }
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        guard !Task.isCancelled else { return }
+        figureStands = true
+    }
+
+    /// The awakened form's mesh and clips, parsed off the main thread while
+    /// the awakening sheet is up: the well swaps its figure for the awakened
+    /// one the moment `store.awaken` returns, into a live scene, on the main
+    /// thread. The Hall of Ka's `warmAwakening`, for the same rite reached
+    /// from here.
+    private func warmAwakenedForm(_ unit: ResolvedUnit) {
+        guard !unit.unit.isAwakened, unit.blueprint.awakening != nil else { return }
+        ModelLibrary.shared.warm(forms: [(spec: unit.blueprint.model, awakened: true)], crowded: false, clips: true)
     }
 
     /// Why the Evolve row is lit or dark. `canEvolve` is false for two
@@ -587,7 +897,9 @@ struct UnitDetailView: View {
                 }
             )
         }
-        .buttonStyle(PlateButtonStyle())
+        // The plate's press (2026-09-24): its actions never sounded, so the
+        // silent `PlateButtonStyle()` left these three rows mute.
+        .buttonStyle(GamePressStyle(.plate))
         .disabled(!enabled && !achieved)
     }
 
@@ -641,7 +953,6 @@ struct UnitDetailView: View {
                 VStack(spacing: 2) {
                     boonSocket(unit)
                     Button {
-                        Juice.haptic(.light)
                         showWorth = true
                     } label: {
                         VStack(spacing: 2) {
@@ -667,7 +978,7 @@ struct UnitDetailView: View {
                         }
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(GamePressStyle(.plate))
                     .accessibilityLabel("Power \(unit.power), what the relics are worth")
                     .popover(isPresented: $showWorth) {
                         ringWorth(unit, figures: figures)
@@ -726,7 +1037,6 @@ struct UnitDetailView: View {
     private func slotTile(slot: Int, unit: ResolvedUnit) -> some View {
         let relic = unit.unit.equippedRelics[slot].flatMap { store.player.relic($0) }
         return RelicSlotTile(slot: slot, relic: relic, size: slotTileSize) {
-            Juice.haptic(.light)
             // A worn relic opens its power-up screen (Change is on it);
             // an empty slot opens the picker.
             if let relic {
@@ -745,7 +1055,6 @@ struct UnitDetailView: View {
         let boon = unit.boon
         let socket: CGFloat = 36
         return Button {
-            Juice.haptic(.light)
             showBoons = true
         } label: {
             ZStack {
@@ -767,7 +1076,7 @@ struct UnitDetailView: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
     }
 
     /// The boon's line under the sets row: "Bane of Tide" over "+18.3% vs
@@ -854,7 +1163,9 @@ struct UnitDetailView: View {
                 .overlay(shape.strokeBorder(unlocked ? Theme.gold.opacity(0.6) : Theme.stroke.opacity(0.6), lineWidth: 0.5))
                 .contentShape(shape)
             }
-            .buttonStyle(.plain)
+            // A row of the panel's scroll (`SheetPanelScroll`): the quiet
+            // press, and its tick stays in the action (2026-09-24).
+            .buttonStyle(GamePressStyle(.quiet))
             .accessibilityLabel("\(regalia.name), level \(regalia.level)")
         }
     }
@@ -923,7 +1234,8 @@ struct UnitDetailView: View {
                 .background(Capsule().fill(Theme.surface))
                 .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            // In the panel's scroll: quiet, the tick kept (2026-09-24).
+            .buttonStyle(GamePressStyle(.quiet))
             .accessibilityLabel("Set effects")
         }
         .frame(height: 22)
@@ -1271,7 +1583,6 @@ struct UnitDetailView: View {
             HStack(spacing: 6) {
                 ForEach(unit.skills.indices, id: \.self) { slot in
                     Button {
-                        Juice.haptic(.light)
                         selectedSkill = slot
                     } label: {
                         skillTile(
@@ -1283,17 +1594,16 @@ struct UnitDetailView: View {
                             icon: icon
                         )
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                     .accessibilityLabel(unit.skills[slot].name)
                 }
                 if leader != nil {
                     Button {
-                        Juice.haptic(.light)
                         selectedSkill = Self.leaderSlot
                     } label: {
                         leaderTile(selected: index == Self.leaderSlot, icon: icon)
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                     .accessibilityLabel("Leader skill")
                 }
             }
@@ -1471,7 +1781,9 @@ private struct SkillLevelButton: View {
             } label: {
                 badge
             }
-            .buttonStyle(.plain)
+            // In the skill's words, which scroll (`SheetPanelScroll`): the
+            // quiet press, its tick and tap kept in the action (2026-09-24).
+            .buttonStyle(GamePressStyle(.quiet))
             .accessibilityLabel("Skill level \(level) of \(skill.maxSkillLevel), skill-ups")
             .popover(isPresented: $isOpen) {
                 ladder
@@ -1674,10 +1986,15 @@ struct FodderPickerView: View {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 76, maximum: 96), spacing: 8)], spacing: 10) {
                             ForEach(candidates) { candidate in
                                 Button {
+                                    Juice.haptic(.light)
                                     toggle(candidate.id)
                                 } label: {
                                     UnitCard(unit: candidate, isSelected: selection.contains(candidate.id), size: 76)
                                 }
+                                // The system's automatic style drew these; a
+                                // card of a scrolling grid wears the quiet
+                                // press, its tick in the action (2026-09-24).
+                                .buttonStyle(GamePressStyle(.quiet))
                             }
                         }
                         .padding(.horizontal, ScreenChrome.contentPadding)
@@ -1808,6 +2125,8 @@ struct RelicSlotTile: View {
             }
             .frame(width: size, height: size)
         }
-        .buttonStyle(PlateButtonStyle())
+        // The plate's press answers on touch-down (2026-09-24); every
+        // caller's action dropped the tick it played.
+        .buttonStyle(GamePressStyle(.plate))
     }
 }

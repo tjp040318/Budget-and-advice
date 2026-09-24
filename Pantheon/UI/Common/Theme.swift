@@ -515,6 +515,83 @@ enum Theme {
     }
 }
 
+// MARK: - Motion
+
+/// The game's motion curves: seven, named for what they do, and every
+/// screen's chrome moves on one of them (2026-09-24, `Docs/FEEL.md` W1.8).
+/// The chrome had grown more than twenty spring settings, one per screen and
+/// written on the day, so the same kind of thing — a popup opening, a chip
+/// being chosen — moved three different ways depending on who built the
+/// screen, and one hand designing everything is what a premium game feels
+/// like (principle 9). The battle's and the reveal's cinematics keep their
+/// own numbers: they are choreography, timed to a clip or a beam, not chrome.
+/// `swiftcheck` fails a new `.spring(response:` written anywhere else in
+/// `Pantheon/UI`, so a screen reaches for a token instead of inventing one.
+///
+/// Every token but `ambient` passes through `respecting(_:)`: under Reduce
+/// Motion (iOS's, or the game's own switch — `MotionComfort`, the same read
+/// the fight's camera makes) a spring's travel and overshoot become a short
+/// ease, so a thing still arrives and still says it arrived, without the
+/// bounce that the setting exists to take away.
+enum Motion {
+    /// A finger's answer: the sink under a press, a switch's knob. 160 ms,
+    /// inside the 100–200 ms a tap wants and with no bounce of its own —
+    /// the bounce is the release's (`GamePressStyle`).
+    static let tapSpring = MotionSpring(response: 0.16, damping: 0.86)
+    /// A choice changing: a tab, a chip, a segment, a card picked in a rail.
+    static let selectSpring = MotionSpring(response: 0.28, damping: 0.78)
+    /// Something small arriving with a word to say: a bubble, a nameplate,
+    /// a badge. It overshoots a little, which is what makes it an event.
+    static let popSpring = MotionSpring(response: 0.34, damping: 0.64)
+    /// A plate, a popup or a receipt opening over the screen: heavier and
+    /// settled, because a panel that bounces reads as a toy.
+    static let panelSpring = MotionSpring(response: 0.38, damping: 0.86)
+    /// A reward or a stamp landing: slow enough to see and loose enough to
+    /// ring. Kept for the moments that earn it (principle 2: bounce is for
+    /// successes).
+    static let celebrateSpring = MotionSpring(response: 0.52, damping: 0.58)
+    /// The press's release: the plate springs PAST its size and settles
+    /// (`GamePressStyle`'s keyframes end on it).
+    static let settleSpring = MotionSpring(response: 0.3, damping: 0.6)
+
+    static var tap: Animation { respecting(tapSpring.animation) }
+    static var select: Animation { respecting(selectSpring.animation) }
+    static var pop: Animation { respecting(popSpring.animation) }
+    static var panel: Animation { respecting(panelSpring.animation) }
+    static var celebrate: Animation { respecting(celebrateSpring.animation) }
+    /// Something leaving: quick and falling away, never a bounce — a thing
+    /// on its way out has nothing more to say.
+    static var exit: Animation { respecting(.easeIn(duration: 0.18)) }
+    /// A breath: a glow, a pulse, a drift, for a caller to repeat. It does
+    /// NOT pass through `respecting(_:)` — a 0.22-second ease repeated
+    /// forever would be a flicker, the opposite of calm — so a loop that
+    /// should stop under Reduce Motion asks `isCalm` itself.
+    static let ambient = Animation.easeInOut(duration: 2.4)
+
+    /// Reduce Motion, iOS's or the game's own.
+    static var isCalm: Bool { MotionComfort.isReduced }
+
+    /// The curve a moment gets under Reduce Motion: a short ease that still
+    /// arrives, with no travel past the mark and no bounce back.
+    static let calm = Animation.easeInOut(duration: 0.22)
+
+    /// `animation`, or `calm` when the player has asked for less motion.
+    /// For a curve of a screen's own that is not one of the seven.
+    static func respecting(_ animation: Animation) -> Animation {
+        isCalm ? calm : animation
+    }
+}
+
+/// One spring, readable as a SwiftUI `Animation` for a view and as a
+/// `Spring` for a keyframe track, so the two can never drift apart.
+struct MotionSpring {
+    let response: Double
+    let damping: Double
+
+    var animation: Animation { .spring(response: response, dampingFraction: damping) }
+    var spring: Spring { Spring(response: response, dampingRatio: damping) }
+}
+
 // MARK: - Painted chrome
 
 /// The painted UI kit — panels, buttons, frames — as 9-slice textures.

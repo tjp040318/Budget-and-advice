@@ -262,8 +262,18 @@ jobs:
                 # The 5★'s charge (2026-09-23): the painted scroll over the
                 # turning rings, held, so the beat before a reveal is judged
                 # on its own (it played over an empty dusk until run 220).
-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal-hold charge >/dev/null
-                sleep 5; shoot "$step-${names[$step]}-charge" ;;
+                # Since 2026-09-24 the charge climbs a ladder (Docs/FEEL.md
+                # W1.5): held at 0.5 of the 5★'s 1.4 s it stands on the violet
+                # rung, at 0.8 on the gold one with its lightning.
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal-hold charge:0.5 >/dev/null
+                sleep 5; shoot "$step-${names[$step]}-charge-violet"
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal-hold charge:0.8 >/dev/null
+                sleep 5; shoot "$step-${names[$step]}-charge"
+                # And the awakened Ares under the reveal's light as it was
+                # before the figure and the temple had lights of their own
+                # (Docs/FEEL.md L1): the control for 5-reveal-awakened.
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-layers off >/dev/null
+                sleep 10; shoot "$step-${names[$step]}-awakened-layers-off" ;;
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d"
                 # The skill panel: the first player turn opens with a skill
                 # chosen and what it does over the skill squares.
@@ -607,6 +617,16 @@ jobs:
               | sort -u | sort -t' ' -k2 -rn | head -n 25)
             if [ -n "$SLOW" ]; then
               { echo "---- slowest to type-check (over 300 ms) ----"; echo "$SLOW"; } >> /tmp/screens/build-errors.txt
+            fi
+            # ProMotion (2026-09-24, Docs/FEEL.md W1.8): the key is set as
+            # INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone, a form the
+            # generated Info.plist is reported to drop; without it the phone
+            # stays at 60 Hz and the 120 choice is hidden, with nothing red.
+            # The BUILT plist is read so a dropped key is the first line
+            # ciframes.py prints.
+            BUILT=$(find build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "Pantheon.app" | head -1)
+            if [ -n "$BUILT" ] && ! /usr/libexec/PlistBuddy -c 'Print :CADisableMinimumFrameDurationOnPhone' "$BUILT/Info.plist" >/dev/null 2>&1; then
+              echo "PROMOTION KEY MISSING: CADisableMinimumFrameDurationOnPhone is not in the built Info.plist; move it to an INFOPLIST_FILE" >> /tmp/screens/build-errors.txt
             fi
           fi
           if [ -f test.log ]; then

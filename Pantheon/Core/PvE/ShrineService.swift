@@ -344,11 +344,15 @@ enum ShrineService {
         player.shrinePieces = stock.isEmpty ? nil : stock
 
         let isNew = !player.codex.contains(blueprint.id)
+        // What the reveal tells (2026-09-24), from the summon's own calls.
+        var promised: Set<String> = []
+        let pagePay: Int? = isNew ? SummonService.codexPay(for: blueprint.id, player: player, promised: &promised) : nil
         player.codex.insert(blueprint.id)
         var unit = Unit(blueprint: blueprint)
         unit.acquiredFrom = "shrine"
+        var skillUp: SummonSkillUp?
         if !isNew, let index = player.units.firstIndex(where: { $0.blueprintID == blueprint.id }) {
-            _ = ProgressionService.applySkillUp(to: &player.units[index], using: &rng)
+            skillUp = SummonService.duplicateSkillUp(on: index, player: &player, rng: &rng)
         }
         player.units.append(unit)
         return SummonResult(
@@ -357,7 +361,9 @@ enum ShrineService {
             stars: unit.stars,
             isNew: isNew,
             isFeatured: false,
-            fromPity: false
+            fromPity: false,
+            skillUp: skillUp,
+            codexDivinity: pagePay
         )
     }
 

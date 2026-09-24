@@ -312,7 +312,9 @@ struct CollectionView: View {
                             UnitCard(unit: unit, isSelected: unit.id == selected.id, size: card)
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(PlateButtonStyle())
+                        // A card of a scrolling grid: quiet, the tick kept
+                        // in the action (2026-09-24).
+                        .buttonStyle(GamePressStyle(.quiet))
                     }
                     // The grid is filled out to whole rows, and to at least
                     // the three the frame holds. A new save has nine units in
@@ -475,8 +477,6 @@ struct CollectionView: View {
     private func fullSheetDoor(_ unit: ResolvedUnit) -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
         return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             fullSheet = UnitPick(id: unit.id)
         } label: {
             Image(systemName: "person.text.rectangle")
@@ -491,7 +491,8 @@ struct CollectionView: View {
                 .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
                 .contentShape(shape)
         }
-        .buttonStyle(PlateButtonStyle())
+        // Answers on touch-down (2026-09-24), so the action plays nothing.
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("Full sheet")
     }
 
@@ -537,13 +538,14 @@ struct CollectionView: View {
         .allowsHitTesting(false)
         .overlay {
             Button {
-                Juice.haptic(.light)
                 fullSheet = UnitPick(id: unit.id)
             } label: {
                 Color.clear
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            // The press's tick and tap on touch-down (2026-09-24); the clear
+            // plate has nothing to sink.
+            .buttonStyle(GamePressStyle(.plate))
             .accessibilityLabel("\(unit.name), full sheet")
         }
     }
@@ -715,7 +717,6 @@ struct CollectionView: View {
                             size: Self.slotSize,
                             onGlass: onGlass
                         ) {
-                            Juice.haptic(.light)
                             pickingSlot = SlotPick(id: slot, unitID: unit.id)
                         }
                     }
@@ -757,9 +758,6 @@ struct CollectionView: View {
     private static let railFace: CGFloat = 58
     private static let railPadding: CGFloat = 7
     private static var railHeight: CGFloat { railFace + 8 + railPadding * 2 }
-    /// Radians of turn per point of drag: one full turn across a landscape
-    /// phone's width, which is what a finger expects of a turntable.
-    private static let spinPerPoint: CGFloat = .pi * 2 / 800
 
     /// The summoning hall under everything, the figure on its ring in the
     /// right half, the glass plate over the left, the drag over the right,
@@ -786,7 +784,7 @@ struct CollectionView: View {
             GeometryReader { geo in
                 let width = geo.size.width.isFinite ? geo.size.width : 0
                 ZStack(alignment: .topLeading) {
-                    CollectionStageView(unit: selected, spin: Float((spinBase + spinDrag) * Self.spinPerPoint))
+                    CollectionStageView(unit: selected, spin: Float((spinBase + spinDrag) * CollectionStageView.spinPerPoint))
                         .allowsHitTesting(false)
                     HStack(alignment: .top, spacing: 0) {
                         stagePlate(selected)
@@ -877,7 +875,9 @@ struct CollectionView: View {
                                 // The face and its plate's rim are the tap.
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        // A face of a scrolling rail: quiet, the tick and
+                        // tap kept in the action (2026-09-24).
+                        .buttonStyle(GamePressStyle(.quiet))
                         .id(unit.id)
                     }
                 }
@@ -1001,26 +1001,108 @@ enum CollectionLayout: String, CaseIterable {
 /// plate's words beside it. The one thing the altar has not got is a yaw the
 /// screen sets from the drag across that half. The figure is rebuilt when the
 /// unit or its form changes, and the screen zeroes the spin with it.
+///
+/// Since 2026-09-24 it is also the unit sheet's figure (FEEL.md, W1.10): the
+/// sheet a player opens most showed a card of the chibi bust while the whole
+/// roster had been remade serious, and the figure now stands in a dark glass
+/// well in the sheet's left column. Only WHERE the figure stands differs
+/// (`Framing`); the rig, the idle, the awakened mesh and its clips are this
+/// stage's, so the two screens cannot light or pose a figure differently.
 struct CollectionStageView: UIViewRepresentable {
     let unit: ResolvedUnit?
     /// The turn about Y, in radians, on top of the stance.
     let spin: Float
+    /// Where the figure stands in this stage's frame: the collection's by
+    /// default, the unit sheet's well (`Framing.column`) since 2026-09-24.
+    var framing: Framing = .collection
+    /// Whether the stage runs. False while it is out of sight — the unit
+    /// sheet's well turned over to the card — so a view nobody can see stops
+    /// drawing sixty frames a second; the figure holds its pose and takes it
+    /// up again as it turns back into view.
+    var playing: Bool = true
 
-    /// Where the figure stands: its centre line 66% of the way across the
-    /// frame, its feet 78% of the way down, and 70% of the height tall. The
-    /// left half is the plate's; the figure has the right, with room over its
-    /// head for the tallest family and under its feet for the ring. 0.66
-    /// rather than 0.72 since run 216, so the feet stand on the hall's
-    /// painted floor medallion (`CollectionView.stageGround`) rather than on
-    /// bare marble beside a column; the ring's left edge still clears the
-    /// plate by 30 points.
-    private static let across: Float = 0.66
-    private static let down: Float = 0.78
-    private static let fill: Float = 0.70
+    /// Radians of turn per point of drag: one full turn across a landscape
+    /// phone's width, which is what a finger expects of a turntable. The
+    /// stage's since 2026-09-24, so the unit sheet's well turns at the
+    /// collection's rate — one gesture, one feel.
+    static let spinPerPoint: CGFloat = .pi * 2 / 800
+
+    /// Where the figure stands in the stage's frame, in shares of it: its
+    /// centre line `across` of the way across, its feet `down` of the way
+    /// down, and `fill` of the height tall.
+    ///
+    /// `stance` is the turn about Y before any drag, in radians. A figure is
+    /// authored facing +Z, toward the camera, and a POSITIVE turn brings its
+    /// front round to the frame's RIGHT (`UnitNode` faces a victim with
+    /// `atan2(dx, dz)`). So the collection's 0.3 turns its figure toward the
+    /// right, away from the plate on the left — run 241's frame 21 has
+    /// Thoth's beak pointing right — though the note this replaces said it
+    /// turned toward the words; the number is kept, since it is the frame
+    /// the owner has judged. The unit sheet's 0.3 turns the figure toward
+    /// the relic ring, as W1.10 asks.
+    ///
+    /// `ringRoom`, when set, is the most of the frame's width, measured from
+    /// the centre line to the nearer edge, the rune ring may take; a ring
+    /// built wider is scaled down to it. A narrow frame is narrower than a
+    /// figure's ring is wide — `max(1.2, 0.7 h)` of radius is 1.4 times the
+    /// figure's height across — and shrinking the RING keeps the figure at
+    /// its `fill`, where shrinking the figure to fit the ring would leave a
+    /// tall well's upper third empty. Nil, the collection's, leaves the ring
+    /// as it was built.
+    ///
+    /// `fillByWidth`, when set, caps `fill` at that share of the frame's
+    /// WIDTH (the figure's height at most `fillByWidth` times the width): a
+    /// well taller than the one it was drawn for — a family with no
+    /// awakening has 36 points more, a Pro Max 28 — keeps its figure at the
+    /// size the width sets, with the room over its head, where 78% of the
+    /// height made a figure wide enough to stand under the card's thumbnail.
+    /// Nil, the collection's, is `fill` alone.
+    ///
+    /// `firstAspect` is the frame's shape (width over height) the camera is
+    /// solved for before the view's first layout, when its bounds are still
+    /// zero: the collection's is a notched phone's stage in landscape, and a
+    /// well framed on that until the next update would stand its figure a
+    /// fifth of a metre off its centre line with its ring uncut.
+    ///
+    /// `name` is the stage's name in the tour's console (`StageDoctor`).
+    struct Framing: Equatable {
+        var across: Float
+        var down: Float
+        var fill: Float
+        var stance: Float
+        var ringRoom: Float?
+        var fillByWidth: Float?
+        var firstAspect: Float
+        var name: String
+
+        /// The collection's Stage: the centre line 66% of the way across the
+        /// frame, the feet 78% of the way down, 70% of the height tall. The
+        /// left half is the plate's; the figure has the right, with room
+        /// over its head for the tallest family and under its feet for the
+        /// ring. 0.66 rather than 0.72 since run 216, so the feet stand on
+        /// the hall's painted floor medallion (`CollectionView.stageGround`)
+        /// rather than on bare marble beside a column; the ring's left edge
+        /// still clears the plate by 30 points.
+        static let collection = Framing(across: 0.66, down: 0.78, fill: 0.70, stance: 0.3, ringRoom: nil,
+                                        fillByWidth: nil, firstAspect: 736 / 204, name: "collection")
+
+        /// The unit sheet's well, a column 120 points wide and as tall as the
+        /// buttons under it leave (134 on an iPhone 16 Pro). FEEL.md's
+        /// narrow column — the feet 86% down, 78% of the height tall — with
+        /// the centre line at 0.53 rather than 0.5: the card's 44-point
+        /// thumbnail stands in the well's top-left corner, and at 0.5 the
+        /// shoulder of a figure 104 points tall — about 28 across at seven
+        /// and a half heads — would reach some three points under it. The
+        /// ring may take nine tenths of the half-width, the rest is the
+        /// well's dark glass round it. The figure's height is at most 0.87
+        /// of the well's width, which the 120 × 134 well meets at 0.78 of
+        /// its height: taller wells keep that figure, 104 points, and gain
+        /// headroom.
+        static let column = Framing(across: 0.53, down: 0.86, fill: 0.78, stance: 0.3, ringRoom: 0.9,
+                                    fillByWidth: 0.87, firstAspect: 120 / 134, name: "unit sheet")
+    }
+
     private static let lens: Float = 30
-    /// The stance before any drag: a three-quarter turn toward the words on
-    /// the left — the altar's `-0.3` mirrored, its panel being on the right.
-    private static let stance: Float = 0.3
 
     final class Coordinator {
         var scene: SCNScene?
@@ -1028,10 +1110,15 @@ struct CollectionStageView: UIViewRepresentable {
         var figureKey = ""
         var figureHeight: Float = 1.9
         var ring: SCNNode?
+        /// The ring's radius as built, before `Framing.ringRoom` scales it.
+        var ringRadius: Float = 0
         var shadow: SCNNode?
         var cameraNode: SCNNode?
         var framedFor: Float = 0
-        let doctor = StageDoctor(label: "collection")
+        /// The framing the camera was last solved for.
+        var framing: Framing?
+        /// Replaced in `makeUIView` by one named for the framing.
+        var doctor = StageDoctor(label: "collection")
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -1051,6 +1138,9 @@ struct CollectionStageView: UIViewRepresentable {
         // The drag is a SwiftUI gesture over the view, not the view's own.
         view.isUserInteractionEnabled = false
         let coordinator = context.coordinator
+        // The console says which screen's stage it is watching: the unit
+        // sheet's and the collection's are the same view (2026-09-24).
+        coordinator.doctor = StageDoctor(label: framing.name)
         view.delegate = coordinator.doctor
         coordinator.doctor.view = view
         coordinator.scene = scene
@@ -1126,7 +1216,43 @@ struct CollectionStageView: UIViewRepresentable {
         frameCamera(view, coordinator)
         // The drag, applied every pass: it is one float and the figure is
         // one node, so there is nothing to be saved by checking first.
-        coordinator.figure?.eulerAngles.y = Self.stance + spin
+        coordinator.figure?.eulerAngles.y = framing.stance + spin
+        // Out of sight, the stage stops: no scene time, no frames. Only a
+        // change is written, so the collection's stage, which always plays,
+        // is never touched here.
+        if view.isPlaying != playing {
+            view.isPlaying = playing
+            view.rendersContinuously = playing
+        }
+    }
+
+    /// The stage lets go of its scene the moment it leaves the screen
+    /// (2026-09-24).
+    ///
+    /// The model cache is bounded since 1b1bf74, but it never drops a file a
+    /// live figure was cloned from, and until now this stage kept its figure
+    /// for as long as SceneKit kept the view — the scene held by the view and
+    /// by this coordinator both — so every unit sheet opened could leave a
+    /// family pinned in the cache after its sheet had gone (run 242's summon
+    /// stress climbed 30 MB a reveal and never came down; a stage that
+    /// outlives its screen is one way to draw that curve, and this one no
+    /// longer can). Stopped first, so no frame is drawn
+    /// half-empty, then the scene is dropped from the view and the
+    /// coordinator; the figure, its ring and its aura go with the whole
+    /// scene, as a torn-down battle's do — `VFXLibrary.dismiss` is for a node
+    /// leaving a scene that goes on rendering, which this one does not.
+    static func dismantleUIView(_ view: SCNView, coordinator: Coordinator) {
+        view.isPlaying = false
+        view.rendersContinuously = false
+        view.delegate = nil
+        view.scene = nil
+        coordinator.scene = nil
+        coordinator.figure = nil
+        coordinator.ring = nil
+        coordinator.shadow = nil
+        coordinator.cameraNode = nil
+        coordinator.figureKey = ""
+        coordinator.doctor.figure = nil
     }
 
     /// The figure for the unit, rebuilt only when the unit or its form changes.
@@ -1157,7 +1283,7 @@ struct CollectionStageView: UIViewRepresentable {
         if unit.unit.isAwakened {
             node.addParticleSystem(VFXLibrary.aura(tint: tint, scale: height / 1.9))
         }
-        node.eulerAngles.y = Self.stance + spin
+        node.eulerAngles.y = framing.stance + spin
         node.opacity = 0
         scene.rootNode.addChildNode(node)
         // The idle AFTER the figure is in the scene, through a player told
@@ -1180,9 +1306,11 @@ struct CollectionStageView: UIViewRepresentable {
         coordinator.doctor.figure = node
         coordinator.figureHeight = height
 
-        let ring = StageBuilder.runeRing(radius: CGFloat(max(1.2, height * 0.7)), tint: tint)
+        let ringRadius = max(1.2, height * 0.7)
+        let ring = StageBuilder.runeRing(radius: CGFloat(ringRadius), tint: tint)
         scene.rootNode.addChildNode(ring)
         coordinator.ring = ring
+        coordinator.ringRadius = ringRadius
 
         let size = CGFloat(height) * 0.75
         let plane = SCNPlane(width: size, height: size)
@@ -1202,34 +1330,50 @@ struct CollectionStageView: UIViewRepresentable {
         coordinator.framedFor = 0
     }
 
-    /// Places the camera so the figure stands in the right half of the frame.
+    /// Places the camera so the figure stands where the framing says — the
+    /// right half of the collection's frame, the middle of the unit sheet's
+    /// well.
     ///
     /// The vertical lens makes the frame's height a known quantity: the
     /// figure is `fill` of it, the feet sit `down` of the way down, and the
     /// camera is shifted — not turned — so the figure's centre line stands
     /// `across` of the way across, the reveal's rising front. Solved again
-    /// only when the viewport's shape or the figure changes.
+    /// only when the viewport's shape, the figure or the framing changes.
     private func frameCamera(_ view: SCNView, _ coordinator: Coordinator) {
         guard let cameraNode = coordinator.cameraNode else { return }
         let bounds = view.bounds
-        // The stage of a notched phone in landscape stands in until the
-        // first real layout.
-        let phoneAspect: Float = 736 / 204
-        let aspect = bounds.height > 0 ? Float(bounds.width / bounds.height) : phoneAspect
+        // The framing's own shape stands in until the first real layout —
+        // for the collection, the stage of a notched phone in landscape.
+        let aspect = bounds.height > 0 ? Float(bounds.width / bounds.height) : framing.firstAspect
         let framedFor = aspect * 1000 + coordinator.figureHeight
-        guard abs(framedFor - coordinator.framedFor) > 0.01 else { return }
+        guard abs(framedFor - coordinator.framedFor) > 0.01 || coordinator.framing != framing else { return }
         coordinator.framedFor = framedFor
+        coordinator.framing = framing
 
-        let visible = coordinator.figureHeight / Self.fill
+        var fill = framing.fill
+        if let byWidth = framing.fillByWidth {
+            fill = min(fill, byWidth * aspect)
+        }
+        let visible = coordinator.figureHeight / fill
         let distance = visible / (2 * tan(Self.lens * .pi / 360))
         // The frame's centre is `down - 0.5` of a frame above the feet.
-        let aimY = visible * (Self.down - 0.5)
+        let aimY = visible * (framing.down - 0.5)
         let halfWidth = visible * aspect / 2
-        let x = halfWidth * (1 - 2 * Self.across)
+        let x = halfWidth * (1 - 2 * framing.across)
         // A little above the aim and looking down at it, the way the hall's
         // painting looks down at its floor.
         cameraNode.position = SCNVector3(x, aimY + visible * 0.08, distance)
         cameraNode.look(at: SCNVector3(x, aimY, 0))
+
+        // The ring on the feet's plane, which is the plane the frame is
+        // solved on, so a metre there is `visible` over the frame's height:
+        // the room is the distance from the centre line to the nearer edge,
+        // `ringRoom` of it.
+        if let room = framing.ringRoom, let ring = coordinator.ring, coordinator.ringRadius > 0 {
+            let reach = min(framing.across, 1 - framing.across) * 2 * halfWidth * room
+            let scale = min(1, max(0.1, reach / coordinator.ringRadius))
+            ring.scale = SCNVector3(scale, scale, scale)
+        }
     }
 }
 

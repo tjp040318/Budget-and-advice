@@ -991,6 +991,10 @@ def check_unknown_types(files, declared, errors):
         "kCGImageSourceCreateThumbnailFromImageAlways", "kCGImageSourceCreateThumbnailWithTransform",
         "kCGImageSourceShouldCacheImmediately", "kCGImageSourceThumbnailMaxPixelSize",
         "MenuStyle","Alignment","Anchor","UnitPoint","Axis","Transaction","Animation",
+        # The press and the motion tokens (2026-09-24, FEEL.md W1.8): iOS 17's
+        # keyframes and springs, and the environment key the press sets.
+        "ButtonStyleConfiguration","KeyframeTrack","CubicKeyframe","SpringKeyframe",
+        "LinearKeyframe","MoveKeyframe","Spring","EnvironmentKey","EnvironmentValues",
         "XCTest","XCTestCase","XCTAssert","XCTAssertEqual","XCTAssertNotEqual","XCTAssertTrue",
         "XCTAssertFalse","XCTAssertNil","XCTAssertNotNil","XCTAssertGreaterThan",
         "XCTAssertGreaterThanOrEqual","XCTAssertLessThan","XCTAssertLessThanOrEqual",
@@ -1675,6 +1679,48 @@ def check_token_ternaries(files, types, errors):
                 f"({right}); Swift will not unify them — use a Group with an if/else")
 
 
+# ---------------------------------------------------------------------------
+# A spring written by hand in the chrome
+# ---------------------------------------------------------------------------
+#
+# The menus had grown more than twenty spring settings, one per screen and
+# written on the day, so a popup opened three different ways depending on who
+# built it (Docs/FEEL.md W1.8, 2026-09-24). The chrome moves on the seven
+# `Motion` tokens in Theme.swift now, and this rule keeps it that way: a
+# `.spring(`, `.interactiveSpring(` or `.interpolatingSpring(` whose first
+# argument is a number, or a SwiftUI `Spring(` built from numbers, anywhere in
+# Pantheon/UI is a new curve — name it with a token instead. Theme.swift is
+# where the tokens are written. The fight and the reveal are choreography
+# timed to a clip or a beam, not chrome, and keep their own numbers:
+# Pantheon/UI/Battle/, SummonRevealView.swift and SummoningCircle*.swift.
+# Pantheon/App since the same day: the tab bar (RootView.swift) wrote the
+# last spring of its own, and moves on `Motion.select` now.
+
+CHROME_ROOT = (os.path.join("Pantheon", "UI") + os.sep, os.path.join("Pantheon", "App") + os.sep)
+CHROME_SPRING_EXEMPT = (
+    os.path.join("Pantheon", "UI", "Battle") + os.sep,
+    os.path.join("Pantheon", "UI", "Common", "Theme.swift"),
+    os.path.join("Pantheon", "UI", "Summon", "SummonRevealView.swift"),
+    os.path.join("Pantheon", "UI", "Summon", "SummoningCircle"),
+)
+HAND_SPRING = re.compile(
+    r"(?:\.(?:spring|interactiveSpring|interpolatingSpring)|(?<![A-Za-z0-9_.])Spring)"
+    r"\(\s*(?:[A-Za-z]+\s*:\s*)?-?(?:\d|\.\d)")
+
+
+def check_chrome_springs(files, errors):
+    for path in files:
+        if not path.startswith(CHROME_ROOT) or path.startswith(CHROME_SPRING_EXEMPT):
+            continue
+        src = strip_noise(open(path).read(), mask_strings=True)
+        for m in HAND_SPRING.finditer(src):
+            line = src[:m.start()].count("\n") + 1
+            errors.append(
+                f"{path}:{line}: a spring written by hand in the chrome — use a Motion "
+                f"token (Motion.tap, .select, .pop, .panel, .exit, .celebrate, .ambient; "
+                f"Theme.swift), or add one there if none fits")
+
+
 def main():
     files = []
     for r in ROOTS:
@@ -1704,6 +1750,7 @@ def main():
     check_switch_by_labels(files, errors)
     check_nil_returns(files, errors)
     check_token_ternaries(files, collect_static_types(files), errors)
+    check_chrome_springs(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

@@ -84,7 +84,9 @@ struct DiagnosticsView: View {
             .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
             .overlay(ScreenChrome.controlShape.strokeBorder(Theme.gold.opacity(0.4), lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        // `ShareLink` draws its label as a button, so it takes the strip's
+        // press like the BarButton beside it (2026-09-24).
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("Share")
     }
 }

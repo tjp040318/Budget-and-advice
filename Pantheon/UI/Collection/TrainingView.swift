@@ -452,7 +452,9 @@ struct TrainingView: View {
                 // a thumb on the plate's rim picks the unit too.
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A card of the roster's scrolling rail: the quiet press, and its
+        // tap stays in the action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
     }
 
     /// Whether the unit can take this mode's rite now: at its level cap for
@@ -521,7 +523,8 @@ struct TrainingView: View {
             .background(GlassRowPlate(isOn: isOn))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A row of the prizes' scrolling rail: quiet, its tap kept.
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel(plan.recipe.name)
     }
 
@@ -854,7 +857,7 @@ struct TrainingView: View {
     private func show(_ title: String, _ detail: String) {
         stampSequence += 1
         let mine = stampSequence
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.65)) {
+        withAnimation(Motion.celebrate) {
             stamp = AltarStamp(id: mine, title: title, detail: detail)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
@@ -1331,7 +1334,8 @@ struct TrainingView: View {
                 }
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A face of the ledger's scrolling grid: quiet, the tick kept.
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityHint(worth?.phrase ?? "")
     }
 
@@ -1582,8 +1586,6 @@ struct TrainingView: View {
     private func socket(_ unit: ResolvedUnit?, want: String) -> some View {
         if let unit {
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
                 fodder.remove(unit.id)
             } label: {
                 UnitPortraitTile(unit: unit, size: 52)
@@ -1593,7 +1595,7 @@ struct TrainingView: View {
                     )
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GamePressStyle(.plate))
         } else {
             EmptyUnitSlot(size: 52)
                 .overlay(alignment: .bottom) {
@@ -2176,9 +2178,75 @@ struct AltarStageView: UIViewRepresentable {
         var framedFor: Float = 0
         var playedStamp = 0
         let doctor = StageDoctor(label: "altar")
+
+        /// Lets go of every node and the scene (`dismantleUIView`), on the
+        /// main thread once the renderer has stopped.
+        func release() {
+            scene = nil
+            figure = nil
+            figureKey = ""
+            ring = nil
+            shadow = nil
+            cameraNode = nil
+            doctor.figure = nil
+            doctor.view = nil
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
+
+    /// THE ALTAR LEAVES WITH ITS VIEW (2026-09-24), in the reveal's order
+    /// (`SummonStageView.dismantleUIView`). CI run 242 measured the reveal's
+    /// missing teardown at about 30 MB a reveal, never given back, and this
+    /// stage has the reveal's shape: a transparent `SCNView` holding a
+    /// figure's clone — which pins its family's entry in the model cache —
+    /// the rune ring, the contact shadow, the rite's orbs, bursts and beams,
+    /// and every texture the renderer uploaded, for as long as SwiftUI kept
+    /// the old view. SwiftUI calls this on the main thread as the Hall of Ka
+    /// closes.
+    ///
+    /// The renderer stops FIRST, so no frame is built while the graph
+    /// changes; then every particle carrier under the root — the awakened
+    /// figure's aura, a rite's bursts and beam — leaves through
+    /// `VFXLibrary.dismiss` (its systems off, hidden: a host freed with its
+    /// motes alive crashed the fight twice), and every action and animation
+    /// stops, the idle, the rite's orbs and the queued removals with them;
+    /// only `SummonStageView.teardownSettle` later do the root's children
+    /// go, the view let go of its scene and the coordinator of its nodes.
+    static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
+        uiView.isPlaying = false
+        uiView.rendersContinuously = false
+        uiView.delegate = nil
+        guard let root = uiView.scene?.rootNode else {
+            coordinator.release()
+            return
+        }
+        for child in root.childNodes where carriesParticles(child) {
+            VFXLibrary.dismiss(child, reportsLive: false)
+        }
+        root.enumerateHierarchy { node, _ in
+            node.removeAllActions()
+            node.removeAllAnimations()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + SummonStageView.teardownSettle) {
+            for child in root.childNodes {
+                child.removeFromParentNode()
+            }
+            uiView.scene = nil
+            coordinator.release()
+        }
+    }
+
+    /// Whether a node or anything under it carries a particle system.
+    private static func carriesParticles(_ node: SCNNode) -> Bool {
+        var found = false
+        node.enumerateHierarchy { child, stop in
+            guard let systems = child.particleSystems, !systems.isEmpty else { return }
+            found = true
+            stop.pointee = true
+        }
+        return found
+    }
 
     func makeUIView(context: Context) -> SCNView {
         let view = SCNView()

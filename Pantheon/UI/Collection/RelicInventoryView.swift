@@ -547,7 +547,9 @@ struct RelicInventoryView: View {
                 }
                 .opacity(selecting && relic.isLocked ? 0.45 : 1)
         }
-        .buttonStyle(.plain)
+        // A cell of a scrolling grid: the quiet press, and its tick stays
+        // in `tap`, which only a finished tap reaches (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
     }
 
     private func tap(_ relic: Relic) {
@@ -771,7 +773,6 @@ struct RelicInventoryView: View {
         _ title: String, _ symbol: String, tint: Color, enabled: Bool = true, action: @escaping () -> Void
     ) -> some View {
         Button {
-            Juice.haptic(.light)
             action()
         } label: {
             HStack(spacing: 4) {
@@ -786,6 +787,7 @@ struct RelicInventoryView: View {
             .frame(maxWidth: .infinity, minHeight: 28)
             .background(Theme.panel(Theme.tightCorner))
         }
+        .buttonStyle(GamePressStyle(.plate))
         .disabled(!enabled)
     }
 
@@ -799,14 +801,13 @@ struct RelicInventoryView: View {
                 // Every unlocked, unworn relic in the list as it is filtered:
                 // with the filter, "sell every 3★ Normal" is three taps.
                 Button {
-                    Juice.haptic(.light)
                     selection = Set(relics.filter { !$0.isLocked && $0.equippedBy == nil }.map(\.id))
                 } label: {
                     Text("All shown")
                         .font(Theme.body(11).weight(.semibold))
                         .foregroundStyle(Theme.info)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.plate))
                 Spacer()
                 PrimaryButton(
                     title: "Sell for \(sellTotal)",
@@ -834,7 +835,6 @@ struct RelicInventoryView: View {
         return VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 Button {
-                    Juice.haptic(.light)
                     filter.sets = []
                 } label: {
                     Text("ALL")
@@ -848,7 +848,7 @@ struct RelicInventoryView: View {
                         )
                         .foregroundStyle(filter.sets.isEmpty ? Theme.ink : Theme.textSecondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.plate))
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
                         ForEach(RelicSet.allCases) { relicSet in
@@ -876,7 +876,7 @@ struct RelicInventoryView: View {
                                         .strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: 1)
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(GamePressStyle(.quiet))
                         }
                         Spacer(minLength: 26)
                     }
@@ -903,7 +903,6 @@ struct RelicInventoryView: View {
                 // "where can I see what each type of relic does and how
                 // many I need" (2026-09-12); this is where.
                 Button {
-                    Juice.haptic(.light)
                     showSets = true
                 } label: {
                     Label("Set effects", systemImage: "book.closed.fill")
@@ -911,7 +910,7 @@ struct RelicInventoryView: View {
                         .foregroundStyle(Theme.gold)
                         .lineLimit(1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.plate))
             }
         }
     }
@@ -1001,7 +1000,9 @@ struct RelicRow: View {
             )
             .opacity(selecting && relic.isLocked ? 0.45 : 1)
         }
-        .buttonStyle(.plain)
+        // A row of the picker's scrolling list: quiet, and the caller's
+        // action keeps its tick.
+        .buttonStyle(GamePressStyle(.quiet))
     }
 
     /// All four sub stats, always in the same two-by-two block, so the rows
@@ -1253,14 +1254,14 @@ private struct RelicCompactGoldButton: View {
                     LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .center)
                 )
             )
-            .overlay(sweep)
+            .overlay(sweep.pressDimmed())
             .overlay(shape.strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1))
             .clipShape(shape)
             .shadow(color: Theme.gold.opacity(0.35), radius: 8, y: 3)
             .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
             .contentShape(shape)
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.primary))
     }
 
     /// The gloss that crosses `PrimaryButton`'s gold every 4.4 seconds.
@@ -1894,7 +1895,6 @@ struct RelicDetailView: View {
                         .foregroundStyle(Theme.goldDim)
                     ForEach(Element.allCases) { element in
                         aetherChip(element, isOn: paying == element, fair: element == relic.set.aetherElement) {
-                            Juice.haptic(.light)
                             payingElement = element
                         }
                     }
@@ -1940,7 +1940,7 @@ struct RelicDetailView: View {
             .background(Capsule().fill(isOn ? element.color : element.color.opacity(0.12)))
             .overlay(Capsule().strokeBorder(fair ? Theme.gold : Color.clear, lineWidth: 1.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("\(element.displayName) Aether, \(held) held\(fair ? ", the fair colour" : "")")
     }
 
@@ -1982,7 +1982,6 @@ struct RelicDetailView: View {
                     smallButton("Change", "arrow.left.arrow.right", tint: Theme.info) { showPicker = true }
                     smallButton("Unequip", "minus.circle", tint: Theme.textPrimary) {
                         if let wearer { store.unequip(slot: relic.slot, from: wearer.id) }
-                        AudioLibrary.shared.play(.uiTap)
                     }
                 } else {
                     // The genre's Equip from the inventory: the wearer is
@@ -2088,13 +2087,13 @@ struct RelicDetailView: View {
                     .strokeBorder(Theme.goldDim.opacity(0.6), lineWidth: 0.5)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
     }
 
     private func take(_ offer: RelicService.RollCandidate) {
         guard let change = store.takeRelicRoll(relicID, candidate: offer.id) else { return }
+        // The card's press ticked on touch-down; the confirm is the "done".
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
         lastOutcome = RelicService.PowerUpOutcome(
             succeeded: true,
             level: store.player.relic(relicID)?.level ?? 0,
@@ -2149,6 +2148,7 @@ struct RelicDetailView: View {
             .frame(maxWidth: .infinity, minHeight: 28)
             .background(Theme.panel(Theme.tightCorner))
         }
+        .buttonStyle(GamePressStyle(.plate))
         .disabled(!enabled)
     }
 
@@ -2284,9 +2284,9 @@ struct RelicAwakeningRite: View {
     private func play() {
         withAnimation(.easeOut(duration: 0.35)) { lit = true }
         withAnimation(.linear(duration: 18).repeatForever(autoreverses: false)) { rays = 360 }
-        withAnimation(.spring(response: 0.55, dampingFraction: 0.6).delay(0.1)) { risen = true }
+        withAnimation(Motion.celebrate.delay(0.1)) { risen = true }
         withAnimation(.easeInOut(duration: 0.7).delay(0.5)) { haloed = true }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.55).delay(1.05)) { stamped = true }
+        withAnimation(Motion.celebrate.delay(1.05)) { stamped = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
             AudioLibrary.shared.play(.starTick, volume: 0.8)
         }
@@ -2449,14 +2449,12 @@ struct RelicPickerView: View {
                     systemImage: "checkmark.circle.fill"
                 ) {
                     store.equip(relicID: selected.id, on: unitID)
-                    AudioLibrary.shared.play(.uiConfirm)
                     dismiss()
                 }
             }
             if current != nil {
                 Button {
                     store.unequip(slot: slot, from: unitID)
-                    AudioLibrary.shared.play(.uiTap)
                     dismiss()
                 } label: {
                     Text("Unequip what is there")
@@ -2464,6 +2462,7 @@ struct RelicPickerView: View {
                         .foregroundStyle(Theme.danger)
                         .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(GamePressStyle(.plate))
             }
         }
         .padding(10)
@@ -2861,7 +2860,8 @@ struct RelicOptimiserView: View {
                             UnitCard(unit: entry, isSelected: entry.id == target, size: 76)
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        // A card of a scrolling grid: quiet, the tick kept.
+                        .buttonStyle(GamePressStyle(.quiet))
                     }
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
@@ -3047,12 +3047,11 @@ struct RelicOptimiserView: View {
                             .font(Theme.body(10).weight(.bold))
                             .foregroundStyle(Theme.gold)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(GamePressStyle(.plate))
                     // Its own button, not a corner of the chip: a loadout is
                     // four taps to rebuild, but deleting the one you meant to
                     // wear is the annoying half of that.
                     Button {
-                        Juice.haptic(.light)
                         store.deleteRelicLoadout(loadout.id)
                     } label: {
                         Image(systemName: "xmark")
@@ -3060,7 +3059,7 @@ struct RelicOptimiserView: View {
                             .foregroundStyle(Theme.textSecondary)
                             .frame(width: 16, height: 24)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(GamePressStyle(.plate))
                 }
                 .padding(.leading, 9)
                 .padding(.trailing, 3)
@@ -3194,7 +3193,9 @@ private struct FilterChip: View {
             )
             .foregroundStyle(isOn ? Theme.readableText(on: tint) : Theme.textPrimary)
         }
-        .buttonStyle(.plain)
+        // The filter sheet scrolls under its chips: the quiet press, and
+        // each caller's tick stays in its action (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
     }
 }
 
@@ -3221,7 +3222,6 @@ struct RelicFilterSheet: View {
                 dismiss: { dismiss() }
             ) {
                 BarButton(title: "Clear", systemImage: "xmark.circle", tint: Theme.danger) {
-                    Juice.haptic(.light)
                     filter = RelicFilter()
                 }
                 BarButton(title: "Done", systemImage: "checkmark.circle.fill", tint: Theme.gold) { dismiss() }
@@ -3469,7 +3469,8 @@ struct RelicStoneSheet: View {
                     .strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        // A row of the sub stats' scroll: quiet, the tick kept.
+        .buttonStyle(GamePressStyle(.quiet))
     }
 
     // MARK: The stones
@@ -3548,7 +3549,6 @@ struct RelicStoneSheet: View {
         let count = store.stoneCount(sample)
         let selected = tier == candidate
         return Button {
-            Juice.haptic(.light)
             tier = candidate
         } label: {
             VStack(spacing: 2) {
@@ -3574,7 +3574,7 @@ struct RelicStoneSheet: View {
             )
             .opacity(count > 0 ? 1 : 0.55)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
     }
 
     private func use() {
@@ -3638,7 +3638,8 @@ struct RelicWearerPicker: View {
                                     UnitCard(unit: entry, isSelected: entry.id == target, size: 76)
                                         .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.plain)
+                                // A card of a scrolling grid: quiet, the tick kept.
+                                .buttonStyle(GamePressStyle(.quiet))
                             }
                         }
                         .padding(.vertical, 8)
@@ -3674,7 +3675,6 @@ struct RelicWearerPicker: View {
                 .frame(maxHeight: .infinity)
                 PrimaryButton(title: current == nil ? "Equip" : "Replace and equip", systemImage: "checkmark.circle.fill") {
                     store.equip(relicID: relicID, on: unit.id)
-                    AudioLibrary.shared.play(.uiConfirm)
                     dismiss()
                 }
             } else {
@@ -3930,8 +3930,6 @@ struct RelicDropCard: View {
     ) -> some View {
         let face = label()
         return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             action()
         } label: {
             HStack(spacing: 7) {
@@ -3955,7 +3953,7 @@ struct RelicDropCard: View {
             .shadow(color: .black.opacity(0.18), radius: 3, y: 2)
             .opacity(enabled ? 1 : 0.6)
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .disabled(!enabled)
     }
 }

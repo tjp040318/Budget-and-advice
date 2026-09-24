@@ -403,7 +403,7 @@ struct SettingsView: View {
             } label: {
                 door(title: "Missions", icon: "scroll.fill", art: "missions", badge: store.claimableRewards)
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
 
             Button {
                 press { showEvents = true }
@@ -411,14 +411,14 @@ struct SettingsView: View {
                 door(title: "Events", icon: "calendar", art: "events",
                      badge: EventCalendar.claimableCount(player: store.player))
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
 
             Button {
                 press { showSocial = true }
             } label: {
                 door(title: "Allies", icon: "person.2.fill", art: "allies", badge: store.social.pendingCount)
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
 
             Button {
                 press { showShop = true }
@@ -428,7 +428,7 @@ struct SettingsView: View {
                 // objects (run 216).
                 door(title: "Bazaar", icon: "bag.fill", itemKey: "drachma")
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
 
             // Everything Athena has ever said, kept and replayable. The
             // owner, on the opening being skippable: "that would be a good
@@ -442,22 +442,25 @@ struct SettingsView: View {
             } label: {
                 door(title: "Lessons", icon: "book.fill", itemKey: ItemArt.key(scroll: .unknown))
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
             // The Codex: every god in every element, with a reward for each
             // one first owned — the badge is the rewards waiting.
             Button { press { showCodex = true } } label: {
                 door(title: "Codex", icon: "book.closed.fill", badge: store.codexRewardsWaiting)
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
         }
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// The tap every door on this screen makes: a light haptic and the tap
-    /// sound, then the door.
+    /// What every door on this screen does when it is tapped: the door.
+    /// Its tick and tap were played here until 2026-09-24; they are the
+    /// press's now (`GamePressStyle(.plate)`, on touch-down), and played
+    /// here as well they sounded twice. The boards' rows wear the plate too,
+    /// not the quiet press a scrolling row gets: a `FadingBoard` scrolls
+    /// only when its rows overflow it (`.scrollBounceBehavior(.basedOnSize)`)
+    /// and every board is cut to fit at rest.
     private func press(_ open: () -> Void) {
-        Juice.haptic(.light)
-        AudioLibrary.shared.play(.uiTap)
         open()
     }
 
@@ -644,7 +647,7 @@ struct SettingsView: View {
             )
             .contentShape(Rectangle())
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel(label)
     }
 
@@ -690,13 +693,13 @@ struct SettingsView: View {
                     } label: {
                         pageRow(title: "Notifications", detail: notificationsLine, glyph: "bell.fill")
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                     Button {
                         press { page = .graphics }
                     } label: {
                         pageRow(title: "Graphics", detail: graphicsLine, glyph: "sparkles")
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                 }
                 // The game's switch: OFF a dark well with a bronze knob, ON
                 // lit gold. The system switch's OFF, a white knob on pale
@@ -769,7 +772,7 @@ struct SettingsView: View {
                     } label: {
                         diagnosticsRow
                     }
-                    .buttonStyle(PlateButtonStyle())
+                    .buttonStyle(GamePressStyle(.plate))
                     // Anonymous play data (`Docs/ANALYTICS.md`): the switch,
                     // and under it the whole of what it sends. Off forgets
                     // this install's number and whatever was waiting.
@@ -794,7 +797,7 @@ struct SettingsView: View {
                         } label: {
                             linkRow("Privacy policy", glyph: "hand.raised.fill")
                         }
-                        .buttonStyle(PlateButtonStyle())
+                        .buttonStyle(GamePressStyle(.plate))
                     }
                     if let terms = legalLinks.terms {
                         Button {
@@ -802,7 +805,7 @@ struct SettingsView: View {
                         } label: {
                             linkRow("Terms of use", glyph: "doc.text.fill")
                         }
-                        .buttonStyle(PlateButtonStyle())
+                        .buttonStyle(GamePressStyle(.plate))
                     }
                     caption("Something wrong? Diagnostics copies or shares the log; send it with your Player ID.")
                     caption("Set in Cinzel and Manrope, under the SIL Open Font License.")
@@ -1051,10 +1054,9 @@ struct DiagnosticsDesk: View {
                 } label: {
                     deskRow(title: "Read the log", glyph: "text.alignleft", trailing: "chevron.right")
                 }
-                .buttonStyle(PlateButtonStyle())
+                .buttonStyle(GamePressStyle(.plate))
                 Button {
-                    Juice.haptic(.light)
-                    AudioLibrary.shared.play(.uiTap)
+                    // The press ticks and taps on touch-down (2026-09-24).
                     UIPasteboard.general.string = DiagnosticsLog.shared.text
                     copied = true
                 } label: {
@@ -1064,7 +1066,7 @@ struct DiagnosticsDesk: View {
                         trailing: nil
                     )
                 }
-                .buttonStyle(PlateButtonStyle())
+                .buttonStyle(GamePressStyle(.plate))
                 Spacer(minLength: 0)
             }
         }
@@ -1496,9 +1498,7 @@ struct GameTabBar: View {
         let isOn = selection == item.tab
         return Button {
             guard !isOn else { return }
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) { selection = item.tab }
+            withAnimation(Motion.select) { selection = item.tab }
         } label: {
             VStack(spacing: 1) {
                 // Anchored at the bottom, so the chosen door rises about
@@ -1519,7 +1519,13 @@ struct GameTabBar: View {
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // The tab doors' press (2026-09-24, Docs/FEEL.md W1.8): the
+        // medallion's sink and bright rim, and its tick and tap on
+        // touch-down — which the action played on the release until now.
+        // The chosen door opens nothing, so it sinks without a sound; the
+        // change of tab moves on `Motion.select`, the chips' and segments'
+        // spring, where a spring of its own was written.
+        .buttonStyle(GamePressStyle(.medallion, sounds: !isOn))
         // Athena's caret finds a tab by this name: lesson `first_relic`
         // points at "tab_collection", which no view had registered, so the
         // caret fell back to a line at the foot with nothing under it.

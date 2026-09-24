@@ -978,6 +978,19 @@ environment can and cannot do. The short version:
   `shots/memory.txt` is every launch's curve and `ciframes.py` prints it
   as MEMORY, a death as STRESS: THE APP DIED and a wait that ran out as
   TIMED OUT.
+  **And a 3D stage lets go of its scene when its view leaves** (run 242:
+  76 → 1,439 MB over thirty summons, about 30 MB a reveal kept): an
+  `SCNView` in a `UIViewRepresentable` with no `dismantleUIView` keeps its
+  scene, its figure's clone and its uploaded textures as long as SwiftUI
+  keeps the old view, and a live clone pins its family in the model cache.
+  Every stage — `SummonStageView`, `AltarStageView`, `CollectionStageView`,
+  `RewardChestView`, `BattleSceneView` — has `static func dismantleUIView`:
+  the renderer stopped first, particle hosts through `VFXLibrary.dismiss`,
+  actions and animations off, and `SummonStageView.teardownSettle` later the
+  children, the scene and the links (the battle's view drops only its own
+  links: the model owns the controller's scene). A new stage gets the same;
+  `[Mem] reveal stage released` and `[Mem] battle stage released` say in the
+  console that one really went (PLAN.md, *The random crashes, part two*).
 - **A card's wear scales with the card (2026-09-14).** The owner, of the
   popup's 50-point enemy cards: "Do the elemental symbols need to be so
   big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped

@@ -288,7 +288,9 @@ struct SummonView: View {
             .padding(.vertical, 5)
             .background(railRowPlate(isOn: isOn))
         }
-        .buttonStyle(.plain)
+        // A card of the banner rail's scroll: the quiet press, and its tap
+        // stays in the action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
         .opacity(owned > 0 || isOn ? 1 : 0.6)
     }
 
@@ -369,8 +371,6 @@ struct SummonView: View {
         let best = MileageService.catalogue(for: selectedBanner).first
         let reading: String = best.map { "\(points)/\($0.price)" } ?? "\(points)"
         return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             showMileage = true
         } label: {
             HStack(spacing: 5) {
@@ -395,7 +395,7 @@ struct SummonView: View {
             .frame(height: 28)
             .background(chipPlate)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
     }
 
     /// A capsule for a reading and its question mark, translucent so the
@@ -423,13 +423,11 @@ struct SummonView: View {
             // (`RateTableView`), and two summaries of one table is the fault
             // being fixed here, not a pattern to repeat.
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
                 showPool = true
             } label: {
                 InfoGlyph()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GamePressStyle(.medallion))
         }
         .padding(.leading, 9)
         .padding(.trailing, 1)
@@ -638,7 +636,8 @@ struct SummonView: View {
             .frame(height: 44)
             .background(GlassPlate(radius: Theme.tightCorner))
         }
-        .buttonStyle(.plain)
+        // Half strength when the purse is short, as `.plain` drew it.
+        .buttonStyle(GamePressStyle(.plate, dimsWhenDisabled: true))
         .disabled(!affordable)
     }
 

@@ -187,7 +187,7 @@ struct IslandView: View {
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) {
-                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { camera = IslandCamera() }
+                        withAnimation(Motion.panel) { camera = IslandCamera() }
                     }
 
                 // The living layer sits over the painting and under the
@@ -254,7 +254,7 @@ struct IslandView: View {
             .simultaneousGesture(panGesture(full: full))
             .simultaneousGesture(pinchGesture(full: full, shift: shift))
             .animation(.easeInOut(duration: 0.25), value: pendingIntro)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: offering)
+            .animation(Motion.pop, value: offering)
             .onAppear {
                 if let pinnedZoom, let circle = IslandDatabase.landmarks.first(where: { $0.id == "circle" }) {
                     camera = IslandCamera.aimed(at: circle.footprint.centre, zoom: pinnedZoom, painting: Self.paintingSize, in: full)
@@ -481,50 +481,43 @@ struct IslandView: View {
             // was squeezed until the level and the experience numbers either
             // side of its bar were gone. Six, not four, so the missions'
             // red count clears the allies' rim (run 216).
+            // Each door is a medallion: it tips in under the finger with its
+            // rim catching the light, and ticks and taps on touch-down
+            // (`GamePressStyle`, 2026-09-24).
             HStack(spacing: 6) {
                 // Missions: the scroll beside the wallet, with what is waiting.
                 Button {
-                    Juice.haptic(.light)
-                    AudioLibrary.shared.play(.uiTap)
                     showMissions = true
                 } label: {
                     door("scroll.fill", art: "missions", title: "Missions", waiting: store.claimableRewards, target: target)
                 }
-                .buttonStyle(PlateButtonStyle())
+                .buttonStyle(GamePressStyle(.medallion))
                 // Allies: friends, mail, the guild and the ranks; requests
                 // and unclaimed mail counted in red like the missions.
                 Button {
-                    Juice.haptic(.light)
-                    AudioLibrary.shared.play(.uiTap)
                     showSocial = true
                 } label: {
                     door("person.2.fill", art: "allies", title: "Allies", waiting: store.social.pendingCount, target: target)
                 }
-                .buttonStyle(PlateButtonStyle())
+                .buttonStyle(GamePressStyle(.medallion))
                 // Events: the week's calendar beside the missions, with the
                 // Festival's unclaimed gifts counted the same red way.
                 Button {
-                    Juice.haptic(.light)
-                    AudioLibrary.shared.play(.uiTap)
                     showEvents = true
                 } label: {
                     door("calendar", art: "events", title: "Events", waiting: EventCalendar.claimableCount(player: player), target: target)
                 }
-                .buttonStyle(PlateButtonStyle())
+                .buttonStyle(GamePressStyle(.medallion))
                 // The chisel: the island's decorations.
                 Button {
-                    Juice.haptic(.light)
-                    AudioLibrary.shared.play(.uiTap)
                     showDecor = true
                 } label: {
                     door("hammer.fill", art: "decor", title: "Decorations", waiting: 0, target: target)
                 }
-                .buttonStyle(PlateButtonStyle())
+                .buttonStyle(GamePressStyle(.medallion))
             }
             // The wallet is the way into the bazaar, as the genre has it.
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
                 showShop = true
             } label: {
                 IslandPurse(wallet: player.wallet, showsLaurels: !compact)
@@ -532,7 +525,7 @@ struct IslandView: View {
             // The wallet keeps its full width on a notched landscape frame;
             // a long demigod's name gives way before a truncated number does.
             .layoutPriority(1)
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -700,7 +693,7 @@ struct IslandView: View {
                     .allowsHitTesting(chipShown)
                     .onTapGesture { tap(landmark, unlocked: unlocked) }
                     .position(chipAt)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
+                    .animation(Motion.pop, value: pressed)
                     .animation(.default.speed(3), value: shaking)
                     .animation(Self.stepBack(to: chipShown), value: chipShown)
             }
@@ -718,7 +711,7 @@ struct IslandView: View {
                     .allowsHitTesting(bubbleShown)
                     .onTapGesture { tap(landmark, unlocked: unlocked) }
                     .position(bubbleAt)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
+                    .animation(Motion.pop, value: pressed)
                     .animation(Self.stepBack(to: bubbleShown), value: bubbleShown)
             }
         }
@@ -972,7 +965,7 @@ struct IslandView: View {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.plateDelay) {
             guard named == plate else { return }
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { nameplateDrawn = true }
+            withAnimation(Motion.pop) { nameplateDrawn = true }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.plateDelay + Self.plateHold) {
             guard named == plate else { return }

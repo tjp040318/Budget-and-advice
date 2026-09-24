@@ -113,7 +113,9 @@ struct IslandDecorView: View {
                     .fill(picked ? Theme.surfaceHigh : Theme.surfaceRaised)
             )
         }
-        .buttonStyle(PlateButtonStyle())
+        // A piece of the catalogue's scrolling grid: quiet, its tap kept in
+        // the action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
     }
 
     private func priceLine(_ piece: IslandDecoration, owned: Bool, locked: Bool) -> some View {
@@ -280,7 +282,8 @@ struct IslandDecorView: View {
         let ink: Color = gold ? Theme.ink : Theme.onGlass
         let rim: Color = gold ? Color(hex: "#FFE9A8").opacity(0.55) : Theme.goldDeep.opacity(0.7)
         return Button {
-            Juice.haptic(.light)
+            // The press ticks and taps on touch-down; the confirm is the
+            // "done" (2026-09-24).
             AudioLibrary.shared.play(.uiConfirm, volume: 0.6)
             action()
         } label: {
@@ -299,7 +302,7 @@ struct IslandDecorView: View {
                 .shadow(color: Color.black.opacity(0.22), radius: 2, y: 1)
                 .contentShape(Capsule())
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
     }
 
     /// The pill's metal: `PrimaryButton`'s four gold stops with its gloss, or

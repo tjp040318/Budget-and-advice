@@ -247,6 +247,11 @@ struct TeamPickerView: View {
             LazyVGrid(columns: rosterColumns, spacing: 8) {
                 ForEach(roster) { unit in
                     Button {
+                        // The grid scrolls, so its cards wear the quiet press
+                        // and answer a finished tap here (2026-09-24): the
+                        // picker had no sound at all.
+                        Juice.haptic(.light)
+                        AudioLibrary.shared.play(.uiTap)
                         toggle(unit.id)
                     } label: {
                         UnitCard(
@@ -255,7 +260,7 @@ struct TeamPickerView: View {
                             size: 70
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(GamePressStyle(.quiet))
                     .restingRow(goneBelow: 0.85, wholeFrom: 0.98)
                 }
             }

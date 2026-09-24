@@ -133,7 +133,9 @@ struct WorldMapView: View {
                     .fill(Theme.surface.opacity(unlocked ? 1 : 0.45))
             )
         }
-        .buttonStyle(.plain)
+        // A row of the Realms sheet's scroll: the quiet press, and a shut
+        // chapter at half strength as `.plain` drew it (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet, dimsWhenDisabled: true))
         .disabled(!unlocked)
     }
 
@@ -578,8 +580,6 @@ struct TierChips: View {
         let labelTint: Color = selected ? Theme.ink : (open ? Theme.onGlass : Theme.onGlassDim)
         return Button {
             guard open else { return }
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             withAnimation(.easeOut(duration: 0.2)) { difficulty = tier }
         } label: {
             HStack(spacing: 4) {
@@ -603,7 +603,9 @@ struct TierChips: View {
             )
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        // A locked tier sinks under the finger but says nothing: its
+        // action does nothing either.
+        .buttonStyle(GamePressStyle(.plate, sounds: open))
         .accessibilityLabel(open ? tier.displayName : "\(tier.displayName), locked")
     }
 }
@@ -1350,7 +1352,7 @@ struct ChapterMapView: View {
                 }
             }
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.medallion, sounds: unlocked))
         .disabled(!unlocked)
         .accessibilityLabel(spokenName(stage, state: state))
     }
@@ -1529,9 +1531,7 @@ struct ChapterMapView: View {
     /// the road is walked is the strip's second line.
     private func chapterTab(_ chapter: Chapter, form: ChapterMapArt.TabForm) -> some View {
         Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { scrollOpen.toggle() }
+            withAnimation(Motion.panel) { scrollOpen.toggle() }
         } label: {
             HStack(spacing: 8) {
                 HStack(spacing: form == .seal ? 6 : 8) {
@@ -1558,7 +1558,7 @@ struct ChapterMapView: View {
             .background(GlassPlate(radius: ChapterMapArt.tabHeight / 2))
             .contentShape(Capsule())
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("\(chapter.name), the chapter's story and yields")
     }
 
@@ -1592,7 +1592,7 @@ struct ChapterMapView: View {
                         .overlay(Circle().strokeBorder(Theme.glassRim, lineWidth: 1))
                         .contentShape(Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GamePressStyle(.medallion))
                 .accessibilityLabel("Close")
             }
             Text(chapter.name.uppercased())
@@ -1813,7 +1813,6 @@ struct ChapterMapView: View {
 
     private func arrow(_ symbol: String, _ name: String, action: @escaping () -> Void) -> some View {
         Button {
-            Juice.haptic(.light)
             action()
         } label: {
             Image(systemName: symbol)
@@ -1823,7 +1822,7 @@ struct ChapterMapView: View {
                 .background(GlassPlate(radius: 20))
                 .contentShape(Circle())
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.medallion))
         .accessibilityLabel(name)
     }
 
@@ -1838,7 +1837,6 @@ struct ChapterMapView: View {
         let claimed = TributeService.isClaimed(tribute, player: player)
         let ready = earned && !claimed
         return Button {
-            Juice.haptic(.light)
             openTribute = tribute
         } label: {
             ZStack(alignment: .topTrailing) {
@@ -1863,7 +1861,7 @@ struct ChapterMapView: View {
             }
             .frame(width: 54, height: 54)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
     }
 
     private func chestBadge(_ symbol: String, _ tint: Color) -> some View {
@@ -2061,7 +2059,6 @@ struct CityMedallion: View {
     var body: some View {
         Button {
             guard state != .locked else { return }
-            Juice.haptic(.light)
             AudioLibrary.shared.play(.uiConfirm)
             action()
         } label: {
@@ -2120,7 +2117,9 @@ struct CityMedallion: View {
                 .fixedSize()
             }
         }
-        .buttonStyle(.plain)
+        // The road pans, but its twelve cities stand apart on the painting,
+        // so a drag rarely starts on one: the full press, silent when shut.
+        .buttonStyle(GamePressStyle(.medallion, sounds: state != .locked))
         .opacity(state == .locked ? 0.75 : 1)
     }
 }

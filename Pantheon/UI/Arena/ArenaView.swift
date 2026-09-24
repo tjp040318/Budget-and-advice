@@ -271,8 +271,6 @@ struct ArenaView: View {
     /// in one strip (run 216).
     private var exchangeButton: some View {
         Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             showExchange = true
         } label: {
             HStack(spacing: 4) {
@@ -289,7 +287,7 @@ struct ArenaView: View {
             .background(ScreenChrome.well)
             .stripHitTarget()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("Laurel exchange")
     }
 
@@ -601,7 +599,7 @@ struct ArenaView: View {
                     }
                 }
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.plate))
             .accessibilityLabel("Change the \(title.lowercased()) team")
         }
     }
@@ -801,8 +799,6 @@ struct ArenaView: View {
             line = "Pick five, strike one"
         }
         return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             showDraft = true
         } label: {
             HStack(spacing: 10) {
@@ -859,7 +855,7 @@ struct ArenaView: View {
             .padding(.vertical, 7)
             .background(GlassPlate(radius: 10))
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .disabled(!open)
         .accessibilityLabel("Draft Arena, \(record.tier.displayName), rating \(record.rating)")
     }
@@ -951,7 +947,9 @@ struct ArenaView: View {
                     .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
                     .shadow(color: canAttack ? Theme.gold.opacity(0.35) : .clear, radius: 6, y: 2)
                 }
-                .buttonStyle(PlateButtonStyle())
+                // A gold plate at the card's end: the primary press, though
+                // the column scrolls — a drag rarely starts on it.
+                .buttonStyle(GamePressStyle(.primary))
                 .disabled(!canAttack)
                 .accessibilityLabel("Fight \(opponent.name), win \(win) points")
                 Text("−\(loss) if lost")

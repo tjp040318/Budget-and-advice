@@ -299,7 +299,9 @@ struct MileageSheet: View {
             .background(GlassRowPlate(isOn: isOn))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A face of the board's scrolling grid: quiet, its tap kept in the
+        // action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel("\(offer.blueprint.name), \(offer.price) points")
     }
 
@@ -396,8 +398,8 @@ struct MileageSheet: View {
 
     private func redeem(_ offer: MileageService.Offer) {
         guard let result = store.redeemMileage(offer, on: banner) else { return }
+        // Take's press ticked on touch-down; the confirm is the "done".
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
         dismiss()
         onRedeem(result)
     }
@@ -523,8 +525,6 @@ struct SelectorSheet: View {
     private func candidate(_ blueprint: UnitBlueprint, face: CGFloat) -> some View {
         let isPicked = picked == blueprint.id
         return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             picked = blueprint.id
         } label: {
             VStack(spacing: 4) {
@@ -547,14 +547,13 @@ struct SelectorSheet: View {
             .background(GlassRowPlate(isOn: isPicked))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("\(blueprint.name), \(blueprint.role.displayName)")
     }
 
     private func take() {
         guard let chosen, let result = store.claimSelector(chosen) else { return }
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
         dismiss()
         onChoose(result)
     }

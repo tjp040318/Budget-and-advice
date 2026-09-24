@@ -536,6 +536,8 @@ struct PlaceRailRow: View {
 
     var body: some View {
         Button {
+            // The row sits in a scrolling rail, so it wears the quiet press
+            // and its tap stays here, on the lift of a real tap.
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiTap)
             action()
@@ -582,7 +584,7 @@ struct PlaceRailRow: View {
             .background(GlassRowPlate(isOn: isOn))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel(title)
     }
 }
@@ -1003,7 +1005,8 @@ private struct WholeRowPlan {
 /// A reading, or a quiet action, on glass: a capsule of glass with a painted
 /// item (or a glyph) and a word or number beside it, at its own width so it
 /// never truncates — the summon header's chip beads made shared. With an
-/// `action` it is a button (a light haptic and the tap sound). Used by the
+/// `action` it is a button (the plate's press: the tick and the tap on
+/// touch-down, `GamePressStyle`). Used by the
 /// Arena's Rate/Holds chip, the Labyrinth's beads ("B3/10", "New"), the
 /// bazaar's clocks and the chapter's tier capsule. For custom content inside
 /// the same capsule, `GlassCapsule`.
@@ -1018,13 +1021,11 @@ struct GlassBead: View {
     var body: some View {
         if let action {
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
                 action()
             } label: {
                 face
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GamePressStyle(.plate))
             .accessibilityLabel(text)
         } else {
             face
@@ -1196,8 +1197,6 @@ struct InfoDot<Detail: View>: View {
 
     var body: some View {
         Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             isOpen = true
         } label: {
             if seated {
@@ -1212,7 +1211,7 @@ struct InfoDot<Detail: View>: View {
                 InfoGlyph()
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.medallion))
         .popover(isPresented: $isOpen) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title.uppercased())
@@ -1650,7 +1649,8 @@ struct ClaimPlate: View {
         switch status {
         case .ready:
             Button {
-                Juice.haptic(.medium)
+                // The press is the tap and the firm tick; the claim's
+                // confirm is the "done".
                 AudioLibrary.shared.play(.uiConfirm)
                 action()
             } label: {
@@ -1672,7 +1672,7 @@ struct ClaimPlate: View {
                     .overlay(shape.strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1))
                     .shadow(color: Theme.gold.opacity(0.35), radius: 6, y: 2)
             }
-            .buttonStyle(PlateButtonStyle())
+            .buttonStyle(GamePressStyle(.primary))
         case .waiting:
             Text(title.uppercased())
                 .font(Theme.title(13))

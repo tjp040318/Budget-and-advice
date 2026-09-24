@@ -104,7 +104,7 @@ struct SweepButton: View {
             )
             .contentShape(shape)
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .disabled(!open)
         .accessibilityHint(refusal ?? "")
     }
@@ -170,7 +170,9 @@ struct SweepButton: View {
                         .strokeBorder(refusal == nil ? Color.clear : Theme.stroke, lineWidth: 0.5)
                 )
             }
-            .buttonStyle(.plain)
+            // A gold plate: the primary press, at half strength when shut
+            // as `.plain` drew it (2026-09-24).
+            .buttonStyle(GamePressStyle(.primary, dimsWhenDisabled: true))
             .disabled(refusal != nil)
 
             if let refusal {

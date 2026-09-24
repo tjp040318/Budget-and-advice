@@ -81,6 +81,32 @@ struct BattleSceneView: UIViewRepresentable {
         Coordinator(controller: controller, onTapUnit: onTapUnit)
     }
 
+    /// The view lets go of the fight when the fight closes (2026-09-24). The
+    /// reveal, the altar, the collection's Stage and the chest each tear
+    /// their stage down as their view leaves, because CI run 242 caught a
+    /// view without it holding its scene, its figures and every texture it
+    /// had uploaded after it was gone; this view had none either. The graph
+    /// is NOT taken apart here: the battle's model owns the controller and
+    /// its scene, and they go with the model when the cover closes (the
+    /// controller's `deinit` says so in the console). What the view holds is
+    /// dropped: the renderer stops at once, so the frame the cover slides
+    /// away on is the last one drawn, and `SummonStageView.teardownSettle`
+    /// later, past the slide and any frame in flight, the view lets go of
+    /// the scene, the plates and the coordinator's links.
+    static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
+        uiView.isPlaying = false
+        uiView.rendersContinuously = false
+        uiView.delegate = nil
+        uiView.gestureRecognizers?.forEach { uiView.removeGestureRecognizer($0) }
+        coordinator.onTapUnit = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + SummonStageView.teardownSettle) {
+            uiView.overlaySKScene = nil
+            uiView.scene = nil
+            coordinator.view = nil
+            coordinator.controller = nil
+        }
+    }
+
     final class Coordinator: NSObject, SCNSceneRendererDelegate {
         var onTapUnit: ((UUID) -> Void)?
         weak var view: SCNView?

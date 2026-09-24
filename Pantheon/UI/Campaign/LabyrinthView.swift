@@ -170,8 +170,6 @@ struct LabyrinthView: View {
         let doubled = EventCalendar.isActive(.doubleRelics(labyrinth: labyrinth.id))
         let standing = dungeonStanding(labyrinth, cleared: cleared).uppercased()
         return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             path.append(labyrinth.id)
         } label: {
             ZStack(alignment: .bottomLeading) {
@@ -234,7 +232,7 @@ struct LabyrinthView: View {
                 }
             }
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("\(labyrinth.name), \(cleared) of \(labyrinth.levels.count) levels cleared")
     }
 
@@ -301,8 +299,6 @@ struct LabyrinthView: View {
         let word = (named ? String(hall.name.dropFirst(8)) : hall.name).uppercased()
         let eyebrow = named ? "HALL OF" : "HALL"
         return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             path.append(hall.id)
         } label: {
             ZStack {
@@ -368,7 +364,7 @@ struct LabyrinthView: View {
                 }
             }
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("\(hall.name), \(cleared) of \(hall.floors.count) floors cleared")
     }
 
@@ -569,8 +565,6 @@ struct LabyrinthView: View {
                 accessoryTint: stage.map { power >= $0.recommendedPower } == true ? Theme.onGlassSuccess : Theme.onGlassDanger
             )
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
                 showTeamPicker = true
             } label: {
                 HStack(spacing: 5) {
@@ -584,7 +578,7 @@ struct LabyrinthView: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GamePressStyle(.plate))
             .accessibilityLabel("Your team, \(team.count) of 5")
 
             Spacer(minLength: 0)
@@ -765,7 +759,9 @@ struct LabyrinthView: View {
             .background(GlassRowPlate(isOn: isOn))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A row of the Titans' scrolling rail: quiet, its tap kept
+        // in the action, on a finished tap (2026-09-24).
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel("\(raid.name), \(element.displayName) Titan\(best.map { ", best grade \($0.label)" } ?? "")\(cleared ? ", fallen" : "")")
     }
 
@@ -1076,7 +1072,6 @@ struct LabyrinthView: View {
 
     private func enterRaid(_ raid: RaidEncounter) {
         guard let engine = store.startRaid(raid) else { return }
-        Juice.haptic(.light)
         raidEngine = engine
         openRaid = raid
         raidBattle = .campaign(raid.stage)
@@ -1103,7 +1098,6 @@ struct LabyrinthView: View {
     private func climbTower() {
         guard let stage = TowerService.nextStage(player: store.player) else { return }
         guard let engine = store.startTowerBattle() else { return }
-        Juice.haptic(.light)
         towerEngine = engine
         towerBattle = .campaign(stage)
     }
@@ -1366,9 +1360,9 @@ struct DungeonLevelsView: View {
     private func sweep(_ stage: Stage, runs: Int) {
         shrinesBefore = Set(store.openShrines.map { $0.id })
         guard let receipt = store.sweep(stage: stage, runs: runs), receipt.runs > 0 else { return }
+        // The choice's press ticked on touch-down; the confirm is the "done".
         AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.medium)
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { sweepReceipt = receipt }
+        withAnimation(Motion.panel) { sweepReceipt = receipt }
     }
 
     /// The player's floor: the first open and uncleared one, or the top once
@@ -1493,7 +1487,8 @@ struct DungeonLevelsView: View {
             .background(GlassRowPlate(isOn: isOn))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // A row of the floors' scrolling rail: quiet, its tap kept.
+        .buttonStyle(GamePressStyle(.quiet))
         .accessibilityLabel("B\(stage.index), \(stage.rewards.relicGrade) star relic, \(earned) of 3 stars\(unlocked ? "" : ", locked")")
     }
 
@@ -2296,7 +2291,7 @@ struct DungeonLevelsView: View {
                     .frame(width: 30, height: 32)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GamePressStyle(.medallion))
             .accessibilityLabel("Close")
         }
         .padding(.leading, 12)
@@ -2310,7 +2305,6 @@ struct DungeonLevelsView: View {
         let label = isMost ? "Max ×\(runs)" : "×\(runs)"
         let spent = "\(spend)"
         return Button {
-            Juice.haptic(.light)
             withAnimation(.easeOut(duration: 0.15)) { sweepChoicesFor = nil }
             sweep(stage, runs: runs)
         } label: {
@@ -2333,7 +2327,7 @@ struct DungeonLevelsView: View {
             .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
             .contentShape(Capsule())
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .accessibilityLabel("Sweep \(runs) times for \(spend) energy")
     }
 
@@ -2341,8 +2335,6 @@ struct DungeonLevelsView: View {
     /// a room too narrow for the words.
     private func teamButton(_ stage: Stage, enabled: Bool) -> some View {
         Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
             selectedStage = stage
         } label: {
             VStack(spacing: 1) {
@@ -2358,7 +2350,7 @@ struct DungeonLevelsView: View {
             .frame(width: 66, height: PrimaryButton.height)
             .background(GlassPlate(radius: Theme.tightCorner))
         }
-        .buttonStyle(PlateButtonStyle())
+        .buttonStyle(GamePressStyle(.plate))
         .disabled(!enabled)
         .accessibilityLabel("Team and runs")
     }
