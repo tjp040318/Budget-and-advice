@@ -9396,3 +9396,621 @@ kept the images alive, and one the Metal path never enters. The simulator
 reports a GPU-private texture's `allocatedSize` as 0, so the cache's byte
 budget and the [Mem] line count a texture by its size and its mipmaps
 (`textureBytes(of:)`), never by `allocatedSize`.
+
+## Natural poses (2026-09-24)
+
+The owner: "can we make the 3D characters have more of a fluid design and
+poses, instead of all the same static, frozen style poses? Something more
+natural". What he sees is real, and it is ours rather than Meshy's. Of the
+115 serious rigs, 108 stand in battle in one Meshy preset, 89 Combat Idle.
+And every one of the 117 rigs in the bundle (those 115, the Jötunn and the
+sandstone sentinel) stands on every stage — the island, the reveal, the
+Hall of Ka's altar, the collection's Stage and the unit sheet's well — in
+an idle that `tools/stand_idle.py` stands up from a battle stance. So
+every figure stands in the same near-A-pose and breathes in the same
+rhythm, whatever it is.
+
+Research came first (rule 2), in two passes. One read how an idle plays on
+each stage, what SceneKit lets a procedural layer do over a playing
+skeletal clip, and what an idle built offline from each rig would change,
+then built that idle as a prototype and ran it over all 117 families. The
+other read how the genre stands its figures, the craft of a standing
+figure and Meshy's library of 678 motions, and gave every rig an
+archetype. The genre's pages were refused by the proxy again (only the
+search engine's summaries and one GitHub file could be read), so Summoners
+War, Raid, Epic Seven, Genshin and Star Rail are what their screens show
+and what is recalled of them [recalled]. Apple's SceneKit pages were read
+through their JSON [read]. Meshy's preview GIFs are on `cdn.meshy.ai`,
+which is refused at CONNECT, so its presets were chosen by name. Every
+number about our figures was measured on the shipped files [measured]. No
+credits were spent (the one Meshy call was the free library listing), and
+nothing is built. The two reports (`engine.md`, `craft.md`), the prototype
+(`engine_natural_idle.py`), the measurements and the boards are in the
+session's scratchpad under `poses/`.
+
+### What the study found
+
+- **One motion for everyone.** The 108 stand in 89 raw (26), stood 70% up
+  (`half`, 37) or stood fully up (`stand`, 45); six more stand in 85's
+  calm tail and Skadi in 226's frozen draw. 109 of the 117 standing idles
+  are the same 1.30-second loop, which plays in 1.27 s because SceneKit's
+  clip ends on its last key. That is 47 breaths a minute, where a calm
+  figure takes 12–20. 67 of them turn the chest by the same 1.35°, and for
+  the 45 `stand` families the stage's idle and the battle's stance are one
+  file [measured]. `UnitNode.play` already starts each loop at a random
+  phase and a ±6% tempo, which is right, but on a 1.27 s loop two figures
+  fall back into step every 10.6 s, and no tempo changes a pose.
+- **The stand-up pass throws the life away with the crouch.**
+  `stand_idle.py` slerps every frame toward the rest pose. That scales the
+  motion down along with the crouch, and it levels the figure, because the
+  rest pose is symmetrical. On the 26 families still on raw 89, the hips
+  bob 3.5 cm in the guard and 1.1 cm in the standing idle; the chest turns
+  6.4° and 2.2°, the head yaws 6.3° and 2.4°, and the hips roll −4.7° and
+  −0.8°. The 37 `half` families go through the pass twice (the chest
+  1.5°). So a king, a brute, a trickster and a beast measure alike: every
+  archetype's median standing idle is a 1.30 s loop with about 2° of chest
+  turn and head yaw, level hips and the weight between the feet
+  [measured].
+- **Every figure holds an invisible shield.** The pass keeps 85% of the
+  guard's arms (`KEEP["arms"]`). The upper arms stand a median 51° and 39°
+  out from straight down with the elbows at 69° and 56°, and in 106 of the
+  117 the left hand is held a quarter of the body's height in front of the
+  hips [measured]. A relaxed figure hangs its arms 5–20° out. The rigs'
+  own bind poses already hang theirs at 22° with a 26° elbow (the median
+  of 117), because the concepts were painted that way for the rigger. So
+  the near-A-pose is the guard stood up, not the rig.
+- **Nothing stands on one leg.** One standing idle in 117 tilts its hips
+  more than 3°, and 102 hold the weight centred between the feet
+  [measured]. Contrapposto — a straight leg carrying the weight, the hips
+  up over it and the shoulders tilted against them — is the first rule the
+  craft teaches for a standing figure [recalled].
+- **And nothing could.** `character.canonicalise` locks the root's
+  sideways travel in every clip `mesh.py` writes, so the hips move 0.0 cm
+  in all 234 idle carriers. On the donor, 89 sways the pelvis 1.5 cm with
+  the feet planted; as shipped, the pelvis is pinned and the feet slide
+  instead, 1.3 cm at the median and 7–15 cm on the Colossus's axe stance
+  [measured]. An idle with a real weight shift has to be written without
+  the lock, or its feet skate as far as its hips should have moved.
+- **The guard's arms tear the meshes.** Measured as edges stretched past
+  3x over the loop (`clip_fix.clip_stretch`, the roll-out's measure, on
+  the shipped bases), the standing idles have 22,202 and the battle
+  stances 27,884 [measured]. Freya's cloak reaches 206x, Frigg 46x and
+  Hera 31x, and the sovereigns and the graces hold 10,696 of the 22,202. A
+  pose far from the bind is what drags the cloth welded to the arms
+  (MOTION.md §6).
+- **On the phone the life is millimetres.** In the CI consoles of
+  25cfa95's run, the unit sheet's figure moves its hips 7 mm and its hand
+  about 3 cm in five seconds (`[StageDoctor]`) [measured].
+- **The genre gives every character its own idle** [recalled]. Summoners
+  War gives each family one, shared by its five elements, which is our
+  `assetName`'s granularity: its nobles stand tall and still, its beasts
+  crouch and bounce, and its fliers hover. Raid credits a named animator
+  with each champion's idle, on shared skeletons. Genshin and Star Rail
+  give every character a standing idle and two or three idle animations
+  that play once it has stood still (Chiori inspects her swords; Heizou
+  toys with the weapon at his waist). Epic Seven's animators sell a hero
+  on hand gestures, gaze and breath timing. The craft's numbers are 15–20
+  breaths a minute of 1–2 cm with the inhale longer than the exhale, a
+  weight shift every 4–8 s, a loop of 8–12 s once it carries one, and a
+  break every 30–60 s in play and sooner on a showcase. The pose is
+  exaggerated and the motion kept subtle.
+- **The battle and the stages are different jobs.** At battle distance
+  the team stands 0.30 of the frame tall, so a breath is under a point and
+  only the silhouette reads: the stance, the arms, the weapon's angle. On
+  the stages the figure fills the frame and the motion reads. So the
+  battle's stance is chosen by the weapon, and the stage's idle by the
+  character.
+
+### What SceneKit lets a layer do over a playing clip
+
+- **A transform constraint on a joint shows** [read]. Its block receives
+  the joint's "currently visible state … during the animation", and
+  SceneKit applies what it returns. Apple's WWDC 2014 demo (`AAPLSlideIK`)
+  puts a look-at on a skinned hero's head and an IK on his hand while he
+  plays his attack. No page after 2017's rewrite of the skeletal
+  evaluation shows it again, so one CI lab confirms it before anything is
+  built on it. This is the procedural layer.
+- **A look-at with an influence also shows**, but it has no angle limit (a
+  finger behind the figure turns the head 180° times the influence) and it
+  blends the roll. W2.15's `SCNLookAtConstraint` at 0.3 is better written
+  as a clamped transform constraint.
+- **Two ways do not help.** An additive animation is undocumented for the
+  clips' quaternion tracks. A joint written in `didApplyAnimationsAtTime`
+  does not show where the clip has a track, because the clip owns the
+  presentation value (the cape's design already assumes it); that way is
+  right only for a joint with no track, which is how `ClothChain` works.
+- **Blended animation players show.** The reveal's entrance blends the
+  victory over the running idle and back (run 251). Players carry baked
+  variants and one-shot breaks, at one skeletal evaluation each.
+- **Joints are found by where they sit, never by name.** Eleven of the 117
+  rigs name the joint over the hips `neck`, name the real neck `Head1` or
+  `Spine1`, and have no `headfront` [measured]: Zeus, Thor and the
+  awakened Thor, Poseidon and the awakened Poseidon, the awakened Sekhmet,
+  the awakened Hera, the Unwrapped King, the smith, Idunn and Skadi. A
+  layer that asked for `neck` would bend Zeus's lower back. The joint
+  under `Head` is the neck, and those between it and `Hips` are the spine,
+  bottom to top.
+
+### The options
+
+**1. A runtime layer in Swift (free).** Four pieces, on the figure stages
+and the island:
+- a gaze: a transform constraint on the neck and the head, ±25° of yaw
+  and ±12° of pitch, eased toward the finger or the lens (W2.15's gaze,
+  clamped);
+- a weight shift: two variants of the idle, standing on either leg on the
+  same foot spots, both playing, with the top one's `blendFactor` eased
+  0↔1 over 1.2 s at random intervals of 8–20 s, so the shift never
+  repeats;
+- idle breaks: a one-shot player blended over the running idle (in 0.4 s,
+  out 0.5 s, the reveal entrance's pattern) after 12–18 s untouched, and
+  on the island in place of most of today's hops and swings;
+- the random phase and tempo the battle already has, on the stages'
+  `startLoop`.
+
+It costs no credits and about three days (the gaze a day, the weight
+shift half a day, the breaks a day), plus one CI run for the lab. It gives
+the life the genre sells on its showcase screens: eyes that follow, a
+weight that moves, a figure that fidgets and answers a touch, never twice
+alike, because its clocks are independent. It cannot change the pose.
+Laid over today's idle, it animates a figure that still holds an
+invisible shield, still tears Freya's cloak and still pants 47 times a
+minute, and its weight shift needs variants only option 2 can make.
+
+The risks:
+- the lab;
+- the blocks run on SceneKit's render thread, so they read a lock-guarded
+  state (the `ClipPace` pattern), keep a clock that is a scene action (so
+  a hit-stop freezes it), and are built in a `nonisolated static func` (a
+  closure made on the main actor would trap under Swift 6). About six
+  blocks a figure a frame cost microseconds;
+- `ClothChain` steps before the constraints run, so a layered spine
+  carries a cape rigidly by its delta until the step moves to
+  `didApplyConstraintsAtTime`;
+- every axis must be read once from each rig's bind, because Meshy's
+  joint frames differ between rigs (the base and awakened Ares's pelvises
+  are 150° apart, run 190).
+
+**2. Idles re-derived offline from each rig's own bind (free).** A new
+`tools/natural_idle.py`, made from the prototype (346 lines of numpy),
+builds the standing idle from the rig's bind pose instead of the guard:
+- **contrapposto:** the weight on the leg opposite the weapon hand
+  (`motion_palette.WEAPON_HAND`, Polykleitos's chiasm); the pelvis rolled
+  3–6° up over that leg, turned 1.5° and shifted 1.6–2.6% of the height
+  over the standing foot; the spine counter-rolled so the shoulders tilt
+  against the hips; the head turned 4–8° toward the standing side;
+- **the feet:** planted by two-bone IK on their bind spots with the knees
+  on their bind poles; the standing leg straight to 98.5% of its length;
+  the free foot 1.2% of the height forward and turned out 8°;
+- **the arms:** at the bind's hang, 0–4° in, the elbows softened 5–10°,
+  following 60% of the chest a quarter of a second late;
+- **the motion:** a 4 s breath (3.2 s for a brute) with the inhale 40% of
+  it, a lateral and a fore-aft sway, and the head drifting on two slow
+  sines. Each is a whole number of cycles in one 8 s loop (6.4 s for a
+  brute), so the loop closes seamlessly;
+- **no root lock:** it is written straight onto the family's carrier, so
+  the hips keep their sway and the feet do not slide.
+
+It costs no credits. Making the prototype a tool, with its guards, its
+style table and the four places that derive the idle today, is about a
+day. It takes 2 s a family (the roster in four minutes). The files are
+285–410 KB against 180–270 KB today, 16 MB more over the roster. It needs
+one CI run. What it gives, measured on all 117 families on their shipped
+bases:
+
+| | today's standing idles | the prototype |
+|---|---|---|
+| edges past 3x, all families | 22,202 | 1,005 (−95%) |
+| families with none | 21 | 82 |
+| the median family's worst stretch | 6.8x | 1.5x |
+| families that tear more than today | — | none |
+| the feet | slide 1.3 cm (median) | planted: 0.0 mm on all 117 |
+| the loop | 1.27 s | 8 s (6.4 s for a brute) |
+
+Freya goes from 1,719 to 143, Frigg from 1,359 to 5, Heracles from 1,095
+to 164, Hera from 957 to 205, Achilles from 385 to 0 and Ares from 275 to
+0. The arms come down: Hera from 41°/38° to 10°/18°, Freya 45°/34° to
+12°/11°, Ares 63°/45° to 27°/29° and Zeus 48°/42° to 20°/24°. The hips
+tilt 2–7°. On the sheet of six (`poses/proto/SHEET_idles.jpg`: Hera,
+Freya, Ares, Achilles, Zeus and the Minotaur, today's idle above the
+prototype's), today's rows hold the guard's arms, blow Freya's cloak
+into a sheet, tear Hera's robe and drag Ares's and Achilles's kilts with
+the sword arm. The prototypes stand upright and at ease, the weapon
+hanging by the thigh. It is the only option that gives every rig a POSE
+of its own, and the arms can come down safely because the meshes were
+skinned with them there.
+
+What it cannot do:
+- It cannot make a gesture (a hand on the hip, a scan along a bow, a
+  weapon lowered and raised), and it has none of motion capture's small
+  irregularity: its motion is designed curves.
+- Its breath is quiet on purpose. The chest turns 0.6° against today's
+  1.35°, at a third of the rate, so the stage camera may not read it; that
+  is the first knob to raise, to 1.5–2.5°.
+- The weight moves only part of the way over the standing foot (0.35–0.64
+  of the way from one foot to the other), because the feet keep the
+  bind's shoulder-width spots. A narrower stance bends the legs more under
+  a skirt, so the tear guard decides it per family.
+
+Two lesser versions, so that the choice is on the record:
+- **The arms at 20% of the guard instead of 85%** in `stand_idle.py`
+  (measured): one constant, an hour. It keeps the 1.3 s pant, the crouch's
+  legs and spine and the level hips. It tears less than today, and more
+  than the prototype on every robed and heavy family (Hera 233 against
+  205, Frigg 215 against 5, Heracles 593 against 164).
+- **The guard's mean pose moved and its motion kept** (not built): blend
+  only each joint's loop mean toward a hanging arm and keep the deviations
+  whole. That brings back the motion capture (the chest about 6°, the
+  hips about 3.5 cm), but the motion is a combat pant at 1.3 s, and
+  stretched to 3.9 s it is a pant in slow motion. It belongs to the
+  battle's stance, where that rhythm is right (step 4), not the stage's.
+
+**3. The paid preset palette.** Meshy presets are bought once on
+`shield_maiden_serious` (rigged 2026-09-23 21:12, alive until about
+2026-09-27) at 3 credits each, archived as `.motion.npz`, and put on every
+rig for nothing by `retarget.py`, which measured equal to Meshy's own
+application (MOTION.md §3). Each is cut to its calm window and closed into
+a loop. Fifteen were chosen by name, one or two per archetype (the table
+under *The choice*): ten poses — the three breathing look-arounds (336,
+338, 335), 377's stance, the plain idles 0, 11 and 12, 318's hand rub,
+2 Alert and 231's scanning aim — and five breaks and victories (334, 306,
+403, 255, 41).
+
+The fifteen cost 45 credits (549 → 504), and the ten poses alone 30
+(→ 519). MOTION.md §8 proposed fourteen for 42; this list drops its 87
+(Boxing Practice may throw punches) and its 59 and 49 (cheers beside the
+412, 298 and 88 already shipped), and adds 338, 318, 231 and 334. Sixteen,
+48 credits, is the most the floor allows. Once the donor expires, a preset
+can be bought only on the next rig Meshy makes for us.
+
+It gives what option 2 cannot: motion capture's small irregularity, and
+the gestures — the look around, the hand rub, the weapon lowered and
+raised, the bow, the stomp — which are what the genre's idle breaks are
+made of. It cannot give a family its own pose: one preset on the 27
+sovereigns is the sameness problem at a smaller scale. A preset's arms
+leave the bind, so every one must pass the same tear guard, and the 24
+robed rigs take only those that keep the hands low (the dress is welded
+to them; Hathor is the measured case). Most presets open with a long
+lead-in or end in a settle (MOTION.md §6), so each needs its window cut
+and its loop closed, and each loop must ship with its sway rather than
+through the root lock.
+
+**4. Idles from a sentence, one per archetype (Text to Motion).**
+`meshy.py motion` on a live rig, with one sentence per archetype written
+from its recipe: a king still but for a slow survey, a brute's heave and
+neck roll, a trickster's cocked hip and sideways glances, a beast
+sniffing the air. Each asks for "in place, loopable", and the robed for
+"arms close to the body" (drafted in `craft.md` §8). It costs 10 credits a
+motion in prime mode and 3 to apply: 13 an archetype, 104 for eight, which
+is over the 49 the floor leaves. Swift mode is 6 (48 for eight, landing
+at 501) and unproven on motion this subtle, and neither can be seen
+before it is paid for. One idle per family, Summoners War's standard,
+would be about 1,220 (94 families at 13). It gives an idle authored to
+the character rather than guessed from a preset's name; the fourteen
+sentences of the five-god test all read right at the first take
+(2026-09-15). It cannot fit beside option 3 under the floor, and one
+sentence per archetype still shares a clip among 5–27 rigs.
+
+| | credits | time | the pose | the life | the tear |
+|---|---|---|---|---|---|
+| 1. runtime layer | 0 | about 3 days, and a lab | unchanged | gaze, weight shifts, breaks; never repeats | unchanged |
+| 2. idle from the bind | 0 | about a day, and a CI run | each rig's own, in contrapposto | a calm breath, a sway, a drift | −95% |
+| 3. preset palette | 30–45 | half a day after buying | one per archetype | motion capture and gestures | must pass the guard |
+| 4. a sentence per archetype | 104 (48 in swift) | about a day | one per archetype, authored | authored | must pass the guard |
+
+### The choice, and why
+
+**Option 2 for every family, then option 1 over it. Option 3 on his word,
+for what only it gives. Option 4 later.**
+
+- **Option 2 is the base** because the pose is what he is looking at —
+  117 figures holding the same invisible shield — and it is the one
+  option that gives every family a pose of its own: each is built from
+  the rig its concept was painted for, on the leg its weapon hand
+  chooses, in its archetype's style. Options 3 and 4 change the pose too,
+  but to one per archetype, for credits, with arms that leave the bind.
+  Option 2 also stops most of the tearing the guard's arms cause. Its
+  quickest version (the arms at 20%) fixes part of the tear and none of
+  the pose, so it is not the one.
+- **Option 1 is what makes it fluid.** The craft's idle is a pose AND a
+  life: a weight that moves every few seconds, eyes that follow, a break
+  that surprises. A runtime layer is the only way that life never
+  repeats. It comes second because it needs option 2's variants and a
+  lab.
+- **Option 3 buys what neither free option can**, the gestures and
+  motion capture's grain, but it is not the idle: a preset laid on the 27
+  sovereigns is the sameness problem again. So the palette goes where
+  only it serves: the idle breaks and the victories per archetype, and a
+  "motion texture" — a preset's small deviations from its own mean pose,
+  with the arms kept small — laid over the designed pose. A preset
+  replaces an archetype's designed idle only where its board reads better
+  and it tears no more.
+- **Option 4 is the genre's authored idle**, but it is over the floor
+  today, and the free base should be seen first. When it comes, the
+  sovereign is first.
+
+**Decided the same evening.** The owner, shown the six-figure sheet and
+Ares's GIF: "Yes buy them". The fifteen presets of option 3 were bought on
+`shield_maiden_serious` at 3 credits each (549 → 504) and archived as
+`Art/Motions/preset_<id>.motion.npz` (be7b124), so step 8 below is steps
+8.3 and 8.4 only. Then "Go ahead": the free build starts with steps 1–3.
+
+**The one decision with a date on it.** The donor rig expires about
+2026-09-27, so the palette has to be decided before the free work has
+landed. He opens the previews in a browser (free, about five minutes).
+Every file is at
+`https://cdn.meshy.ai/webapp-assets/feature-demo/animation/preview/biped/<file>`.
+For each, he says whether it reads as its name, whether the hands stay
+low enough for a robed figure, and whether a weapon crosses the body.
+
+| preset | judged for | file |
+|---|---|---|
+| 336 Long Breathe and Look Around | the sovereign: a slow survey | `Long_Breathe_and_Look_Around.gif` |
+| 338 Short Breathe and Look Around | the champion | `Short_Breathe_and_Look_Around.gif` |
+| 335 Axe Breathe and Look Around | the brute | `Axe_Breathe_and_Look_Around.gif` |
+| 377 Relax Arms, Then Strike Battle Pose | the champion's battle pose; a stance taken | `Relax_arms_then_strike_battle_pose.gif` |
+| 0 Idle | the mystic, and the fallback | `Idle.gif` |
+| 11 Idle 1 and 12 Idle 2 | the grace (the better of the two) | `Idle_02.gif`, `Idle_03.gif` |
+| 318 Scheming Hand Rub | the trickster | `Scheming_Hand_Rub.gif` |
+| 309 Talk with Left Hand on Hip | the trickster, if 318's weapon crosses the body | `Talk_with_Left_Hand_on_Hip.gif` |
+| 2 Alert | the hunter and the beast | `Alert.gif` |
+| 231 Archery Aim with Lateral Scan | the archers' battle stance, for 226's frozen draw | `Archery_Aim_with_Lateral_Scan.gif` |
+| 334 Lower Weapon, Look, Raise | a break for every weapon | `Lower_Weapon_Look_Raise.gif` |
+| 306 Cheer with One Hand Up | the sovereign's victory | `Cheer_with_One_Hand_Up.gif` |
+| 403 Victory Fist Pump | the champion's victory | `Victory_Fist_Pump.gif` |
+| 255 Angry Ground Stomp | the brute's victory or break | `Angry_Ground_Stomp.gif` |
+| 41 Formal Bow | the mystic's and the grace's victory | `Formal_Bow.gif` |
+| 243–254 and 599, Idle 3–15 | replacements, unnamed | `Idle_3.gif` … `Idle_15.gif` |
+
+- **If he says yes,** the palette is bought by 2026-09-26 (step 8),
+  whatever step the free work has reached. A preset that disappoints on
+  its GIF is swapped for one of the unnamed Idle 3–15 he liked, at the
+  same 3 credits.
+- **If he says no,** the breaks come from each family's own victory,
+  taunt or cheer and from the tool's look-around, shoulder roll and
+  weight settle, and nothing else changes.
+
+### The build, in order
+
+About five days of free work and the palette on his word. Every push runs
+`python3 tools/swiftcheck.py --members --types` and `python3
+tools/balance.py` first (no number moves), is followed by its CI run, and
+ends with its boards and frames composed into a sheet and sent to him
+before he tests (rule 1).
+
+1. **Make the tool, `tools/natural_idle.py`** (new, from the prototype).
+   - **Ten style rows, one per archetype,** dealt by an `ARCHETYPE` table
+     beside `POOLS` in `tools/motion_palette.py` (from `craft.md` §5:
+     sovereign 27 rigs, champion 18, brute 14, grace 14, trickster 10,
+     mystic 9, soldier 7, undead and construct 7, hunter 6, beast 5; an
+     awakened form takes its family's). Four rows are the prototype's
+     styles: regal for the sovereign, warrior for the champion and the
+     soldier, brute, and lithe for the grace. Six are written from the
+     craft's recipes: the mystic (the feet closer, the hands low before
+     the waist, a drift like floating, the head still), the hunter (the
+     torso bladed 20–30°, the weight on the back leg, a slow scan), the
+     trickster (the hip cocked, the head tilted 8–12°, an off-beat hitch,
+     1.1× tempo), the beast (a low crouch, the head low and bobbing, 1.2×
+     tempo), the soldier at ease, and the construct (no breath, a slow
+     settle and a stiff twitch; the Jiangshi's arms forward).
+   - **No two alike:** each family's numbers are drawn inside its style's
+     ranges from a hash of its key. The weight goes on the leg opposite
+     the weapon hand; both sides are tried and the one that tears less is
+     kept (the other side won on 14 of 117 in the prototype). The joints
+     are found by position (above). The loop is written as F+1 keys, the
+     last equal to the first.
+   - **Guards that refuse a file:** a foot that drifts more than a
+     millimetre or leaves the floor; a carrier that binds off the shipped
+     base (`motion_palette.bind_against_base`); more edges past 3x than
+     the idle it replaces (`clip_fix.clip_stretch`); an arm through the
+     thigh or the torso (a new check built from `character._arm_masks`
+     and `_limb_surface`); a loop that does not close. An override table
+     like the roll-out's `JUDGED` takes the odd rests: Fenrir's bind holds
+     its arms 58° out, the bosses stand 6–8 m tall, and Heracles, Hera,
+     Freya and Horus keep some tear.
+   - **Verified by:**
+     - the tool's survey over all 117, with every guard's line and the
+       total against today's 22,202 and the prototype's 1,005;
+     - a board per family: front, three-quarter and side at 0, 25, 50 and
+       75% of the loop, on the shipped base, with its tear numbers. It
+       must read as standing, not guarding, with the weapon hanging by the
+       thigh and clear of the floor and nothing through the body;
+     - a moving GIF beside today's idle for the 5★s;
+     - one roster sheet per archetype, on which no two figures may stand
+       alike.
+2. **Ship it, and point the four derivations at it.**
+   - **The files:** every family's
+     `Pantheon/Resources/Models/<family>_idle.usdz` (117 files, 16 MB
+     more). The same file also becomes `<family>_idle_combat.usdz` for the
+     35 calm families among the 45 `stand` ones — the sovereigns, graces
+     and mystics — since the genre's casters and kings stand calm in
+     battle [recalled]. Those 35 carry 9,994 of the battle stances' 27,884
+     edges past 3x, and the natural idle measures 484 on them. The other
+     ten `stand` families (Surtr, Sun Wukong, Diana, Nike, Set, Dionysus,
+     Sobek, the Centurion, the Hoplite and the Terracotta Soldier) keep
+     their stance until step 4.
+   - **The derivations,** so that no re-ship can put the stood guard
+     back:
+     - `tools/motion_palette.py`: `ship` takes `idle=natural` where it
+       takes `idle=stand` today, and `idle_combat=natural` for the 35;
+       `roll` passes both.
+     - `tools/batch/build_asset.sh` and `tools/batch/proportions.sh` call
+       `natural_idle.py` where they call `stand_idle.py` after a ship,
+       because a re-shipped base can change the bind.
+     - `tools/clip_fix.py` stops re-deriving the standing idle from a fixed
+       combat idle, since the new idle does not come from it.
+     - `stand_idle.py` stays for the battle stances still made from the
+       guard, until step 4 replaces them.
+   - **The words:** `Docs/MOTION.md` gets a section on the stage idle, and
+     CLAUDE.md's paragraph on the standing idle is rewritten.
+   - **Verified by:**
+     - `character.verify` on every file;
+     - the CI frames of tour steps 0 `island` (and `0-island-zoomed`),
+       2 `detail`, 3 `training`, 5 `reveal` (the figure after its
+       entrance), 21 `collection_stage` and 43 `awaken`, and of the
+       battles 6, 8, 18 and 29 for whichever of the 35 the tour fields;
+     - the `[StageDoctor]` Hips and Hand lines, which give the motion's
+       size on the device (today 7 mm and 3 cm in five seconds). If the
+       frames and these lines read still, raise the breath to 1.5–2.5°
+       and ship again;
+     - `[Mem]`, since an 8 s clip carries six times the keys. If it
+       climbs, write the idles at 15 keys a second;
+     - the `[Reveal] facing` line, which averages both feet, while the
+       free foot now turns out 8°. If the figure comes out turned off the
+       lens, read the standing foot alone.
+3. **Fix the Swift the idle runs on, and run the lab, in the same push.**
+   - `Pantheon/Render/UnitNode.swift`:
+     - `restartIdle()` plays `restingIdle`, not `.idleCombat`;
+     - `play(_:)` takes the previous loop off
+       (`removeAnimation(forKey:blendOutDuration:)`, 0.25 s) when a
+       different loop starts;
+     - `revive(healthFraction:)` hands back to the battle's stance
+       (`idleAfterClip`), not the stage's idle.
+   - `Pantheon/Render/ModelLibrary.swift`: `SCNNode.startLoop` starts at
+     a random `timeOffset`.
+   - **The lab,** in `Pantheon/App/TourView.swift` and
+     `.github/workflows/build.yml`: `-tour-pose-lab constraint` relaunches
+     step 3 with a transform constraint turning the head 20° over the
+     playing idle, and prints the head's presentation yaw with it and
+     without. `-tour-pose-lab write` does the same by writing the joint in
+     `didApplyAnimationsAtTime`.
+   - **Verified by:**
+     - a relaunch of step 0 that changes the team once the island is up
+       (`-tour-island-rebuild`, new: the one path that crouched), whose
+       figures must stand;
+     - the `[StageDoctor]` keys: one idle, where an island figure that
+       had strolled carried three;
+     - the lab's yaw lines, and `3-training-pose-constraint` beside
+       `3-training`.
+4. **Give the battle its ready stances.** `natural_idle.py --ready`
+   writes `<family>_idle_combat.usdz` for the 73 families still in the
+   guard (26 raw, 37 `half`, and the ten `stand` families of step 2),
+   which carry 17,600 of the 27,884; the six on 85's tail, Skadi, the
+   Jötunn and the sentinel keep theirs. Neither recipe is measured yet, so
+   both are built and judged side by side:
+   - the guard's own motion kept, with its mean pose moved: the arms per
+     kit toward the bind, the knees bent;
+   - a stance synthesised like the stage idle, with the guard's arms per
+     kit and a quicker breath.
+
+   Keep the one that tears less and reads better at battle distance. A
+   champion's 1.3 s bounce is right here.
+   - **Verified by** the survey against the shipped stances; boards at
+     battle distance; and CI steps 6 `battle`, 8 `arena_battle`, 18
+     `dungeon_battle` and 29 `realm_battle`, each beside the run before.
+5. **Shift the weight.**
+   - The tool writes `<family>_idle_alt.usdz`, standing on the other leg
+     on the same foot spots. The two prototypes blended at 25, 50 and 75%
+     keep the feet within 2.7 mm; the gap is 15.7 mm when the free foot
+     steps differently, so both variants are planted alike.
+   - `AnimationClip.idleAlt` goes into
+     `Pantheon/Core/Models/Presentation.swift`, and every switch over the
+     enum stays exhaustive for swiftcheck.
+   - A new `Pantheon/Render/PoseLayer.swift` holds a figure's life for any
+     figure node, because the stage views hold a plain node from
+     `ModelLibrary.node`, not a `UnitNode`. Its `startIdle(_:alternate:)`
+     plays both variants and eases the top one's `blendFactor` 0↔1 over
+     1.2 s at random intervals of 8–20 s. The reveal, the Hall of Ka and
+     the collection's Stage (`SummonRevealView.swift`, `TrainingView.swift`,
+     `CollectionView.swift`) call it where they call `startLoop`, and
+     `UnitNode.swift` where the island plays `restingIdle`; the battle
+     keeps its one stance.
+   - It costs about 320 KB a family (37 MB, about half that at 15 keys a
+     second), and one more skeletal evaluation while a blend runs.
+   - **Verified by** the tool's blend check (the feet within 3 mm at 25,
+     50 and 75%); `-tour-pose-blend 0.5` relaunches of steps 3 and 21;
+     and `[StageDoctor]` naming two players and the hips' travel.
+6. **Give the figures a gaze,** in `PoseLayer.swift`, called from
+   `SummonRevealView.swift`, `TrainingView.swift` and
+   `CollectionView.swift`.
+   - **If the lab showed the constraint:** an
+     `SCNTransformConstraint.orientationConstraint(inWorldSpace: false)`
+     on the neck and the head, ±25° of yaw and ±12° of pitch, eased
+     toward the finger (on the Hall of Ka, the collection's Stage, the
+     unit sheet and the reveal's hold) or the lens. The face's direction
+     comes from the rig's `headfront`, or from the model's +Z in the bind
+     on the 11 rigs that have none. The target is lock-guarded, the clock
+     is a scene action, and the closures are built `nonisolated`.
+   - **If it did not:** the neck's and the head's tracks are filtered out
+     of the clip group in `ModelLibrary.firstAnimation` and driven in
+     `didApplyAnimationsAtTime`, as the cape is.
+   - If the layer reaches the spine, `ClothSimulation.step` moves to
+     `didApplyConstraintsAtTime` in `BattleSceneView`'s coordinator,
+     `StageDoctor` and `ClothStepper`.
+   - The reveal's `settle`, which sways the whole figure ±11.5° every
+     4.5 s as its only sign of life, becomes one slow turn to the lens.
+     FEEL.md W2.15's look-at is rewritten to match.
+   - **Verified by** `-tour-gaze left` relaunches of steps 3, 21 and 5
+     with the head turned, the awakened Ares's reveal frame for his cape,
+     and the lab's yaw line.
+7. **Give the figures idle breaks.**
+   - `PoseLayer`'s `fidget(_:)` plays a one-shot player over the running
+     idle (in 0.4 s, out 0.5 s), and the stage views call it after 12–18 s
+     untouched.
+   - The island's `armStir` (`Pantheon/UI/Island/IslandSceneView.swift`)
+     plays a break through `UnitNode` for most stirs, and keeps the hop and
+     the swing for a tap.
+   - The breaks are the family's own victory, taunt or cheer (W2.15's
+     flourish), the tool's look-around, shoulder roll and weight settle,
+     and the bought presets once they are archived.
+   - Files: `PoseLayer.swift`, `UnitNode.swift`, `IslandSceneView.swift`,
+     `TrainingView.swift`, `CollectionView.swift`, `SummonRevealView.swift`.
+   - **Verified by** `-tour-fidget` relaunches of steps 3 and 21 caught
+     mid-break, `[StageDoctor]` naming the second player, and the
+     island's frames.
+8. **Buy the palette, on his word** (by 2026-09-26; used after step 7).
+   1. `python3 tools/meshy.py balance`.
+   2. `python3 tools/motion_palette.py buy shield_maiden_serious <ids>
+      --floor 500 --cap <n>`, then `archive`, then `board-archive <ids>
+      --out <dir>`.
+   3. Write each preset's calm window into `PRESET_CUTS`, closed into a
+      loop with its sway kept.
+   4. Deal the breaks and the victories per archetype (306 the sovereign,
+      403 the champion, 255 the brute, 41 the mystic and the grace), and
+      lay a preset's deviations over the designed idle with
+      `natural_idle.py --texture <preset>`.
+   - **Verified by** MOTION.md §10's rule (a bought clip ships only where
+     it tears no more than the one it replaces); boards old beside new;
+     and the stage frames of step 2.
+
+### Found on the way
+
+1. **The island stands its figures in the battle crouch after a live
+   rebuild.** A team changed while the island is up goes through
+   `restartIdle()`, which has played `.idleCombat` since it was written on
+   2026-09-17, a day before the standing idle existed. The figure crouches
+   until its first hop. Step 3 fixes it.
+2. **Loops are never taken off.** `UnitNode.play` adds each clip under its
+   own key and removes none, so an island figure that has strolled
+   evaluates `idle_combat`, `walk` and `idle` every frame, and the last
+   one wins. Step 3.
+3. **A revived unit stands in the stage's idle in battle.** `revive` plays
+   `restingIdle`. That was harmless while the standing idle was the guard
+   stood up; with a figure at ease, it would stand relaxed among the
+   guards until its turn. Step 3.
+4. **The shipped loops skip a frame as they wrap.** `prepare()` blends a
+   loop's head into its tail and drops the tail, and SceneKit's loop is
+   its last key's time long, so the pose skips about one key in 39 every
+   1.27 s. Step 1's F+1 keys close it.
+5. **The cape's colliders are found by name.** `ClothChain.Cloth.colliders`
+   names `spine01`. The awakened Hera's rig, one of the eleven and the only
+   one of them with a cape, has no such joint, so her cape gets seven
+   spheres instead of eight. Finding the chest by position mends it.
+
+### What is left for later
+
+- **Idles from a sentence** (option 4), the sovereign's first, when the
+  floor allows. One per family, Summoners War's standard, is about 1,220
+  credits.
+- **A row per pantheon's statuary,** free, to try on the boards after
+  step 1: Egypt's hieratic stride (the left foot forward, the arms
+  straight, the weight even), Greece's and Rome's contrapposto, and the
+  Jade Court frontal and upright like the terracotta army. A stride under
+  a robe may tear, so the guard decides it per family.
+- **The gaze in battle,** toward the acting unit.
+- **Hair and tails** have no bones on Meshy's rigs, and nothing here moves
+  them.
+- **The robed families' dresses** are welded to their hands, which limits
+  every arm motion on them. The cure is a remake (MOTION.md §6).
+- **Meshy's turns in place** (575, 576, 577, 578, 586) could step the unit
+  sheet's figure round on a drag instead of spinning it.
