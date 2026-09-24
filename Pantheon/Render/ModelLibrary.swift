@@ -82,6 +82,28 @@ final class ModelLibrary {
             clones.removeAll { $0.node == nil }
             return !clones.isEmpty
         }
+
+        /// The clones of this file still alive.
+        var liveClones: Int {
+            clones.removeAll { $0.node == nil }
+            return clones.count
+        }
+    }
+
+    /// One line of what the cache holds, for the memory log (`MemoryProbe`
+    /// prints it on every `[Mem]` line): files kept, the decoded bytes they
+    /// were charged, how many a live figure pins, the live clones and the
+    /// clip sets. CI run 242's summon stress climbed 30 MB a reveal to 1.4 GB
+    /// and never came down (2026-09-24); this is how the next run tells a
+    /// cache that is full by design from one that is pinned by stages that
+    /// never left.
+    func cacheSummary() -> String {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        let bytes = cache.values.reduce(0) { $0 + $1.bytes }
+        let pinned = cache.values.filter { $0.inUse }.count
+        let clones = cache.values.reduce(0) { $0 + $1.liveClones }
+        return "cache \(cache.count) files, \(bytes / 1_048_576) MB, \(pinned) pinned, \(clones) clones, \(animationCache.count) clip sets"
     }
 
     private struct WeakClone {
