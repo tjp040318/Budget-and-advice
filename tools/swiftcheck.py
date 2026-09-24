@@ -984,6 +984,8 @@ def check_unknown_types(files, declared, errors):
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",
         # The memory probe's GPU line (2026-09-24).
         "Metal","MTLDevice","MTLCreateSystemDefaultDevice",
+        # One-channel metallic and roughness maps (ModelLibrary, 2026-09-24).
+        "Accelerate","CFData","CGImageSourceCreateWithData","CGImageSourceCreateImageAtIndex",
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
         "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent","CACurrentMediaTime","RunLoop","PreferenceKey","GeometryProxy","Anchor","CAKeyframeAnimation","SCNParticleBlendMode","SCNParticlePropertyController",

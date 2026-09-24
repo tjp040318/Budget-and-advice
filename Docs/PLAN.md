@@ -8232,6 +8232,51 @@ over the scene until the renderer has drawn three frames of the built stage
 coordinator's `didRenderScene`), five seconds after the build at the latest;
 an auto-repeat's later runs never bring it back.
 
+**Run 245's frames, and three fixes they asked for (2026-09-24).** The
+battle half of Wave 1 compiled first time and every test passed; the frames
+showed the numbers, the held skill card, the area cast as one soft pass over
+the team (0.6% of the frame blown, from 82%), VICTORY over the live field,
+LEVEL 2, the chest and DEFEAT. Three things were wrong:
+
+1. **The arena bleached grey under THUNDERCLAP** (8-b, 11% of the frame
+   clipped). The impact frame punches the grade for two frames and queued
+   its restore on the main thread two sixtieths of a second later; a busy
+   main thread held it for as long as it was busy. The restore now runs on
+   the renderer's thread once the punch has been DRAWN three times
+   (`BattleSceneController.impactFrames`, counted in `frameDrawn` under the
+   veil's lock). Options weighed: an `SCNAction` wait (scene time, which the
+   hit-stop itself freezes) and a wall-clock timer off the main queue (still
+   blind to whether a frame was drawn); counting drawn frames is the only
+   one that means "two frames" whatever the phone is doing.
+2. **The victory beats were photographed one beat late** — -0 caught the
+   reckoning, -triumph the level-up, -levelup the chest, -defeat the
+   defeat's reckoning. The app's clock was right (the fanfare's sounds in
+   the host log put the triumph at 08:25:59, the reckoning at 08:26:08, the
+   level-up at 08:26:12, the chest at 08:26:19); a simulator screenshot of a
+   LIVE fight simply came back six to nine seconds after it was asked for,
+   where a still screen's takes two or three. Under `-tour-victory` the
+   triumph now holds 24 s, the level-up 16 and the fall 16, the pose plays
+   at a tenth of its pace, the frames are asked for on their cues with no
+   sleeps, and each one's asked and landed times go to
+   `shots/shot-times.txt`, which `ciframes.py` prints as SHOT TIMES.
+3. **The first area-cast pair was black** (aoe-a, aoe-b): the veil was
+   still up at a flat eight seconds from the launch, because the build
+   settled at seven and the main thread was busy again after it. The app
+   prints `[TourCue] shown (drawn|the 5 s limit)` as the veil lifts and the
+   job waits for it, then five seconds for the casts, which begin four
+   seconds after the build.
+
+Two smaller ones rode along: a reckoning row for a unit that did nothing
+drew its empty damage bar as a gold dot (DEFEAT showed three), and the
+stage popup's Fight opened a battle with nothing warmed, so every model was
+parsed on the main thread under the veil — the popup now warms its fight
+while it is read, as the briefing does (`StageBriefingView.warmModels(for:
+team:)`). And every battle build prints one line of where its main-thread
+time went — `[Perf] battle build: stage N ms, light and camera N ms, K
+unit(s) N ms, N ms in all`, with any unit over 120 ms named — because run
+245's arena held the main thread 4.3 s at its build and nothing said which
+part.
+
 ## The premium feel, Wave 1 (2026-09-24; `Docs/FEEL.md`)
 
 The owner: "do more research and really study games and summoners war and
@@ -8294,7 +8339,9 @@ paragraph under each item.
   inside it (`Tremor` on a `FrameTicker`, a 120-Hz main-run-loop `Timer` —
   no `CADisplayLink`, which swiftcheck's list lacks); the impact frame
   (`CameraDirector.impactFrame`, saturation 0.25, contrast +0.35, exposure
-  +0.3 for two frames, the grade restored exactly) with a two-frame white
+  +0.3, the grade restored exactly after the renderer has drawn it three
+  times — counted on the render thread since run 245, whose restore on the
+  main thread waited out a stall and held the arena grey) with a two-frame white
   burn (`flashHit(strength: 1.4)`) and, on a kill, speed lines in the plate
   overlay; one per cast, the final blow's when the cast has one.
 - **W1.9 turn circle and banner:** a rune disc 0.6 × the height in the

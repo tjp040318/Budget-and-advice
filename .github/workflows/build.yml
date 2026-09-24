@@ -45,7 +45,8 @@ jobs:
     # premium feel's Wave 1 (the same day) adds the battle step's
     # -layers-off relaunch and the victory step's real win and forfeit
     # (-tour-victory field|defeat): about two minutes, and five when the
-    # victory's three cue waits (120 + 45 + 60 s) all run out: 110.
+    # victory's three cue waits (120 + 60 + 60 s) all run out: 110. Run
+    # 245 took 54 minutes in all.
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
@@ -125,6 +126,16 @@ jobs:
           # to one step (-tour-step N), waits for the screen to settle, and
           # photographs it; battle and reveal get several frames each.
           shoot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || true; }
+          # A shot whose moment matters, with when it was asked for and when
+          # the call came back written to shots/shot-times.txt (ciframes.py
+          # prints it). Run 245's victory frames each landed a beat late: a
+          # screenshot of a live fight took six to nine seconds there, where
+          # a still screen's takes two or three.
+          shoot_timed() {
+            local asked; asked="$(date -u +%T)"
+            shoot "$1"
+            echo "$1: asked $asked, back $(date -u +%T)" >> shots/shot-times.txt
+          }
           # The first frame after a launch, shot again while it is dark. Run
           # 224's Hall of Ka came out as the empty framebuffer — every pixel
           # 0,0,0 but the home indicator — because that launch's main thread
@@ -306,10 +317,16 @@ jobs:
               # by -tour-aoe through the path a real one takes (run 224's b
               # caught Fenrir's by chance: four white sheets, one slab over
               # the whole team). Two frames each, a second apart, so one
-              # lands on the sheet at its brightest.
+              # lands on the sheet at its brightest. The casts begin four
+              # seconds after the stage is built, so each pair waits for the
+              # veil to lift ([TourCue] shown) and five seconds more: run
+              # 245's first pair, at a flat eight seconds from the launch,
+              # photographed the veil twice.
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"
-                again -tour-aoe duat_rite:tide; sleep 8; shoot "$step-${names[$step]}-aoe-a"; sleep 0.5; shoot "$step-${names[$step]}-aoe-b"
-                again -tour-aoe wrath_of_the_eye:ember; sleep 8; shoot "$step-${names[$step]}-aoe-c"; sleep 0.5; shoot "$step-${names[$step]}-aoe-d" ;;
+                again -tour-aoe duat_rite:tide; cue_again shown 40; sleep 5
+                shoot_timed "$step-${names[$step]}-aoe-a"; sleep 0.5; shoot_timed "$step-${names[$step]}-aoe-b"
+                again -tour-aoe wrath_of_the_eye:ember; cue_again shown 40; sleep 5
+                shoot_timed "$step-${names[$step]}-aoe-c"; sleep 0.5; shoot_timed "$step-${names[$step]}-aoe-d" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
               # The reckoning (about 3 s in), the chest with its lid coming
               # up (about 7.6 s), the spoils panel with every tile and
@@ -322,29 +339,31 @@ jobs:
               # (Docs/FEEL.md W1.6, W1.7; -tour-victory field): the Duat's
               # first gate on auto at x3, seeded so the win levels the
               # demigod and the team's leader. When the fight ends the app
-              # prints [TourCue] triumph and holds the beat nine seconds:
-              # -0 is VICTORY stamped over the live field with its stars,
-              # the HUD gone; -triumph, a few seconds on, the survivors
-              # turned to the camera in their own victory poses with gold
-              # EXP bars on their plates and LEVEL UP over the leader. A
-              # screenshot lands two to three seconds after it is asked for
-              # (relic_awaken's note, below), so under the tour the pose is
-              # played at a quarter of its pace (BattleSceneController
-              # .tourPosePace: eight seconds, not two) and -triumph is asked
-              # for a second after -0 is back, landing inside it. The
-              # reckoning then plays itself on to the level-up, printing
-              # [TourCue] levelup and holding it seven seconds: -levelup is
-              # LEVEL N in carved gold over the light shafts with its chips.
-              # Then the same gate forfeited seven seconds in (-tour-victory
-              # defeat, [TourCue] fallen, held six seconds): -defeat is DEFEAT
-              # in wine over the field drained to grey.
+              # prints [TourCue] triumph and holds the beat 24 seconds: -0
+              # is VICTORY stamped over the live field with its stars, the
+              # HUD gone, the survivors turned to the camera in their own
+              # victory poses with gold EXP bars on their plates and LEVEL
+              # UP over the leader; -triumph, asked for the moment -0 is
+              # back, the same beat further on. A screenshot of a live fight
+              # lands six to nine seconds after it is asked for (run 245,
+              # whose -0 caught the reckoning, -triumph the level-up and
+              # -levelup the chest under holds of 9, 7 and 6 s), so under
+              # the tour the pose is played at a tenth of its pace
+              # (BattleSceneController.tourPosePace: twenty seconds, not
+              # two). The reckoning then plays itself on to the level-up,
+              # printing [TourCue] levelup and holding it sixteen seconds:
+              # -levelup is LEVEL N in carved gold over the light shafts
+              # with its chips. Then the same gate forfeited seven seconds
+              # in (-tour-victory defeat, [TourCue] fallen, held sixteen
+              # seconds): -defeat is DEFEAT in wine over the field drained
+              # to grey. Each of the four writes its times to shot-times.txt.
               victory) sleep 2; shoot "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
                 again -tour-victory field
-                cue_again triumph 120; shoot "$step-${names[$step]}-0"
-                sleep 1; shoot "$step-${names[$step]}-triumph"
-                cue_again levelup 45; sleep 1; shoot "$step-${names[$step]}-levelup"
+                cue_again triumph 120; shoot_timed "$step-${names[$step]}-0"
+                shoot_timed "$step-${names[$step]}-triumph"
+                cue_again levelup 60; shoot_timed "$step-${names[$step]}-levelup"
                 again -tour-victory defeat
-                cue_again fallen 60; shoot "$step-${names[$step]}-defeat" ;;
+                cue_again fallen 60; shoot_timed "$step-${names[$step]}-defeat" ;;
               # The rite at its peak, then the awakened relic with its fifth
               # sub stat's choice up. The rite's own clock (RelicAwakeningRite
               # .play): the veil up by 0.35 s, the halo drawn by 1.2, AWAKENED

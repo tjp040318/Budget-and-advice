@@ -1422,8 +1422,10 @@ environment can and cannot do. The short version:
   `endSlowMotion` (its own end, a new one, `flush`, `halt`, `build`,
   `celebrate`, `drainColour`) and the controller's deinit invalidate them.
   `CameraDirector` reads the realm's grade at init; `impactFrame()` punches
-  it for two frames and restores it EXACTLY (a generation guard; never over a
-  drain or under Reduce Motion), and `stopMoves()` (shot, shake, fov)
+  it and hands back the restore, which `BattleSceneController.frameDrawn`
+  runs on the RENDER thread after three drawn frames (`impactFrames`; a
+  restore queued on main waited out a stall and run 245's arena frame came
+  out grey) — never over a drain or under Reduce Motion — and `stopMoves()` (shot, shake, fov)
   replaced `removeAllActions` so a return home never cancels `drainColour`'s
   `grade` action. One impact frame per cast, the final blow's when the cast
   has one. Lights: figures on category 2 (`UnitNode.markFigure`; a category

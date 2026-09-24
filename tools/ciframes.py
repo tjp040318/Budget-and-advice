@@ -154,6 +154,17 @@ def main():
             print(f"   … {len(stress) - 160} more stress lines in {memory}")
         print()
 
+    # When the frames whose moment matters were asked for and landed
+    # (build.yml's shoot_timed, 2026-09-24): run 245's victory beats were
+    # each photographed a beat late, because a screenshot of a live fight
+    # took six to nine seconds to come back.
+    times = os.path.join(frames_dir, "shot-times.txt")
+    if os.path.exists(times) and open(times, errors="replace").read().strip():
+        print("\n== SHOT TIMES ==")
+        for line in open(times, errors="replace").read().splitlines()[:40]:
+            print("   " + line[:220])
+        print()
+
     # The job also publishes what the app printed during each step. The lines
     # that decide anything are the loader's and the frameworks' complaints;
     # the rest is there in the file for when they are not enough.

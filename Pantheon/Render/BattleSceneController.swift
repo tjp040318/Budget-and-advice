@@ -287,14 +287,27 @@ final class BattleSceneController: NSObject {
         actingID = nil
         celebrated = false
 
+        // Where the build's main-thread seconds go (task #138): run 245's
+        // arena fight kept the main thread about 4.3 s at its build, under
+        // the veil, and nothing said which part. One line per build, on the
+        // phone's Diagnostics as well as the console.
+        let began = Perf.begin()
         buildStage()
+        let stageMs = Perf.end(began, "battle stage", over: .infinity)
+        let lightBegan = Perf.begin()
         buildLighting()
         buildCamera()
+        let lightMs = Perf.end(lightBegan, "battle light", over: .infinity)
         registerMaxHealth(combatants)
+        let unitsBegan = Perf.begin()
         place(combatants: combatants)
+        let unitsMs = Perf.end(unitsBegan, "battle units", over: .infinity)
         startTourAreaDrill()
         startTourTriumph()
         awaitFirstFrames()
+        let totalMs = Perf.end(began, "battle build", over: .infinity)
+        Perf.note(String(format: "battle build: stage %.0f ms, light and camera %.0f ms, %d unit(s) %.0f ms, %.0f ms in all",
+                         stageMs, lightMs, combatants.count, unitsMs, totalMs))
     }
 
     /// Takes the last run's stage out of a scene the view is still drawing,
@@ -651,7 +664,9 @@ final class BattleSceneController: NSObject {
         noteLineWidth(combatants)
         let paleSet = StageBuilder.isPaleSet(environment)
         for combatant in combatants {
+            let unitBegan = Perf.begin()
             let node = UnitNode(combatant: combatant, detail: detail)
+            Perf.end(unitBegan, "unit \(combatant.model.assetName) built", over: 120)
             node.playbackSpeed = pace
             // The turn circle at 60% on the pale marble (W1.9).
             if paleSet { node.turnDiscPeak = Self.paleDiscPeak }
@@ -1377,8 +1392,10 @@ final class BattleSceneController: NSObject {
                 floatTotal(total, on: node)
             }
             if isGlancing { AudioLibrary.shared.play(.dodge, volume: 0.5) }
+            if punches, let restore = director?.impactFrame() {
+                restoreAfterDrawn(frames: Self.impactFrames, restore)
+            }
             if punches {
-                director?.impactFrame()
                 // A kill's speed lines, in the striker's colour.
                 if lethal {
                     plates.burstSpeedLines(over: node, lift: node.spec.height * 0.55,
@@ -1946,17 +1963,55 @@ final class BattleSceneController: NSObject {
     /// Frames still to draw before `onStageShown`; nil when not waiting.
     private var framesToShow: Int?
 
+    /// The impact frame's grade (Docs/FEEL.md W1.3) comes back once the
+    /// renderer has DRAWN it `impactFrames` times, counted here on the
+    /// renderer's thread under the same lock. The restore used to be queued
+    /// on the main thread two sixtieths of a second on, and it waited out
+    /// every stall behind it: run 245's 8-b photographed the arena bleached
+    /// grey under THUNDERCLAP, the punch held for as long as the main thread
+    /// was busy after the blow. Three, because the first frame drawn after
+    /// the punch may have begun before it.
+    static let impactFrames = 3
+    private var impactFramesLeft = 0
+    private var impactRestore: (() -> Void)?
+
+    /// Main thread: `restore` runs on the renderer's thread after the next
+    /// `frames` frames have been drawn. A later punch replaces an earlier
+    /// one's count and restore.
+    private func restoreAfterDrawn(frames: Int, _ restore: @escaping () -> Void) {
+        firstFramesLock.lock()
+        impactFramesLeft = frames
+        impactRestore = restore
+        firstFramesLock.unlock()
+    }
+
+    /// Main thread: a pending impact restore is dropped (the field's colour
+    /// is draining, and the drain puts the grade back itself).
+    private func cancelImpactRestore() {
+        firstFramesLock.lock()
+        impactFramesLeft = 0
+        impactRestore = nil
+        firstFramesLock.unlock()
+    }
+
     /// The renderer's thread, after every frame (`BattleSceneView`).
     func frameDrawn() {
         firstFramesLock.lock()
-        guard let left = framesToShow else {
-            firstFramesLock.unlock()
-            return
+        var restore: (() -> Void)?
+        if impactFramesLeft > 0 {
+            impactFramesLeft -= 1
+            if impactFramesLeft == 0 {
+                restore = impactRestore
+                impactRestore = nil
+            }
         }
-        let remaining = left - 1
-        framesToShow = remaining > 0 ? remaining : nil
+        let left = framesToShow
+        if let left {
+            framesToShow = left > 1 ? left - 1 : nil
+        }
         firstFramesLock.unlock()
-        guard remaining <= 0 else { return }
+        restore?()
+        guard let left, left <= 1 else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self, let told = self.onStageShown else { return }
             self.onStageShown = nil
@@ -2676,9 +2731,10 @@ extension BattleSceneController {
     /// The pace the survivors pose at: their own (×1), whatever speed the
     /// fight was watched at (`UnitNode.celebrate`). Under the CI tour's
     /// victory beat (`-tour-victory`, or this file's `-tour-triumph` lab) a
-    /// quarter of it, so the 2.0-s pose lasts about eight: a simulator
-    /// screenshot lands two to three seconds after it is asked for
-    /// (build.yml's relic_awaken note, run 234), and at ×1 the pose was over
+    /// tenth of it, so the 2.0-s pose lasts about twenty: a simulator
+    /// screenshot of a live fight lands six to nine seconds after it is
+    /// asked for (run 245's victory step; two to three on a still screen,
+    /// build.yml's relic_awaken note), and at a quarter the pose was over
     /// before either of the step's frames landed. A still of the slowed clip
     /// is the clip's own picture at that moment — the battle camera has no
     /// motion blur — so the frame judges the pose the player sees.
@@ -2691,7 +2747,7 @@ extension BattleSceneController {
         #endif
         return 1
     }
-    static let tourPosePace: Double = 0.25
+    static let tourPosePace: Double = 0.1
 
     /// Main thread, once, on a WIN's last run: survivors turn to face the
     /// camera (look(at:), yaw only) and play their own victory clip at ×1
@@ -2728,6 +2784,7 @@ extension BattleSceneController {
     /// the duration (restored when a new run is built).
     func drainColour(duration: TimeInterval) {
         endSlowMotion()
+        cancelImpactRestore()
         director?.drainColour(to: Self.drainedSaturation, over: duration)
     }
 

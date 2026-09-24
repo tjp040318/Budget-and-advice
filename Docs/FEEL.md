@@ -529,10 +529,13 @@ target is a `WeakTickTarget` holding only the step, because swiftcheck's
 `--types` list of the frameworks' names has no `CADisplayLink`;
 `Juice.stopTremor` ends it on every new impact, on the release, and in
 `Juice.release` (every skip, forfeit and new run). The impact frame is
-`CameraDirector.impactFrame(duration: 2/60)`: saturation 0.25, contrast +0.35
-and exposure +0.3 on the realm's grade, which the director reads when it is
-made and puts back exactly (a generation guard; never under Reduce Motion or
-over a draining field), with the victim burnt white for two frames
+`CameraDirector.impactFrame()`: saturation 0.25, contrast +0.35 and exposure
++0.3 on the realm's grade, which the director reads when it is made and puts
+back exactly — once the renderer has DRAWN the punch three times, counted on
+its own thread (`BattleSceneController.impactFrames`, `frameDrawn`), since a
+restore queued on the main thread waited out every stall behind it and run
+245 photographed the arena held grey under THUNDERCLAP; never under Reduce
+Motion or over a draining field — with the victim burnt white for two frames
 (`UnitNode.flashHit(strength: 1.4)`). A kill adds sixteen speed lines and a
 core in the striker's colour for about a quarter of a second, drawn in the
 plate overlay's SpriteKit burst layer rather than a SwiftUI `Canvas`, because

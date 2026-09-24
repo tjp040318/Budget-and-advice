@@ -1,4 +1,6 @@
+import Accelerate
 import Foundation
+import ImageIO
 import SceneKit
 import simd
 import UIKit
@@ -696,9 +698,23 @@ final class ModelLibrary {
                         case material.diffuse: role = "base_color"
                         case material.normal: role = "normal"
                         case material.emission: role = "emissive"
-                        default: role = "metallic_roughness"
+                        case material.metalness: role = "metallic"
+                        default: role = "roughness"
                         }
-                        let candidates = url.fragment.map { [$0] } ?? ["textures/\(role).png", "textures/\(role).jpg"]
+                        // The serious roster's files carry `metallic.png` and
+                        // `roughness.png` as members of their own (256 of the
+                        // bundle's files, 2026-09-24). This looked for one
+                        // `metallic_roughness` member, found it in none of
+                        // them, and left both maps to SceneKit, which decoded
+                        // them at full size and kept them outside this cache
+                        // for the life of the process: about 32 MB for every
+                        // family ever shown — the summon stress's climb of
+                        // ~28 MB per NEW family after the cache was full.
+                        // An older file's combined map is the fallback.
+                        let grayRole = role == "metallic" || role == "roughness"
+                        let own = ["textures/\(role).png", "textures/\(role).jpg"]
+                        let combined = ["textures/metallic_roughness.png", "textures/metallic_roughness.jpg"]
+                        let candidates = url.fragment.map { [$0] } ?? (grayRole ? own + combined : own)
                         for name in candidates {
                             // The same member already decoded for another
                             // file (the base mesh and its `_lod`).
@@ -716,21 +732,29 @@ final class ModelLibrary {
                                     break
                                 }
                             }
-                            if let data = archive?.member(named: name), let read = UIImage(data: data) {
-                                if let ready = read.preparingForDisplay() {
-                                    property.contents = ready
-                                    decoded += 1
-                                    bytes += Self.byteCost(of: ready)
-                                    if let identity = archive?.identity(of: name) {
-                                        decodedTexturesLock.lock()
-                                        decodedTextures.setObject(ready, forKey: identity as NSString)
-                                        decodedTexturesLock.unlock()
-                                    }
-                                } else {
-                                    image = read
-                                }
-                                break
+                            guard let data = archive?.member(named: name) else { continue }
+                            // A map of its own is one channel of numbers;
+                            // a combined map keeps its channels apart, so it
+                            // is decoded for display like a colour.
+                            var ready: UIImage?
+                            if grayRole, !name.contains("metallic_roughness") {
+                                ready = Self.grayscaleMap(from: data)
                             }
+                            if ready == nil, let read = UIImage(data: data) {
+                                ready = read.preparingForDisplay()
+                                if ready == nil { image = read }
+                            }
+                            if let ready {
+                                property.contents = ready
+                                decoded += 1
+                                bytes += Self.byteCost(of: ready)
+                                if let identity = archive?.identity(of: name) {
+                                    decodedTexturesLock.lock()
+                                    decodedTextures.setObject(ready, forKey: identity as NSString)
+                                    decodedTexturesLock.unlock()
+                                }
+                            }
+                            break
                         }
                     } else if let path = property.contents as? String, !path.contains("#"),
                               !path.lowercased().hasSuffix(".usdz"), FileManager.default.fileExists(atPath: path) {
@@ -750,6 +774,47 @@ final class ModelLibrary {
                 + " (\(bytes / 1_048_576) MB)")
         }
         return bytes
+    }
+
+    /// A metallic or roughness map decoded to ONE 8-bit channel (2026-09-24).
+    /// The shipped PNGs are RGB with the three channels equal (every file
+    /// checked), so decoded for display each map was 16 MB, three quarters of
+    /// it copies; one channel is 4 MB at 2048. Read byte for byte through
+    /// vImage in the file's own colour space — these are numbers, not
+    /// colours, and a conversion to a grey space would move the darks. Nil
+    /// when the file is not 8 bits a channel: the caller decodes it for
+    /// display instead.
+    private static func grayscaleMap(from data: Data) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
+              image.bitsPerComponent == 8,
+              let space = image.colorSpace else { return nil }
+        let grayOut = vImage_CGImageFormat(bitsPerComponent: 8, bitsPerPixel: 8,
+                                           colorSpace: CGColorSpaceCreateDeviceGray(),
+                                           bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue))
+        guard let grayOut else { return nil }
+        if space.model == .monochrome {
+            // Already one channel: decoded here, on the parsing thread.
+            guard let grayIn = vImage_CGImageFormat(bitsPerComponent: 8, bitsPerPixel: 8, colorSpace: space,
+                                                    bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)),
+                  var plane = try? vImage_Buffer(cgImage: image, format: grayIn) else { return nil }
+            defer { plane.free() }
+            guard let made = try? plane.createCGImage(format: grayOut) else { return nil }
+            return UIImage(cgImage: made)
+        }
+        guard space.model == .rgb,
+              let rgbx = vImage_CGImageFormat(bitsPerComponent: 8, bitsPerPixel: 32, colorSpace: space,
+                                              bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)),
+              var pixels = try? vImage_Buffer(cgImage: image, format: rgbx) else { return nil }
+        defer { pixels.free() }
+        guard var plane = try? vImage_Buffer(width: Int(pixels.width), height: Int(pixels.height), bitsPerPixel: 8) else {
+            return nil
+        }
+        defer { plane.free() }
+        // Channel 0 of an RGBX buffer is red; the three are the same number.
+        guard vImageExtractChannel_ARGB8888(&pixels, &plane, 0, vImage_Flags(kvImageNoFlags)) == kvImageNoError,
+              let made = try? plane.createCGImage(format: grayOut) else { return nil }
+        return UIImage(cgImage: made)
     }
 
     /// The bytes a decoded image holds.

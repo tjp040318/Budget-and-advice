@@ -724,7 +724,14 @@ struct StageBriefingView: View {
     /// wave and every later one, loaded into the model cache while the
     /// briefing is read so Begin is not followed by a second of parsing.
     private func warmModels() {
-        let team = store.team(store.player.campaignTeam).map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }
+        Self.warmModels(for: stage, team: store.team(store.player.campaignTeam))
+    }
+
+    /// The same for any screen a fight is launched from: the stage popup's
+    /// Fight opened the battle with nothing warmed, so every model was
+    /// parsed on the main thread under the battle's veil (2026-09-24).
+    static func warmModels(for stage: Stage, team units: [ResolvedUnit]) {
+        let team = units.map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }
         let spawns = stage.enemies + stage.laterWaves.flatMap { $0 }
         // An enemy is drawn in its awakened form when it is awakened or a
         // boss (`UnitNode`'s `lit`: a primordial, or anything 3 m tall).
@@ -1187,6 +1194,9 @@ struct StagePopup: View {
             }
             .frame(width: frame.size.width, height: frame.size.height)
         }
+        // The card is read before Fight: its fight's models load meanwhile,
+        // as the briefing's do (`StageBriefingView.warmModels`).
+        .onAppear { StageBriefingView.warmModels(for: stage, team: team) }
     }
 
     private func card(width: CGFloat) -> some View {

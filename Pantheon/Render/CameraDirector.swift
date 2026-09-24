@@ -433,9 +433,6 @@ final class CameraDirector {
     private let restSaturation: CGFloat
     private let restContrast: CGFloat
     private let restExposure: CGFloat
-    /// Bumped by every impact frame and by the drain, so an impact frame's
-    /// restore that a newer one overtook steps aside.
-    private var gradeGeneration = 0
     /// Set once the field's colour is draining: nothing puts the grade back
     /// over it (a new run builds a new camera).
     private var draining = false
@@ -1054,23 +1051,29 @@ final class CameraDirector {
     static let impactContrast: CGFloat = 0.35
     static let impactExposure: CGFloat = 0.3
 
-    /// Main thread: the realm's grade punched for `duration` — two frames at
-    /// 60 Hz — then put back exactly as `StageBuilder.grade(for:)` set it
-    /// (read when this director was made). Set straight on the camera, not
-    /// through an action: it lands at the start of the hit's freeze, when
-    /// every action in the scene is paused and the view is still drawing.
-    /// Never under Reduce Motion, and not over a field whose colour is
-    /// draining.
-    func impactFrame(duration: TimeInterval = 2.0 / 60.0) {
-        guard !MotionComfort.isReduced, !draining, let camera = cameraNode.camera else { return }
-        gradeGeneration += 1
-        let generation = gradeGeneration
+    /// Main thread: the realm's grade punched, and handed back the restore
+    /// that puts it back exactly as `StageBuilder.grade(for:)` set it (read
+    /// when this director was made) — the caller runs it on the renderer's
+    /// thread once the punch has been drawn its frames
+    /// (`BattleSceneController.impactFrames`), so a busy main thread can
+    /// never hold the world grey. Set straight on the camera, not through an
+    /// action: it lands at the start of the hit's freeze, when every action
+    /// in the scene is paused and the view is still drawing. Never under
+    /// Reduce Motion, and not over a field whose colour is draining; nil
+    /// when nothing was punched.
+    func impactFrame() -> (() -> Void)? {
+        guard !MotionComfort.isReduced, !draining, let camera = cameraNode.camera else { return nil }
         camera.saturation = Self.impactSaturation
         camera.contrast = restContrast + Self.impactContrast
         camera.exposureOffset = restExposure + Self.impactExposure
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
-            guard let self, self.gradeGeneration == generation, !self.draining else { return }
-            self.restoreGrade()
+        let saturation = restSaturation
+        let contrast = restContrast
+        let exposure = restExposure
+        return { [weak camera] in
+            guard let camera else { return }
+            camera.saturation = saturation
+            camera.contrast = contrast
+            camera.exposureOffset = exposure
         }
     }
 
@@ -1090,7 +1093,6 @@ final class CameraDirector {
     /// its own key (`stopMoves` leaves it), easing by smoothstep.
     func drainColour(to saturation: CGFloat, over duration: TimeInterval) {
         guard let camera = cameraNode.camera else { return }
-        gradeGeneration += 1
         draining = true
         restoreGrade()
         let from = restSaturation

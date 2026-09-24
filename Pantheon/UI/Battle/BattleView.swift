@@ -101,14 +101,18 @@ struct BattleView: View {
     /// are not read as a wish to skip it.
     private static let beatTapGrace: TimeInterval = 1.2
     /// `-tour-victory field|defeat` (TourView): the CI job photographs the
-    /// beat, and a simulator screenshot lands seconds after it is asked for,
-    /// so the triumph holds long enough for two frames and the fall for one,
-    /// the reckoning plays itself on to the level-up and the chest
-    /// (`BattleResultView.autoplay`), and `[TourCue] triumph` or `[TourCue]
-    /// fallen` tells the job when the beat began.
+    /// beat, and a simulator screenshot of a live fight lands long after it
+    /// is asked for — six to nine seconds in run 245, whose -0 caught the
+    /// reckoning, -triumph the level-up and -levelup the chest, each a beat
+    /// late under holds of 9, 7 and 6 s — so the triumph holds long enough
+    /// for two frames and the fall for one, the reckoning plays itself on to
+    /// the level-up and the chest (`BattleResultView.autoplay`), and
+    /// `[TourCue] triumph` or `[TourCue] fallen` tells the job when the beat
+    /// began. The job writes each of these frames' asked and landed times to
+    /// shots/shot-times.txt.
     private static let touringVictory = ProcessInfo.processInfo.arguments.contains("-tour-victory")
-    private static let tourTriumphHold: TimeInterval = 9
-    private static let tourFallenHold: TimeInterval = 6
+    private static let tourTriumphHold: TimeInterval = 24
+    private static let tourFallenHold: TimeInterval = 16
 
     /// A dark veil over the stage until the renderer has drawn the built
     /// stage (2026-09-24; `BattleSceneController.onStageShown`): run 243's
@@ -119,6 +123,18 @@ struct BattleView: View {
     @State private var stageShown = false
     private static let veilLimit: TimeInterval = 5
     private static let veilLift: Animation = .easeOut(duration: 0.35)
+
+    /// Under the CI tour, `[TourCue] shown` when the veil lifts, and why:
+    /// a step that photographs the first seconds of a fight waits on it
+    /// (build.yml's aoe relaunches, whose frames at launch + 8 s were the
+    /// veil in run 245 — the build settled at seven and the main thread
+    /// was busy again after it).
+    private static func cueStageShown(_ why: String) {
+        #if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("-tour") else { return }
+        print("[TourCue] shown (\(why))")
+        #endif
+    }
 
     var body: some View {
         ZStack {
@@ -264,11 +280,13 @@ struct BattleView: View {
             let shown = $stageShown
             model.sceneController.onStageShown = {
                 withAnimation(Self.veilLift) { shown.wrappedValue = true }
+                Self.cueStageShown("drawn")
             }
             model.begin()
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.veilLimit) {
                 guard !shown.wrappedValue else { return }
                 withAnimation(Self.veilLift) { shown.wrappedValue = true }
+                Self.cueStageShown("the \(Int(Self.veilLimit)) s limit")
             }
             // A chapter boss or a raid says its one line as the fight opens;
             // every other stage returns from this without doing anything.
@@ -1714,7 +1732,7 @@ struct BattleResultView: View {
     private static let stageScrim: Double = 0.84
     /// How long the tour holds the level-up before the chest, so the CI
     /// job's frame lands on it (`[TourCue] levelup`).
-    private static let tourLevelUpHold: TimeInterval = 7
+    private static let tourLevelUpHold: TimeInterval = 16
 
     var body: some View {
         ZStack {
@@ -1978,9 +1996,14 @@ struct BattleResultView: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Theme.plate.opacity(0.6))
-                        Capsule()
-                            .fill(LinearGradient(colors: [Theme.goldDim, Theme.gold], startPoint: .leading, endPoint: .trailing))
-                            .frame(width: max(4, geo.size.width * share))
+                        // Nothing dealt or healed draws no fill: the 4-point
+                        // floor drew a gold dot under every name of run 245's
+                        // DEFEAT, where the team had done nothing yet.
+                        if share > 0 {
+                            Capsule()
+                                .fill(LinearGradient(colors: [Theme.goldDim, Theme.gold], startPoint: .leading, endPoint: .trailing))
+                                .frame(width: max(4, geo.size.width * share))
+                        }
                     }
                 }
                 .frame(height: 5)
