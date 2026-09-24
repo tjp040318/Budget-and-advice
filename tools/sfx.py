@@ -2,8 +2,8 @@
 """
 Synthesises the game's sound effects into Pantheon/Resources/Audio/*.wav.
 
-No samples, no network, no dependencies: envelopes over filtered noise, falling
-pitches and decaying partials. Replace any file with a recorded sample of the
+The first five sections use no samples, no network and no dependencies:
+envelopes over filtered noise, falling pitches and decaying partials. Replace any file with a recorded sample of the
 same name and nothing else has to change — AudioLibrary looks them up by
 filename.
 
@@ -36,8 +36,18 @@ Each sound seeds its own noise from its name, so adding an effect no longer
 changes the waveform of every effect written after it (the old file had to
 append thunder at the end for exactly that reason).
 
-    python3 tools/sfx.py            # write them all
-    python3 tools/sfx.py --check    # measure what is on disk
+The fight's own events (FEEL.md W1.4, 2026-09-24) are the last two sections,
+`build_status` and `build_flow`: the heal and every status as it lands, the
+counter, the extra turn, a revive, a death, a horn call per realm, a boss's
+arrival, the player's turn and the level-up fanfare. They use numpy and scipy,
+and the instrumental ones layer CC0 recordings from VSCO 2 Community Edition,
+which are fetched on demand and never committed; their header says how, and
+what each recording is for.
+
+    python3 tools/sfx.py                     # write them all
+    python3 tools/sfx.py status flow         # only the named sections
+    python3 tools/sfx.py flow --out /tmp/x   # somewhere else, to audition
+    python3 tools/sfx.py --check             # measure what is on disk
 """
 import cmath, math, random, struct, sys, wave, os
 
@@ -461,6 +471,1020 @@ def build_rest():
     write("thunder", mix(gain(crack, 1.0), gain(rumble, 1.2), gain(boom, 0.9)))
 
 # ==============================================================================
+# The fight's own events (FEEL.md W1.4, 2026-09-24). `build_status`: the heal,
+# the shield and every other status as it lands. `build_flow`: the counter, an
+# extra turn, a revive, a death, a horn call per realm when a wave arrives, a
+# boss's arrival, the player's turn and the level-up fanfare (W1.6).
+#
+# Everything above works on Python lists with nothing but the standard library.
+# Everything below works on numpy arrays with scipy, because it layers
+# recordings, convolves reverb and measures loudness, which lists would take
+# minutes over:
+#
+#     python3 tools/sfx.py status flow            # build only these
+#     python3 tools/sfx.py flow --out /tmp/x      # audition somewhere else
+#
+# Two sources.
+#
+#   Synthesis, as above, for everything that is not an instrument: the stun's
+#   blow and ringing ears, ice forming, fire catching, a shield struck twice,
+#   a fuse, a death's fall and the soul leaving it, a crystal ring, the choir
+#   and the boss's roar.
+#
+#   Recordings, for what a synth only imitates: harp, glockenspiel, bell tree,
+#   horn, trumpet, oboe, gong, cymbal, timpani, bass drum and an anvil, all
+#   from VSCO 2 Community Edition by Versilian Studios (recorded by Sam
+#   Gossner and Simon Dalzell): https://github.com/sgossner/VSCO-2-CE at
+#   commit 44030090 (`VSCO_COMMIT`). Its LICENSE file, read 2026-09-24, is
+#   CC0 1.0 Universal: no rights reserved, commercial use included. Its readme
+#   ASKS, without requiring it, for credit to Versilian Studios / Sam Gossner
+#   and Ivy Audio / Simon Dalzell with a link to
+#   vis.versilstudios.net/vsco-community.html, and that the samples themselves
+#   not be sold; effects built from them are neither. Every file used, and
+#   what for, is in `VSCO` below. The recordings are NOT kept in this
+#   repository: a sound that needs them is built only when a checkout of those
+#   files is found, and is skipped otherwise, which leaves the shipped file
+#   alone:
+#
+#     python3 tools/sfx.py --fetch-vsco /tmp/vsco     # sparse clone, 66 MB
+#     python3 tools/sfx.py status flow --vsco /tmp/vsco
+#
+# Loudness. The effects above are all peaked at 0.89 and are as loud as their
+# shape makes them: -21 to -7 LUFS at their loudest 400 ms (K-weighted,
+# `loudness`), median -13.3, measured 2026-09-24. Through a phone's speaker,
+# which has little under 250 Hz, the hits lose up to 7 dB of that (a crit
+# plays at -10.9, a normal hit at -18.5, a heavy one at -19.1) while the
+# sounds below lose under 2, because their weight is in the band a phone
+# plays. So they are matched by role (`level`) a step under where their
+# full-band number would put them, and never peak over 0.89:
+#
+#     the status cues and the heal  -14.5   at the hooks' 0.8, level with an
+#                                           ordinary hit (-16.6), under a
+#                                           heavy (-13.3) or critical one
+#     counter, extra turn, revive,  -12
+#       death
+#     the horn calls                -10     victory -10.8
+#     the boss, the level-up        -9.5    summon_charge -7
+#     the turn chime                -15     AudioLibrary also caps it at 0.35,
+#                                           about 7 dB over the battle music
+#                                           at its 0.32 (-31.6 LUFS)
+# ==============================================================================
+
+try:
+    import numpy as np
+    from scipy import signal as sps
+    from scipy.io import wavfile
+    from scipy.ndimage import minimum_filter1d, uniform_filter1d
+except ImportError:  # the effects above need neither
+    np = None
+
+def _need():
+    if np is None:
+        sys.exit("the W1.4 sounds need numpy and scipy: pip install numpy scipy")
+
+def seeded(name):
+    """Noise seeded by the sound's name, as `random.Random(name)` is above, so
+    adding a sound never moves another's waveform."""
+    import hashlib
+    return np.random.default_rng(int.from_bytes(hashlib.sha256(name.encode()).digest()[:8], "little"))
+
+def N(sec): return max(0, int(round(sec * SR)))
+def T(n): return np.arange(n) / SR
+
+class Bus:
+    """A timeline to lay layers on: `add(layer, at=seconds, g=gain)`. It grows
+    when a layer runs past its end. Every layer's last 4 ms are faded on the
+    way in: a layer cut while it still sounds is a click, and the first
+    spectrograms of this set showed one at the end of nearly every note."""
+    def __init__(self): self.x = np.zeros(1)
+    def add(self, layer, at=0.0, g=1.0):
+        layer = fade_tail(layer, 0.004); a = N(at); end = a + len(layer)
+        if end > len(self.x): self.x = np.concatenate([self.x, np.zeros(end - len(self.x))])
+        self.x[a:end] += g * layer
+        return self
+
+# ------------------------------------------------------------------- filters
+
+def _butter(kind, f, order):
+    return sps.butter(order, f, btype=kind, fs=SR, output="sos")
+
+def lp(x, f, order=2): return sps.sosfilt(_butter("lowpass", min(f, 0.45 * SR), order), x)
+def hp(x, f, order=2): return sps.sosfilt(_butter("highpass", f, order), x)
+def bp(x, lo, hi, order=2): return sps.sosfilt(_butter("bandpass", [lo, min(hi, 0.45 * SR)], order), x)
+
+def _biquad(kind, f, q):
+    """One RBJ-cookbook biquad as an sos row. The band-pass is the constant
+    0 dB peak form, so a bank of them (a voice's formants) sums at the gains
+    it is given."""
+    w = 2 * math.pi * min(f, 0.45 * SR) / SR
+    c, al = math.cos(w), math.sin(w) / (2 * q)
+    b = {"bp": (al, 0.0, -al),
+         "lp": ((1 - c) / 2, 1 - c, (1 - c) / 2),
+         "hp": ((1 + c) / 2, -(1 + c), (1 + c) / 2)}[kind]
+    a0 = 1 + al
+    return [b[0] / a0, b[1] / a0, b[2] / a0, 1.0, -2 * c / a0, (1 - al) / a0]
+
+def reson(x, f, q): return sps.sosfilt(np.array([_biquad("bp", f, q)]), x)
+
+def travel(x, points, q=0.8, kind="bp"):
+    """A filter whose frequency travels through [(fraction, Hz), ...]
+    (geometric between points, as `moving_lowpass` above), recomputed every
+    4 ms with its state carried across so the sweep is one continuous
+    movement. A gust, a flame catching or a vowel opening is noise or a buzz
+    under a moving filter; a fixed one is only a hiss."""
+    x = np.asarray(x, float); n = len(x); blk = N(0.004)
+    out = np.empty(n); zi = np.zeros((1, 2))
+    for s in range(0, n, blk):
+        sos = np.array([_biquad(kind, _at(points, s / max(1, n - 1)), q)])
+        out[s:s + blk], zi = sps.sosfilt(sos, x[s:s + blk], zi=zi)
+    return out
+
+# ---------------------------------------------------------- envelopes, sources
+
+def fall(n, tau, attack=0.0):
+    """Exponential decay over `tau` seconds after a raised-cosine attack."""
+    t = T(n); e = np.exp(-np.maximum(0.0, t - attack) / tau)
+    if attack > 0:
+        e *= np.where(t < attack, 0.5 - 0.5 * np.cos(np.pi * np.clip(t / attack, 0, 1)), 1.0)
+    return e
+
+def shape(n, points):
+    """A piecewise-linear envelope through [(seconds, level), ...]."""
+    ts, vs = zip(*points)
+    return np.interp(T(n), ts, vs)
+
+def fade_tail(x, sec):
+    """Cosine-squared fade over the last `sec` seconds, so nothing ends on a
+    step."""
+    x = np.array(x, float); k = min(len(x), N(sec))
+    if k: x[len(x) - k:] *= np.cos(np.linspace(0, np.pi / 2, k)) ** 2
+    return x
+
+def hz(f, n):
+    """A frequency given as a number or as a per-sample curve, as a curve."""
+    f = np.asarray(f, float)
+    return np.full(n, float(f)) if f.ndim == 0 else f[:n]
+
+def tone(f, n, p0=0.0):
+    return np.sin(2 * np.pi * np.cumsum(hz(f, n)) / SR + p0)
+
+def saw(f, n):
+    """A band-limited sawtooth (polyBLEP) for voices and growls: a naive one
+    aliases audibly under 200 Hz."""
+    dt = hz(f, n) / SR
+    p = np.cumsum(dt) % 1.0
+    y = 2 * p - 1
+    m = p < dt; u = p[m] / dt[m]; y[m] -= u + u - u * u - 1
+    m = p > 1 - dt; u = (p[m] - 1) / dt[m]; y[m] -= u * u + u + u + 1
+    return y
+
+def drop(dur, f0, f1, fall_tau, tau, attack=0.0, wave="sine"):
+    """`body` above in numpy: a tone falling from f0 to f1 with time constant
+    `fall_tau`, decaying over `tau`. The weight of a blow."""
+    n = N(dur); t = T(n)
+    f = f1 + (f0 - f1) * np.exp(-t / fall_tau)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    v = np.sin(ph) if wave == "sine" else (2 / np.pi) * np.arcsin(np.sin(ph))
+    return v * fall(n, tau, attack)
+
+def click(r, dur=0.004, tau=0.0015, fc=9500, lo=1200):
+    """`transient` above in numpy: a few milliseconds of band-limited noise,
+    the moment of contact."""
+    x = bp(r.standard_normal(N(dur) + 8), lo, fc)
+    return x * np.exp(-T(len(x)) / tau)
+
+def smooth_noise(r, n, fc):
+    """Noise low-passed at `fc` and scaled to about +-1: a slow random curve,
+    for jitter, roughness and flicker."""
+    v = lp(r.standard_normal(n + N(0.2)), fc, 2)[N(0.2):]
+    return v / (3 * np.std(v) + 1e-12)
+
+def modes(dur, base, ratios, taus, gains, split=0.0, glide_to=None, glide_tau=0.1, rng=None):
+    """Struck modes, each partial with its own decay: glass, a bar, a gong,
+    a shield. `split` Hz divides every mode into a close pair that beats: no
+    real glass or bell is perfectly round, and the slow wah of that pair is
+    most of what makes one sound real. `glide_to` bends the whole set as it
+    rings, which a Peking-opera gong does."""
+    n = N(dur); t = T(n); out = np.zeros(n)
+    rise = 1.0 if glide_to is None else glide_to + (1 - glide_to) * np.exp(-t / glide_tau)
+    top = 1.0 if glide_to is None else max(1.0, glide_to)
+    for ratio, tau, g in zip(ratios, taus, gains):
+        if base * ratio * top + split > 0.45 * SR: continue
+        f = base * ratio * rise
+        p0 = 0.0 if rng is None else rng.uniform(0, 2 * np.pi)
+        v = tone(f, n, p0)
+        if split: v = 0.5 * (v + tone(f + split, n, p0 + 1.3))
+        out += g * v * np.exp(-t / tau)
+    return out
+
+def pops(r, dur, count, lo, hi, bias=1.6, tau=0.0025):
+    """`crackle` above in numpy: tiny band-passed pops, thickest at the start
+    (`bias` > 1) — fire, a fuse, frost."""
+    n = N(dur); out = np.zeros(n)
+    for _ in range(count):
+        start = int(n * r.random() ** bias); m = N(r.uniform(0.002, 0.006))
+        p = bp(r.standard_normal(m + 8), lo, hi) * np.exp(-T(m + 8) / tau) * r.uniform(0.3, 1.0)
+        end = min(n, start + len(p)); out[start:end] += p[:end - start]
+    return out
+
+def formants(x, table):
+    """A voice: the source through a parallel bank of resonances, one per
+    formant, `table` as [(Hz, bandwidth Hz, dB), ...]."""
+    return sum(reson(x, f, f / bw) * 10 ** (db / 20) for f, bw, db in table)
+
+# ------------------------------------------------------------- space, loudness
+
+def room(x, rt60=1.2, wet=0.22, pre=0.012, seed="room", bright=1.0, lo_cut=180):
+    """Convolution with a made-up room: noise dying 60 dB over `rt60` in three
+    bands at different rates (the lows last longest and the highs go first,
+    as in stone) after a short pre-delay. `wet` is the tail against the dry
+    sound, which is kept whole. The tail loses what is under `lo_cut`, as a
+    mixer's reverb return does: a thud's reverb is only mud, and it smeared
+    the stun's blow across most of a second."""
+    r = seeded("room:" + seed)
+    L = N(rt60 * 1.15); t = T(L); w = r.standard_normal(L)
+    ir = (lp(w, 400) * np.exp(-6.91 * t / (rt60 * 1.15))
+          + bp(w, 400, 3500) * np.exp(-6.91 * t / rt60)
+          + bright * hp(w, 3500) * np.exp(-6.91 * t / (rt60 * 0.5)))
+    ir[:N(pre)] = 0.0
+    ir /= np.sqrt(np.sum(ir ** 2))
+    tail = hp(sps.fftconvolve(x, ir), lo_cut)
+    return np.concatenate([x, np.zeros(len(tail) - len(x))]) + wet * tail
+
+def _kweight(x):
+    """ITU-R BS.1770 K-weighting: a +4 dB shelf over about 1.5 kHz and a
+    high-pass at 38 Hz, the ear's weighting for loudness."""
+    f0, G, Q = 1681.974450955533, 3.999843853973347, 0.7071752369554196
+    K = math.tan(math.pi * f0 / SR); Vh = 10 ** (G / 20); Vb = Vh ** 0.4996667741545416
+    a0 = 1 + K / Q + K * K
+    shelf = [(Vh + Vb * K / Q + K * K) / a0, 2 * (K * K - Vh) / a0, (Vh - Vb * K / Q + K * K) / a0,
+             1.0, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0]
+    f0, Q = 38.13547087602444, 0.5003270373238773
+    K = math.tan(math.pi * f0 / SR); a0 = 1 + K / Q + K * K
+    high = [1.0, -2.0, 1.0, 1.0, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0]
+    return sps.sosfilt(np.array([shelf, high]), x)
+
+def loudness(x):
+    """The loudest 400 ms in LUFS (BS.1770 momentary, 10 ms hop): how loud a
+    short sound is heard at its peak. A file shorter than one window is
+    padded, so a 90 ms tick reads low — the same way for every file, which
+    is what a comparison needs."""
+    y = _kweight(np.asarray(x, float)); b = N(0.4)
+    if len(y) < b: y = np.concatenate([y, np.zeros(b - len(y))])
+    c = np.concatenate([[0.0], np.cumsum(y * y)])
+    ms = (c[b:] - c[:-b])[::N(0.01)] / b
+    return -0.691 + 10 * math.log10(max(float(ms.max()), 1e-20))
+
+def limit(x, ceiling=0.89, look=0.008):
+    """A look-ahead limiter: the gain every sample needs to stay under the
+    ceiling, held over `look` seconds either side and smoothed inside that
+    span, so the level dips just before a peak and comes back after it.
+    Unlike `finish`'s tanh it adds no harmonics, which a harp or a bell
+    would wear as grit."""
+    w = max(1, N(look))
+    need = np.minimum(1.0, ceiling / np.maximum(np.abs(x), 1e-12))
+    return x * uniform_filter1d(minimum_filter1d(need, 2 * w + 1), w + 1)
+
+def level(x, target, ceiling=0.89, most=6.0):
+    """Brings a sound to `target` LUFS (`loudness`) with its peak at or under
+    `ceiling`: louder through the limiter, by `most` dB at the most, and
+    quieter by gain alone. Past about 6 dB a limiter flattens a sound into a
+    wall (the first boss_arrival took 12 and lost its hit), so a sound that
+    cannot get there is left under its target and said to be — the fix is in
+    its mix, not in more limiting."""
+    x = x / max(1e-12, float(np.max(np.abs(x)))) * ceiling
+    now = loudness(x)
+    if now >= target:
+        return x * 10 ** ((target - now) / 20)
+    lo, hi = 0.0, most
+    if loudness(limit(x * 10 ** (hi / 20), ceiling)) < target:
+        y = np.clip(limit(x * 10 ** (hi / 20), ceiling), -ceiling, ceiling)
+        print(f"    ! {loudness(y):.1f} LUFS after {most:g} dB of limiting, under its {target}")
+        return y
+    for _ in range(22):
+        mid = (lo + hi) / 2
+        if loudness(limit(x * 10 ** (mid / 20), ceiling)) < target: lo = mid
+        else: hi = mid
+    return np.clip(limit(x * 10 ** (hi / 20), ceiling), -ceiling, ceiling)
+
+def save(name, x, target, tail=0.25):
+    """Takes the DC and the rumble out, trims what is left under -54 dB at
+    the end, fades in over 1 ms and out over `tail` seconds (so a ring or a
+    room dies instead of stopping), matches the loudness and writes 16-bit
+    mono at 44.1 kHz like every file above."""
+    x = hp(np.asarray(x, float), 25)
+    keep = np.nonzero(np.abs(x) > np.max(np.abs(x)) * 10 ** (-54 / 20))[0]
+    if len(keep): x = x[:keep[-1] + N(0.02)]
+    k = N(0.001); x[:k] *= np.linspace(0, 1, k)
+    x = level(fade_tail(x, tail), target)
+    pcm = np.round(x * 32767).astype("<i2")
+    os.makedirs(OUT, exist_ok=True)
+    with wave.open(os.path.join(OUT, f"{name}.wav"), "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
+        w.writeframes(pcm.tobytes())
+    rms = float(np.sqrt(np.mean(x ** 2)))
+    print(f"  {name}.wav  {len(x) / SR:5.2f}s  peak {np.max(np.abs(x)):.3f}  rms {rms:.3f}"
+          f"  {loudness(x):6.1f} LUFS  {len(pcm) * 2 / 1024:4.0f} KB")
+
+# ---------------------------------------------------------------- recordings
+
+VSCO_REPO = "https://github.com/sgossner/VSCO-2-CE.git"
+VSCO_COMMIT = "440300901dfe9275fd84e0b7763af1f8443ae62e"
+VSCO_DIR = os.environ.get("VSCO_DIR")
+
+# key: (path in VSCO 2 CE, sounding pitch in Hz or None). The library's names
+# are not the pitch you hear — its brass and woodwinds call middle C "C3", and
+# a glockenspiel sounds two octaves over its written note — so every pitch
+# here was MEASURED off the recording (harmonic peaks over a steady 0.8 s, or
+# the 0.12 s after a staccato take's attack; a bar's inharmonic overtones left
+# out). Rebuilt from a fresh `--fetch-vsco`, every file came out byte for byte
+# the same (2026-09-24). All CC0; see the header above.
+VSCO = {
+    # heal's glissando and the extra turn's doubling
+    "harp_F4": ("Strings/Harp/KSHarp_F4_mf.wav", 348.99),
+    "harp_A4": ("Strings/Harp/KSHarp_A4_mf.wav", 437.75),
+    "harp_C5": ("Strings/Harp/KSHarp_C5_mf.wav", 519.99),
+    "harp_E5": ("Strings/Harp/KSHarp_E5_mf.wav", 654.86),
+    "harp_G5": ("Strings/Harp/KSHarp_G5_mf.wav", 781.43),
+    "harp_B5": ("Strings/Harp/KSHarp_B5_mf.wav", 982.95),
+    "harp_D6": ("Strings/Harp/KSHarp_D6_mf.wav", 1169.70),
+    "harp_F6": ("Strings/Harp/KSHarp_F6_mf.wav", 1392.08),
+    # the buff, the extra turn, the revive's ping and the level-up's run
+    "glock_G5": ("Percussion/Glock/glock_medium_G4.wav", 787.70),
+    "glock_C6": ("Percussion/Glock/glock_medium_C5.wav", 1053.65),
+    "glock_G6": ("Percussion/Glock/glock_medium_G5.wav", 1578.75),
+    "glock_C7": ("Percussion/Glock/glock_medium_C6.wav", 2111.58),
+    # the buff's rise (reversed), the extra turn's and level-up's shimmer
+    "belltree": ("Percussion/BellTree_Stroke3_v1_Sum.wav", None),
+    # the counter's steel
+    "anvil": ("Percussion/Anvil_Hit1_v3_Sum.wav", None),
+    # the boss's boom, gong and cymbal; the level-up's cymbal and drum
+    "bass_drum": ("Percussion/BDrumNewhit_v7_rr1_Sum.wav", None),
+    "timpani": ("Percussion/Timpani/Timpani1_Hit_v3_rr1_Sum.wav", 89.68),
+    "gong": ("Percussion/gongHit_fff.wav", None),
+    "crash": ("Percussion/cymbal-crash1_ff_rr1.wav", None),
+    # the Norse and Roman calls, the level-up's horns, the roar's throat
+    "horn_D#2": ("Brass/F Horn/sus/MOHorn_sus_D#1_v3_1.wav", 77.63),
+    "horn_D3": ("Brass/F Horn/sus/MOHorn_sus_D2_v4_1.wav", 147.35),
+    "horn_F3": ("Brass/F Horn/sus/MOHorn_sus_F2_v3_1.wav", 174.05),
+    "horn_A3": ("Brass/F Horn/sus/MOHorn_sus_A2_v3_1.wav", 219.48),
+    "horn_C4": ("Brass/F Horn/sus/MOHorn_sus_C3_v4_1.wav", 260.61),
+    "hornshort_F3": ("Brass/F Horn/stac/MOHorn_stac_F2_v3_rr1.wav", 174.71),
+    "hornshort_F3~2": ("Brass/F Horn/stac/MOHorn_stac_F2_v3_rr2.wav", 174.58),
+    # short trumpet notes: the level-up's pickups and the Greek call's first
+    # two. A "~2" key is the same note's second take (its round robin), so a
+    # repeated note is never one recording fired twice.
+    "tptshort_G4": ("Brass/Trumpet/stac/Sum_SHTrumpet_stac_G3_v3_rr1.wav", 395.93),
+    "tptshort_G4~2": ("Brass/Trumpet/stac/Sum_SHTrumpet_stac_G3_v3_rr2.wav", 394.36),
+    "tptshort_A#4": ("Brass/Trumpet/stac/Sum_SHTrumpet_stac_A#3_v3_rr1.wav", 465.48),
+    "tptshort_D5": ("Brass/Trumpet/stac/Sum_SHTrumpet_stac_D4_v3_rr1.wav", 589.95),
+    "tptshort_F5": ("Brass/Trumpet/stac/Sum_SHTrumpet_stac_F4_v3_rr1.wav", 699.70),
+    "tptshort_A5": ("Brass/Trumpet/stac/Sum_SHTrumpet_stac_A4_v3_rr1.wav", 886.69),
+    # the Greek and Egyptian calls and the level-up's trumpets
+    "tpt_G4": ("Brass/Trumpet/sus/Sum_SHTrumpet_sus_G3_v3_rr1.wav", 393.03),
+    "tpt_A#4": ("Brass/Trumpet/sus/Sum_SHTrumpet_sus_A#3_v3_rr1.wav", 466.63),
+    "tpt_D5": ("Brass/Trumpet/sus/Sum_SHTrumpet_sus_D4_v3_rr1.wav", 588.29),
+    "tpt_F5": ("Brass/Trumpet/sus/Sum_SHTrumpet_sus_F4_v3_rr1.wav", 697.06),
+    "tpt_C6": ("Brass/Trumpet/sus/Sum_SHTrumpet_sus_C5_v3_rr1.wav", 1043.57),
+    # the Egyptian call's silver trumpet: a harmon mute is the nasal rasp
+    "muted_A#4": ("Brass/Trumpet/harmonM-sus/Sum_SHTrumpet_harmonM-sus_A#3_v3_rr1.wav", 466.25),
+    "muted_D5": ("Brass/Trumpet/harmonM-sus/Sum_SHTrumpet_harmonM-sus_D4_v3_rr1.wav", 587.64),
+    # the Jade Court's suona, played on an oboe and roughened
+    "oboe_F5": ("Woodwinds/Oboe/Vib/Oboe_Vib_F4_v3_Main.wav", 699.70),
+}
+
+def have_vsco(names):
+    """True when the recordings are on disk; otherwise says which sounds are
+    skipped (the shipped files stay as they are) and how to fetch them."""
+    if VSCO_DIR and all(os.path.exists(os.path.join(VSCO_DIR, p)) for p, _ in VSCO.values()):
+        return True
+    print(f"  skipped {names}: they need the VSCO 2 CE recordings "
+          f"(python3 tools/sfx.py --fetch-vsco DIR, then --vsco DIR)")
+    return False
+
+def fetch_vsco(dest):
+    """A sparse, blobless clone of only the recordings in `VSCO`, pinned to
+    `VSCO_COMMIT`: 66 MB where the whole library is gigabytes."""
+    import subprocess
+    def run(*a, **k): subprocess.run(list(a), check=True, **k)
+    run("git", "clone", "--filter=blob:none", "--no-checkout", "--depth", "1", VSCO_REPO, dest)
+    run("git", "-C", dest, "sparse-checkout", "init", "--no-cone")
+    run("git", "-C", dest, "sparse-checkout", "set", "--no-cone", "--stdin",
+        input="".join(f"/{p}\n" for p, _ in VSCO.values()), text=True)
+    run("git", "-C", dest, "fetch", "--depth", "1", "--filter=blob:none", "origin", VSCO_COMMIT)
+    run("git", "-C", dest, "checkout", VSCO_COMMIT)
+
+_recordings = {}
+
+def recording(key):
+    """One recording as mono floats at 44.1 kHz, rumble under 30 Hz removed,
+    cut to 2 ms before its onset and scaled to a peak of 1."""
+    if key not in _recordings:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # the library's files carry chunks scipy skips
+            sr, x = wavfile.read(os.path.join(VSCO_DIR, VSCO[key][0]))
+        x = x.astype(float) / (32768.0 if x.dtype == np.int16 else 2147483648.0)
+        if x.ndim > 1: x = x.mean(axis=1)
+        if sr != SR: x = sps.resample_poly(x, SR, sr)
+        x = hp(x, 30)
+        a = np.abs(x); on = int(np.argmax(a > 0.02 * a.max()))
+        x = x[max(0, on - N(0.002)):]
+        _recordings[key] = x / np.max(np.abs(x))
+    return _recordings[key].copy()
+
+def repitch(x, ratio):
+    """Resampling, which is what a sampler does: `ratio` 2 is an octave up in
+    half the time. Every note below stays within about three semitones of its
+    recording, where the change of length and timbre is not heard."""
+    if abs(ratio - 1) < 1e-5: return x
+    from fractions import Fraction
+    fr = Fraction(1 / ratio).limit_denominator(240)
+    return sps.resample_poly(x, fr.numerator, fr.denominator)
+
+def pitch(name):
+    """'A4' -> 440.0; sharps and flats as 'C#5', 'Eb5'."""
+    k = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}[name[0]]; i = 1
+    while name[i] in "#b": k += 1 if name[i] == "#" else -1; i += 1
+    return 440.0 * 2 ** ((k + 12 * (int(name[i:]) + 1) - 69) / 12)
+
+def played(family, note, dur=None, release=0.08, cents=0.0, take=1, settled=False):
+    """One note of an instrument at any pitch, from its nearest recording,
+    cut to `dur` seconds with a `release` fade when given. `take` 2 plays the
+    note's second recording (a "~2" key) where there is one; `settled` irons
+    the pitch out of its attack first (`settle`)."""
+    f = (pitch(note) if isinstance(note, str) else note) * 2 ** (cents / 1200)
+    keys = [k for k in VSCO if k.startswith(family + "_") and "~" not in k]
+    key = min(keys, key=lambda k: abs(math.log(f / VSCO[k][1])))
+    if take > 1 and f"{key}~{take}" in VSCO: key = f"{key}~{take}"
+    x = settle(key) if settled else recording(key)
+    x = repitch(x, f / VSCO[key][1])
+    if dur is not None:
+        x = fade_tail(x[:min(len(x), N(dur + release))], release)
+    return x
+
+def glide(x, ratio):
+    """Reads `x` at a speed that changes every output sample — a slide, a
+    fall or a vibrato on a recording — from a copy upsampled four times, so
+    reading between samples stays clean."""
+    up = sps.resample_poly(x, 4, 1)
+    pos = np.concatenate([[0.0], np.cumsum(ratio[:-1])]) * 4
+    pos = pos[pos < len(up) - 1]
+    return np.interp(pos, np.arange(len(up)), up)
+
+_settled = {}
+
+def settle(key, until=0.25):
+    """A brass recording with the pitch ironed out of its attack. A trumpet or
+    a horn arrives at its note from below: measured here, the G4 sustain
+    starts 85 cents flat and takes 100 ms to get there, and even the staccato
+    takes dip 30-45 cents for their first 60 ms. In a long note that is
+    articulation; in a 70 ms note it IS the note, and the level-up's first
+    pickups read a quarter-tone flat. So the pitch is tracked over the first
+    `until` seconds (the lag of least difference within 0.7-1.4x of the
+    period — YIN's difference function — in 25 ms windows every 5 ms, kept
+    only where the window is clearly periodic) and the recording re-read at
+    the speed that cancels the error, which leaves the attack's bite and
+    takes away its scoop."""
+    if key in _settled: return _settled[key].copy()
+    x = recording(key); hz0 = VSCO[key][1]
+    lo, hi = int(SR / (hz0 * 1.4)), int(SR / (hz0 / 1.4)) + 2
+    w = max(N(0.025), 3 * hi); hop = N(0.005)
+    times, cents = [], []
+    for s in range(0, N(until), hop):
+        seg = x[s:s + w + hi]
+        if len(seg) < w + hi: break
+        a = seg[:w]
+        d = np.array([np.sum((a - seg[tau:tau + w]) ** 2) for tau in range(lo, hi)])
+        i = int(np.argmin(d))
+        if not 0 < i < len(d) - 1 or d[i] > 0.3 * np.mean(d): continue
+        shift = 0.5 * (d[i - 1] - d[i + 1]) / (d[i - 1] - 2 * d[i] + d[i + 1])
+        times.append(s + w / 2)
+        cents.append(float(np.clip(1200 * math.log2(SR / (lo + i + shift) / hz0), -120, 120)))
+    if len(cents) < 3:
+        _settled[key] = x; return x.copy()
+    cents = sps.medfilt(np.array(cents), 5)
+    t = np.arange(len(x))
+    err = np.interp(t, times, cents, left=cents[0], right=cents[-1])
+    err *= np.clip((times[-1] + N(0.05) - t) / N(0.05), 0, 1)   # hand back over 50 ms
+    y = glide(x, 2 ** (-err / 1200))
+    _settled[key] = y
+    return y.copy()
+
+def steady(x, after=0.12, win=0.03):
+    """Evens a sustained note's level out after its attack, so the envelope
+    put on it is the only one heard: the oboe recordings swell by themselves
+    about twice a second."""
+    e = np.sqrt(uniform_filter1d(x * x, max(1, N(win))) + 1e-12)
+    a = N(after); ref = float(np.median(e[a:a + N(0.5)]))
+    ramp = np.clip((T(len(x)) - after) / 0.04, 0, 1)
+    return x * ((1 - ramp) + ramp * ref / np.maximum(e, ref * 0.1))
+
+# ==============================================================================
+# build_status: what lands on a unit. Heard up to four times in a second when a
+# skill buffs a whole team, so every one is short, starts on its first
+# millisecond and is shaped to cascade rather than pile up.
+# ==============================================================================
+
+def heal():
+    # A harp glissando upward through the C major pentatonic, eleven strings
+    # in a quarter of a second, the notes growing a little as they climb and
+    # ringing longer the higher they are, the top one left to die in a small
+    # hall. The pentatonic because a glissando on it has no step that can
+    # clash with anything under it.
+    b = Bus()
+    run = ["G4", "A4", "C5", "D5", "E5", "G5", "A5", "C6", "D6", "E6", "G6"]
+    for i, note in enumerate(run):
+        k = i / (len(run) - 1)
+        b.add(played("harp", note, dur=0.45 + 0.4 * k, release=0.3), 0.025 * i, 0.55 + 0.45 * k ** 0.8)
+    save("heal", room(hp(b.x, 160), rt60=1.1, wet=0.26, seed="hall")[:N(1.3)], -14.5, tail=0.4)
+
+def status_shield():
+    r = seeded("status_shield")
+    # A crystal ring. The barrier forms first: 60 ms of breath climbing to the
+    # strike, so the cue reads as something closing round the unit and not as
+    # a bell. Then two glass voices a fifth apart. Glass is a few pure, high
+    # modes (1 : 2.32 : 4.25 : 6.63 here, not a bar's 2.76 and 5.40, which is
+    # the glockenspiel in the buff), each split by a few hertz so it beats:
+    # that slow wah is what glass does and a synth bell does not. Half a
+    # second of ring, so four shields in a row cascade instead of piling up.
+    b = Bus()
+    n = N(0.09)
+    b.add(travel(r.standard_normal(n), [(0, 3000), (1, 9000)], q=1.2) * shape(n, [(0, 0), (0.07, 1), (0.09, 0)]), 0.0, 0.30)
+    b.add(click(r, 0.003, 0.0012, 12000, 3000), 0.06, 0.45)
+    b.add(modes(1.1, 1760, (1, 2.32, 4.25, 6.63), (0.5, 0.3, 0.18, 0.1), (1, 0.32, 0.14, 0.06), split=2.6, rng=r), 0.06)
+    b.add(modes(1.1, 2637, (1, 2.32, 4.25), (0.4, 0.22, 0.12), (1, 0.25, 0.08), split=3.4, rng=r), 0.085, 0.45)
+    save("status_shield", room(b.x, rt60=1.2, wet=0.3, seed="glass")[:N(1.1)], -14.5, tail=0.35)
+
+def status_buff():
+    # A rising chime: C6 E6 G6 C7 on a real glockenspiel, 32 ms apart, so it
+    # answers on its first millisecond; under it the bell tree's first strokes
+    # played backwards, a tenth of a second of shimmer swelling into the top
+    # note; a harp C and G under it for warmth; after it the bell tree
+    # forwards and quiet, the sparkle that hangs. Up, major and bright,
+    # against the debuff's down, sour and dark.
+    b = Bus()
+    tree = hp(recording("belltree"), 1200)
+    b.add(tree[:N(0.11)][::-1] * shape(N(0.11), [(0, 0), (0.11, 1)]) ** 2, 0.0, 0.45)
+    for i, (note, g) in enumerate([("C6", 0.55), ("E6", 0.65), ("G6", 0.8), ("C7", 1.0)]):
+        b.add(played("glock", note, dur=0.75 - 0.05 * i, release=0.25), 0.032 * i, g)
+    b.add(played("harp", "C5", dur=0.5, release=0.3), 0.0, 0.3)
+    b.add(played("harp", "G5", dur=0.5, release=0.3), 0.032, 0.25)
+    b.add(tree[:N(1.0)], 0.1, 0.16)
+    save("status_buff", room(b.x, rt60=0.9, wet=0.18, seed="small")[:N(1.0)], -14.5, tail=0.4)
+
+def status_debuff():
+    r = seeded("status_debuff")
+    # A falling dissonant pair: E5 sliding to C#5, then, 75 ms behind it, A#4
+    # sliding to G4 — a tritone apart, both falling, on a sour FM tone (the
+    # modulator at 1.41 of the carrier puts its partials between the
+    # harmonics) whose filter closes as it sinks. A soft low thud under it
+    # gives it somewhere to land.
+    b = Bus()
+    def sour(f0, f1, dur):
+        n = N(dur); t = T(n)
+        f = f1 + (f0 - f1) * np.exp(-t / 0.09)
+        ph = 2 * np.pi * np.cumsum(f) / SR
+        v = np.sin(ph + (0.5 + 1.7 * np.exp(-t / 0.12)) * np.sin(1.41 * ph))
+        return fade_tail(travel(v * fall(n, 0.2, 0.005), [(0, 4200), (1, 700)], q=0.7, kind="lp"), 0.25)
+    b.add(sour(pitch("E5"), pitch("C#5"), 0.72), 0.0, 1.0)
+    b.add(sour(pitch("A#4"), pitch("G4"), 0.72), 0.075, 0.85)
+    b.add(drop(0.4, 150, 62, 0.04, 0.09, attack=0.004), 0.0, 0.5)
+    save("status_debuff", room(b.x, rt60=0.8, wet=0.16, seed="small")[:N(0.8)], -14.5, tail=0.25)
+
+def status_stun():
+    r = seeded("status_stun")
+    # Stunned, and not cartoon-dizzy (the owner wants the serious look): a
+    # dull blow (a knock at 900 -> 450 Hz over the thud, since a phone plays
+    # nothing of a thud under 200), a crackle of the lightning its icon
+    # shows, and the ringing in the ears after — two tones 11 Hz apart so
+    # they wobble, sagging 8% as they fade. The ring sits at 2.3 kHz, where a
+    # phone speaker is clear but it cannot pierce.
+    b = Bus()
+    b.add(click(r, 0.005, 0.002, 4500, 300), 0.0, 0.8)
+    b.add(drop(0.35, 190, 55, 0.03, 0.07, wave="tri"), 0.0, 1.0)
+    b.add(drop(0.2, 900, 450, 0.02, 0.045, wave="tri"), 0.0, 0.6)
+    n = N(0.2)
+    sparks = np.convolve((r.random(n) < 0.004).astype(float), np.exp(-T(N(0.004)) / 0.0008), mode="same")
+    buzz = np.sign(np.sin(2 * np.pi * 100 * T(n)))
+    b.add(bp(r.standard_normal(n), 1500, 7000) * (1.5 * sparks + 0.2 * buzz + 0.1) * fall(n, 0.06, 0.004), 0.01, 0.7)
+    n = N(0.9); t = T(n); sag = 1 - 0.08 * (1 - np.exp(-t / 0.35))
+    ring = tone(2350 * sag, n) + tone(2361 * sag, n) + 0.25 * tone(4710 * sag, n)
+    b.add(ring * fall(n, 0.28, 0.02) * (1 - 0.3 * (0.5 + 0.5 * np.sin(2 * np.pi * 6.5 * t))), 0.03, 0.22)
+    save("status_stun", room(b.x, rt60=0.7, wet=0.15, seed="small")[:N(0.9)], -14.5, tail=0.3)
+
+def status_freeze():
+    r = seeded("status_freeze")
+    # Ice forming, not ice breaking: a crisp crack with the crunch of ice
+    # taking hold under it (350 Hz - 1.4 kHz; without it nothing in the
+    # sound was under 2 kHz), then a hundred and forty tiny glass pings
+    # spreading over a third of a second (thick in the middle, as a frost
+    # front is), a cold breath whose band sinks from 9 kHz to 3.5 (kept low:
+    # at its first level it read as hiss), a high glass chord that locks and
+    # hangs, and one last clink.
+    b = Bus()
+    b.add(click(r, 0.003, 0.001, 14000, 3500), 0.0, 0.9)
+    b.add(hp(r.standard_normal(N(0.015)), 3000) * fall(N(0.015), 0.004), 0.0, 0.5)
+    n = N(0.3)
+    b.add(bp(r.standard_normal(n), 350, 1400) * shape(n, [(0, 0), (0.012, 1), (0.3, 0)]) ** 2, 0.0, 0.55)
+    b.add(drop(0.2, 900, 420, 0.02, 0.05, wave="tri"), 0.0, 0.35)
+    for _ in range(140):
+        at = 0.36 * r.beta(2.0, 3.0); f = r.uniform(3200, 9000)
+        m = N(r.uniform(0.004, 0.014))
+        b.add(tone(f, m, r.uniform(0, 6.28)) * np.exp(-T(m) / (m / SR / 3)), at, r.uniform(0.05, 0.2))
+    n = N(0.7)
+    b.add(travel(r.standard_normal(n), [(0, 9000), (1, 3500)], q=1.1) * fall(n, 0.2, 0.03), 0.0, 0.14)
+    b.add(modes(1.0, 2489, (1, 1.335, 1.78), (0.45, 0.35, 0.3), (1, 0.7, 0.5), split=3.1, rng=r) * fall(N(1.0), 0.4, 0.08), 0.05, 0.24)
+    b.add(modes(0.65, 5200, (1, 2.32), (0.12, 0.06), (1, 0.3), rng=r), 0.37, 0.35)
+    save("status_freeze", room(b.x, rt60=0.9, wet=0.2, seed="glass")[:N(1.0)], -14.5, tail=0.35)
+
+def status_burn():
+    r = seeded("status_burn")
+    # Fire catching: a low whump, the fwoosh of a flame taking (noise under a
+    # band that jumps from 350 Hz to 2.8 kHz and settles at 900), then crackle
+    # and a sizzle kept under 9 kHz. `impact_ember` is the blow of a fire
+    # skill; this is the burn left behind, so it is lighter and hisses.
+    b = Bus()
+    b.add(drop(0.4, 160, 55, 0.05, 0.09, attack=0.008), 0.0, 0.8)
+    n = N(0.8)
+    b.add(travel(r.standard_normal(n), [(0, 350), (0.2, 2800), (1, 900)], q=0.7) * fall(n, 0.2, 0.03), 0.0, 1.0)
+    b.add(pops(r, 0.7, 50, 1500, 7000), 0.04, 0.9)
+    n = N(0.75)
+    b.add(lp(hp(r.standard_normal(n), 4000), 9000) * np.abs(smooth_noise(r, n, 40)) * fall(n, 0.22, 0.02), 0.05, 0.45)
+    save("status_burn", room(b.x, rt60=0.7, wet=0.14, seed="small")[:N(0.8)], -14.5, tail=0.3)
+
+def status_provoke():
+    r = seeded("status_provoke")
+    # A taunt: a sword hilt beaten twice on a bronze-faced shield, the second
+    # blow harder, and a low snarl under the second. Two blows because one
+    # would be a block (`block.wav`); the snarl is a band-limited sawtooth
+    # roughened at about 35 Hz and shaped to an "o", kept under the blows.
+    b = Bus()
+    def bash(g):
+        x = Bus()
+        x.add(click(r, 0.004, 0.0018, 6000, 400), 0.0, 0.9)
+        x.add(drop(0.2, 230, 120, 0.02, 0.05, wave="tri"), 0.0, 1.0)
+        x.add(modes(0.5, 410, (1, 2.32, 3.87, 5.21), (0.12, 0.09, 0.07, 0.05), (0.6, 0.5, 0.4, 0.3), rng=r), 0.0, 0.8)
+        x.add(lp(r.standard_normal(N(0.2)), 2500) * fall(N(0.2), 0.04), 0.0, 0.3)
+        return x.x * g
+    b.add(bash(0.8), 0.0)
+    b.add(bash(1.0), 0.15)
+    n = N(0.45); t = T(n)
+    f0 = shape(n, [(0, 105), (0.12, 124), (0.45, 92)]) * (1 + 0.02 * smooth_noise(r, n, 10))
+    src = saw(f0, n) * (1 + 0.6 * smooth_noise(r, n, 35)) + 0.3 * hp(r.standard_normal(n), 300)
+    snarl = formants(src, [(450, 90, 0), (800, 100, -5), (2830, 150, -18)])
+    snarl = np.tanh(2.2 * snarl / (np.max(np.abs(snarl)) + 1e-9)) * shape(n, [(0, 0), (0.05, 1), (0.25, 0.7), (0.45, 0)])
+    b.add(snarl, 0.14, 0.3)
+    save("status_provoke", room(b.x, rt60=0.7, wet=0.15, seed="small")[:N(0.75)], -14.5, tail=0.25)
+
+def status_bomb():
+    r = seeded("status_bomb")
+    # A bomb set: an iron shell clanked down, the fuse struck (a burst of
+    # scratch and sparks), the fuse fizzing, and a clock's tick and tock
+    # under it — the one status whose sound says "later".
+    b = Bus()
+    b.add(click(r, 0.003, 0.0012, 9000, 900), 0.0, 0.8)
+    b.add(modes(0.4, 780, (1, 2.7, 5.1), (0.09, 0.06, 0.035), (0.8, 0.45, 0.25), rng=r), 0.0, 1.0)
+    b.add(drop(0.12, 300, 150, 0.01, 0.03), 0.0, 0.5)
+    n = N(0.08)
+    b.add(bp(r.standard_normal(n), 2000, 8000) * fall(n, 0.02, 0.004), 0.07, 0.6)
+    b.add(pops(r, 0.08, 14, 2500, 9000, bias=1.0), 0.07, 0.8)
+    n = N(0.6)
+    fizz = bp(r.standard_normal(n), 3000, 7000) * (0.5 + 0.5 * np.abs(smooth_noise(r, n, 60)))
+    b.add(fizz * shape(n, [(0, 0), (0.03, 1), (0.4, 0.7), (0.6, 0)]), 0.1, 0.35)
+    b.add(pops(r, 0.55, 30, 3000, 9000, bias=1.0), 0.1, 0.45)
+    for at, f in ((0.26, 1650), (0.46, 1150)):
+        b.add(modes(0.08, f, (1, 2.4), (0.008, 0.005), (1, 0.4)), at, 0.55)
+        b.add(click(r, 0.002, 0.0008, 8000, 1500), at, 0.17)
+    save("status_bomb", room(b.x, rt60=0.6, wet=0.12, seed="small")[:N(0.8)], -14.5, tail=0.25)
+
+def build_status():
+    _need()
+    status_shield(); status_debuff(); status_stun(); status_freeze()
+    status_burn(); status_provoke(); status_bomb()
+    if have_vsco("heal, status_buff"):
+        heal(); status_buff()
+
+# ==============================================================================
+# build_flow: the turns and the fight around them.
+# ==============================================================================
+
+def counter():
+    r = seeded("counter")
+    # A steel sting: a blade drawn fast along a blade (a resonant band
+    # climbing 2.5 -> 7 kHz in 60 ms) into a real anvil struck, raised two
+    # semitones, cut short so it is a parry and not a forge and taken down
+    # over 7 kHz, with two synthesised steel rings (1.45 and 2.9 kHz) and a
+    # short knock under it. The anvil alone put 81% of the sound over 6 kHz,
+    # a whistle rather than a clash.
+    b = Bus()
+    n = N(0.07)
+    b.add(travel(r.standard_normal(n), [(0, 2500), (1, 7000)], q=4.0) * shape(n, [(0, 0), (0.05, 1), (0.07, 0.2)]), 0.0, 0.4)
+    anvil = fade_tail(lp(hp(repitch(recording("anvil"), 2 ** (2 / 12)), 500), 7000)[:N(0.75)], 0.4)
+    b.add(anvil, 0.055, 0.7)
+    b.add(modes(0.75, 1450, (1, 2.44, 4.1), (0.22, 0.12, 0.07), (1, 0.45, 0.2), split=3.0, rng=r), 0.055, 0.8)
+    b.add(modes(0.75, 2900, (1, 2.76, 5.4), (0.3, 0.18, 0.1), (0.5, 0.3, 0.15), split=4.0, rng=r), 0.055, 0.35)
+    b.add(drop(0.12, 420, 210, 0.015, 0.035, wave="tri"), 0.055, 0.5)
+    save("counter", room(b.x, rt60=0.8, wet=0.15, seed="small")[:N(0.8)], -12, tail=0.3)
+
+def extra_turn():
+    # A reward, not a status: three notes on the glockenspiel, G5 C6 E6 in a
+    # "da-da-DING" 90 ms apart, a harp doubling them an octave down and well
+    # under them (at a third of the glockenspiel it still out-rang the top
+    # note), and the bell tree's shimmer blooming off the last. The buff
+    # runs four notes in a blur; this one is a tune you could hum.
+    b = Bus()
+    for i, (note, low, g) in enumerate([("G5", "G4", 0.7), ("C6", "C5", 0.8), ("E6", "E5", 1.0)]):
+        last = i == 2
+        b.add(played("glock", note, dur=1.0 if last else 0.18, release=0.35 if last else 0.06), 0.09 * i, g)
+        b.add(played("harp", low, dur=0.45 if last else 0.2, release=0.3 if last else 0.08), 0.09 * i, 0.15 * g)
+    b.add(hp(recording("belltree"), 1500)[:N(1.2)], 0.18, 0.3)
+    save("extra_turn", room(b.x, rt60=1.0, wet=0.2, seed="hall")[:N(1.3)], -12, tail=0.45)
+
+# The Csound manual's formant table for the vowel "a", per voice part:
+# (Hz, bandwidth Hz, dB).
+_AH = {
+    "bass":    [(600, 60, 0), (1040, 70, -7), (2250, 110, -9), (2450, 120, -9), (2750, 130, -20)],
+    "tenor":   [(650, 80, 0), (1080, 90, -6), (2650, 120, -7), (2900, 130, -8), (3250, 140, -22)],
+    "alto":    [(800, 80, 0), (1150, 90, -4), (2800, 120, -20), (3500, 130, -36), (4950, 140, -60)],
+    "soprano": [(800, 80, 0), (1150, 90, -6), (2900, 120, -32), (3900, 130, -20), (4950, 140, -50)],
+}
+
+def choir_part(r, part, notes, n, voices=4):
+    """One section singing "ah": `voices` singers, each a sawtooth softened
+    above 2.2 kHz (a sung, not a buzzed, source) through the part's formants
+    with a breath of noise, their own vibrato (5-6 Hz, fading in after
+    0.25 s), a slow drift and a few cents of detune, which is what turns one
+    synthetic voice into a section. `notes` is [(seconds, Hz), ...], slid
+    between."""
+    t = T(n); out = np.zeros(n)
+    base = np.interp(t, [a for a, _ in notes], [f for _, f in notes])
+    for v in range(voices):
+        detune = 2 ** (r.uniform(-7, 7) / 1200)
+        vib = 2 ** ((18 / 1200) * np.sin(2 * np.pi * r.uniform(5.0, 6.0) * t + r.uniform(0, 6.28))
+                    * np.clip((t - 0.25) / 0.4, 0, 1))
+        drift = 2 ** ((6 / 1200) * smooth_noise(r, n, 2))
+        f0 = base * detune * vib * drift
+        src = lp(saw(f0, n), 2200, 1) + 0.05 * r.standard_normal(n)
+        out += formants(src, _AH[part])
+    return out / voices
+
+def revive():
+    r = seeded("revive")
+    # A choir swelling on "ah" from nothing, a suspended chord (the alto on
+    # F4) that resolves to C major as the unit stands (the alto slides to E4
+    # at 0.6 s): coming back reads as a question answered. The bell tree,
+    # reversed, rises into that moment and a single glockenspiel note marks
+    # it; a descant G5 enters above. Then it lets go in a long hall. The
+    # swell is heard within 50 ms (it took 270 at first, while the unit was
+    # visibly getting up) and full by 0.5 s.
+    n = N(1.95); choir = Bus()
+    choir.add(choir_part(r, "bass", [(0, pitch("C3"))], n), 0.0, 1.0)
+    choir.add(choir_part(r, "tenor", [(0, pitch("G3"))], n), 0.0, 0.85)
+    choir.add(choir_part(r, "alto", [(0, pitch("F4")), (0.55, pitch("F4")), (0.65, pitch("E4"))], n), 0.0, 0.8)
+    choir.add(choir_part(r, "soprano", [(0, pitch("C5"))], n), 0.0, 0.75)
+    choir.add(choir_part(r, "soprano", [(0, pitch("G5"))], N(1.35)) * shape(N(1.35), [(0, 0), (0.3, 1), (1.35, 1)]), 0.6, 0.35)
+    voices = choir.x[:n] / np.max(np.abs(choir.x))
+    b = Bus()
+    b.add(voices * shape(n, [(0, 0), (0.5, 1.0), (1.35, 1.0), (1.95, 0.0)]) ** 1.2, 0.0, 1.0)
+    tree = hp(recording("belltree"), 1500)
+    b.add(tree[:N(0.6)][::-1] * shape(N(0.6), [(0, 0), (0.6, 1)]) ** 2, 0.0, 0.3)
+    b.add(played("glock", "C7", dur=1.0, release=0.4), 0.6, 0.3)
+    save("revive", room(b.x, rt60=2.0, wet=0.35, seed="hall")[:N(2.05)], -12, tail=0.5)
+
+def death():
+    r = seeded("death")
+    # A fall, then the soul leaving. The killing blow has already landed
+    # (`hit_lethal`), so the fall is soft: a body meeting stone, a rattle of
+    # armour, no transient to speak of. Then a breath rising — noise in a
+    # narrow band climbing 350 Hz -> 3.8 kHz — with a ghostly tone gliding
+    # up an octave and a half on three detuned voices, gone into the hall by
+    # 1.3 s.
+    b = Bus()
+    b.add(drop(0.45, 110, 42, 0.04, 0.11, attack=0.003), 0.05, 0.7)
+    b.add(lp(r.standard_normal(N(0.3)), 300) * fall(N(0.3), 0.07, 0.004), 0.05, 0.45)
+    for _ in range(7):
+        b.add(modes(0.06, r.uniform(1800, 4200), (1, 2.7), (0.012, 0.006), (1, 0.4), rng=r), 0.05 + r.uniform(0, 0.16), r.uniform(0.1, 0.25))
+    n = N(1.1); t = T(n)
+    b.add(travel(r.standard_normal(n), [(0, 350), (0.6, 2600), (1, 3800)], q=2.5)
+          * shape(n, [(0, 0), (0.28, 1), (1.1, 0)]), 0.18, 0.45)
+    f = shape(n, [(0, 330), (1.1, 990)])
+    ghost = sum(tone(f * 2 ** (c / 1200) * (1 + 0.004 * np.sin(2 * np.pi * 6 * t + c)), n) for c in (-8, 0, 8)) / 3
+    b.add(ghost * shape(n, [(0, 0), (0.25, 1), (0.6, 0.5), (1.1, 0)]), 0.2, 0.32)
+    save("death", room(b.x, rt60=1.6, wet=0.35, seed="hall")[:N(1.35)], -12, tail=0.4)
+
+def turn_chime():
+    r = seeded("turn_chime")
+    # The player's turn: one soft note, a vibraphone's A5 with a felt mallet.
+    # A tuned bar rings at 1 : 4 : 10 (3.93 and 9.2 here) and the upper two
+    # die fast, so what is left is nearly a sine; the motor's 5.4 Hz tremolo
+    # keeps it from sounding like a test tone. Heard every turn, so it has no
+    # attack to speak of, nothing above 6 kHz, and it is gone in a second.
+    n = N(1.1); t = T(n)
+    x = modes(1.1, 880, (1, 3.93, 9.2), (0.4, 0.12, 0.05), (1, 0.12, 0.03), rng=r)
+    x *= shape(n, [(0, 0), (0.006, 1), (1.1, 1)]) * (1 - 0.12 * (0.5 + 0.5 * np.sin(2 * np.pi * 5.4 * t)))
+    save("turn_chime", room(lp(x, 6000), rt60=0.8, wet=0.15, seed="small")[:N(1.05)], -15, tail=0.4)
+
+# ----------------------------------------------------------------- horn calls
+
+def _call_note(family, note, dur, release=0.1, swell=None, fall_st=0.0, fall_len=0.15, cents=0.0,
+               take=1, settled=False):
+    """One note of a horn call: the recording at pitch, cut to `dur` with a
+    release, an optional swell [(seconds, level), ...] and an optional fall
+    of `fall_st` semitones over its last `fall_len` seconds — the lip letting
+    go that ends a call. `take` and `settled` as `played`: every note under
+    about 150 ms is a staccato take with its attack settled."""
+    x = played(family, note, cents=cents, take=take, settled=settled)
+    n = min(len(x), N(dur + release))
+    if fall_st:
+        t = T(n); start = dur + release - fall_len
+        k = np.clip((t - start) / fall_len, 0, 1) ** 2
+        x = glide(x, 2 ** (-fall_st * k / 12))[:n]
+    x = fade_tail(x[:n], release)
+    if swell: x *= shape(len(x), swell)
+    return x
+
+def wave_egypt():
+    # The Duat: Tutankhamun was buried with two trumpets, one silver and one
+    # bronze, so this is a pair — a harmon-muted trumpet for the silver's
+    # nasal rasp, an open one filtered dark for the bronze — sounding A4,
+    # then D5 through a grace note a semitone above it (D#5), the Hijaz
+    # colour the island's music is written in, and a fall to end it.
+    b = Bus()
+    for fam, g, tone_ in (("muted", 1.0, None), ("tpt", 0.45, 2200)):
+        v = Bus()
+        v.add(_call_note(fam, "A4", 0.2, 0.06), 0.0)
+        v.add(_call_note(fam, "D#5", 0.05, 0.03), 0.22, 0.8)
+        v.add(_call_note(fam, "D5", 0.75, 0.12, swell=[(0, 0.8), (0.4, 1.0), (0.9, 1.0)], fall_st=1.5, fall_len=0.2), 0.27)
+        b.add(lp(v.x, tone_) if tone_ else v.x, 0.0, g)
+    save("wave_egypt", room(b.x, rt60=1.8, wet=0.28, seed="stone")[:N(1.8)], -10, tail=0.45)
+
+def wave_greece():
+    # Olympus: the salpinx, a straight bronze war trumpet, on the open
+    # trumpet: C5, G5, C6 — up a fifth and an octave, the simplest heroic
+    # call, the first two staccato with their attacks settled — doubled 3
+    # cents sharp and 12 ms late, two trumpeters, in open
+    # air (a light room with a longer pre-delay). At 7 cents the pair beat
+    # four times a second on the long C6, which read as a tremolo.
+    b = Bus()
+    for cents, at, g in ((0.0, 0.0, 1.0), (3.0, 0.012, 0.6)):
+        b.add(_call_note("tptshort", "C5", 0.14, 0.05, cents=cents, settled=True), at, g)
+        b.add(_call_note("tptshort", "G5", 0.14, 0.05, cents=cents, settled=True), at + 0.17, g)
+        b.add(_call_note("tpt", "C6", 0.75, 0.15, swell=[(0, 0.85), (0.35, 1.0), (0.9, 1.0)], cents=cents), at + 0.34, g)
+    save("wave_greece", room(b.x, rt60=1.3, wet=0.25, pre=0.025, seed="open")[:N(1.6)], -10, tail=0.4)
+
+def wave_norse():
+    # Yggdrasil: a war horn — one long low D3 swelling, then up a fifth to A3
+    # with a fall. Under it a quiet sine an octave down for the size of an
+    # animal's horn (quiet, because a phone cannot play it and it would spend
+    # the headroom), and a rasp (the horn itself driven hard through
+    # 300-2500 Hz), in a fjord-sized hall. The slowest of the five calls, as a
+    # horn that big is.
+    b = Bus()
+    d = _call_note("horn", "D3", 0.8, 0.12, swell=[(0, 0.5), (0.5, 1.0), (0.92, 1.0)])
+    a = _call_note("horn", "A3", 0.62, 0.15, swell=[(0, 0.9), (0.2, 1.0), (0.77, 1.0)], fall_st=1.0, fall_len=0.22)
+    b.add(d, 0.0); b.add(a, 0.72)
+    for x, f, at in ((d, pitch("D2"), 0.0), (a, pitch("A2"), 0.72)):
+        env = np.sqrt(uniform_filter1d(x * x, N(0.03)))
+        b.add(tone(f, len(x)) * env / (np.max(env) + 1e-9), at, 0.2)
+    b.add(np.tanh(3.0 * bp(b.x, 300, 2500) / (np.max(np.abs(b.x)) + 1e-9)), 0.0, 0.18)
+    save("wave_norse", room(b.x, rt60=2.3, wet=0.3, seed="fjord")[:N(1.9)], -10, tail=0.5)
+
+def wave_rome():
+    # The Seven Hills: a legion's cornu, the big round horn that gave the
+    # signals — three short G3s tongued in a triplet (the horn's two
+    # staccato takes in turn, their attacks settled) and a long C4, the
+    # repeated-note rhythm of a military signal (the Greek call climbs; this
+    # one drives). The long note is doubled an octave down.
+    b = Bus()
+    for i in range(3):
+        b.add(_call_note("hornshort", "G3", 0.09, 0.04, take=1 + i % 2, settled=True), 0.13 * i, 0.85 + 0.05 * i)
+    b.add(_call_note("horn", "C4", 0.72, 0.15, swell=[(0, 0.8), (0.3, 1.0), (0.87, 1.0)], fall_st=0.7, fall_len=0.18), 0.39)
+    b.add(_call_note("horn", "C3", 0.72, 0.15, swell=[(0, 0.8), (0.3, 1.0), (0.87, 1.0)]), 0.40, 0.45)
+    save("wave_rome", room(b.x, rt60=1.5, wet=0.26, seed="stone")[:N(1.6)], -10, tail=0.4)
+
+def wave_jade():
+    r = seeded("wave_jade")
+    # The Jade Court: first the small Peking-opera gong whose pitch RISES as
+    # it rings (the "jiang" of the xiaoluo), then a suona — the double-reed
+    # horn of every Chinese procession — played on an oboe, driven hard and
+    # lifted over 2 kHz, with a synthesised reed buzz on the same pitch, the
+    # slides and the vibrato included, because a suona's upper harmonics are
+    # nearly as loud as its first and an oboe's are not (the oboe alone put
+    # 98% of the call between 500 Hz and 2 kHz): D5, a slide to E5, a leap to
+    # A5 with a wide vibrato, and a fall. Pentatonic, as the instrument's
+    # calls are.
+    b = Bus()
+    b.add(click(r, 0.003, 0.0012, 9000, 1500), 0.0, 0.6)
+    b.add(modes(1.6, 640, (1, 1.58, 2.46, 3.51, 4.3), (0.5, 0.32, 0.2, 0.14, 0.09),
+                (1, 0.55, 0.4, 0.25, 0.15), glide_to=1.12, glide_tau=0.12, rng=r), 0.0, 0.8)
+    base = VSCO["oboe_F5"][1]
+    n = N(1.25); t = T(n)
+    steps = [(0.0, pitch("D5")), (0.13, pitch("D5")), (0.18, pitch("E5")), (0.28, pitch("E5")),
+             (0.34, pitch("A5")), (1.02, pitch("A5")), (1.2, pitch("G5"))]
+    target = np.interp(t, [a for a, _ in steps], [f for _, f in steps])
+    vib = 2 ** ((32 / 1200) * np.sin(2 * np.pi * 6.2 * t) * np.clip((t - 0.45) / 0.15, 0, 1))
+    reed = glide(steady(recording("oboe_F5")), target * vib / base)[:n]
+    reed = reed + 1.2 * hp(reed, 2000)
+    reed = 0.35 * reed + 0.65 * np.tanh(3.2 * reed / (np.max(np.abs(reed)) + 1e-9))
+    # The buzz: every harmonic to 6 kHz at 1/sqrt(k) (a sawtooth's 1/k is
+    # an oboe; a suona is brighter than a trumpet) on the same pitch, through
+    # the nasal formants at 1.6, 2.8 and 4.2 kHz.
+    f = target * vib
+    phase = 2 * np.pi * np.cumsum(f) / SR
+    buzz = sum(np.sin(k * phase) / k ** 0.5 for k in range(1, int(6000 / f.max()) + 1))
+    buzz = reson(buzz, 1600, 4) + 0.8 * reson(buzz, 2800, 5) + 0.4 * reson(buzz, 4200, 6)
+    m = min(len(reed), n)
+    voice = reed[:m] / np.max(np.abs(reed)) + 0.6 * buzz[:m] / np.max(np.abs(buzz))
+    voice *= shape(m, [(0, 0), (0.02, 1), (1.05, 1), (1.25, 0)])
+    b.add(voice, 0.1, 0.9)
+    save("wave_jade", room(b.x, rt60=1.4, wet=0.22, seed="open")[:N(1.65)], -10, tail=0.45)
+
+# ------------------------------------------------------------------ the boss
+
+def boss_arrival():
+    r = seeded("boss_arrival")
+    # Boom, roar, cymbal — the first cut's synthesised roar was a distorted
+    # buzz, so the roar is the orchestra's: four horns on D2 D3 F3 A3, a D
+    # minor chord, swelling in over 140 ms and blown past their limit (a
+    # tanh on the chord), the cinematic "braaam" that trailers use for a
+    # threat, with a growl under it for a throat — a sawtooth whose pitch
+    # wanders 6% at 25 Hz, amplitude-modulated at half its own pitch (the
+    # period doubling that separates a roar from a hum), through two
+    # formants opening "o" -> "a". Under all of it the boom: the bass drum
+    # and a low timpani struck together over a sub falling 62 -> 28 Hz; with
+    # it the tam-tam, a bright crack and a crash cymbal at full level, and
+    # the chord cut 5 dB at 320 Hz with its edge over 2 kHz lifted: at a
+    # third of the level, 2% of the sound through a phone's speaker was
+    # over 2 kHz, where the shipped heavy hits have 10-22%, and a phone
+    # would have played a muddy chord.
+    b = Bus()
+    boom = Bus()
+    boom.add(click(r, 0.008, 0.0035, 5000, 200), 0.0, 0.8)
+    boom.add(recording("bass_drum")[:N(2.2)], 0.0, 1.0)
+    boom.add(recording("timpani")[:N(2.2)], 0.0, 0.7)
+    boom.add(drop(1.6, 62, 28, 0.25, 0.45, attack=0.003), 0.0, 0.5)
+    bx = lp(boom.x, 3500)
+    b.add(np.tanh(1.6 * bx / np.max(np.abs(bx))), 0.0, 0.7)
+    b.add(hp(recording("gong"), 80)[:N(2.4)], 0.0, 0.35)
+    b.add(hp(recording("crash"), 400)[:N(2.2)], 0.015, 1.0)
+    b.add(click(r, 0.006, 0.0025, 12000, 2500), 0.0, 0.5)
+    chord = Bus()
+    for note, g in (("D2", 1.0), ("D3", 0.9), ("F3", 0.75), ("A3", 0.7)):
+        chord.add(_call_note("horn", note, 1.05, 0.45, swell=[(0, 0.35), (0.14, 1.0), (0.7, 0.9), (1.5, 0.8)]), 0.0, g)
+    c = chord.x / np.max(np.abs(chord.x))
+    c = lp(0.6 * c + 0.4 * np.tanh(2.8 * c), 5000)
+    c = c - 0.45 * reson(c, 320, 1.0) + 0.5 * hp(c, 2000)   # the mud out, the brass's edge up
+    b.add(c, 0.07, 0.95)
+    n = N(1.35); t = T(n)
+    contour = shape(n, [(0, 70), (0.3, 92), (0.8, 84), (1.35, 60)])
+    f0 = contour * (1 + 0.06 * smooth_noise(r, n, 25))
+    sub_am = 1 + 0.5 * np.sin(np.pi * np.cumsum(f0) / SR)
+    src = (lp(saw(f0, n), 1800, 1) * sub_am * (1 + 0.6 * np.clip(smooth_noise(r, n, 45), -1, 1))
+           + 0.5 * bp(r.standard_normal(n), 200, 3000))
+    throat = (travel(src, [(0, 520), (0.25, 720), (1, 470)], q=3.0)
+              + 0.7 * travel(src, [(0, 900), (0.25, 1150), (1, 800)], q=4.0))
+    throat = np.tanh(2.0 * throat / (np.max(np.abs(throat)) + 1e-9)) * shape(n, [(0, 0), (0.15, 1), (0.8, 0.8), (1.35, 0)])
+    b.add(throat, 0.1, 0.3)
+    save("boss_arrival", room(b.x, rt60=2.2, wet=0.25, seed="hall")[:N(2.3)], -9.5, tail=0.6)
+
+# ------------------------------------------------------------------- level up
+
+def level_up():
+    # The player's level-up (FEEL.md W1.6): a fanfare. Three trumpet G4s in a
+    # triplet pickup (the two staccato takes in turn, their attacks settled,
+    # because the sustain's scoop made them a quarter-tone flat), then on the
+    # downbeat (0.3 s) a C major chord — three
+    # trumpets on C5 E5 G5 over three horns on E3 G3 C4 a hair behind them —
+    # swelling for a second and let go, with the glockenspiel running C6 E6
+    # G6 C7 over it, the bell tree, a crash cymbal kept back to a shimmer and
+    # a bass drum with a sub on C2 for the floor. Bigger than the extra turn,
+    # shorter than a cutscene.
+    b = Bus()
+    for i in range(3):
+        b.add(_call_note("tptshort", "G4", 0.07, 0.03, take=1 + i % 2, settled=True), 0.095 * i, 0.75 + 0.05 * i)
+    hold = [(0, 0.85), (0.6, 1.0), (1.1, 1.0)]
+    for note in ("C5", "E5", "G5"):
+        b.add(_call_note("tpt", note, 0.95, 0.35, swell=hold), 0.3, 0.7)
+    for note in ("E3", "G3", "C4"):
+        b.add(_call_note("horn", note, 0.95, 0.35, swell=hold), 0.315, 0.55)
+    for i, note in enumerate(("C6", "E6", "G6", "C7")):
+        b.add(played("glock", note, dur=0.8, release=0.4), 0.31 + 0.045 * i, 0.5)
+    b.add(hp(recording("belltree"), 1500)[:N(1.4)], 0.3, 0.3)
+    b.add(hp(recording("crash"), 500)[:N(1.6)], 0.29, 0.4)
+    b.add(recording("bass_drum")[:N(1.6)], 0.3, 0.3)
+    b.add(drop(1.2, 70, pitch("C2"), 0.05, 0.35, attack=0.004), 0.3, 0.25)
+    save("level_up", room(b.x, rt60=1.6, wet=0.25, seed="hall")[:N(2.0)], -9.5, tail=0.5)
+
+def build_flow():
+    _need()
+    death(); turn_chime()
+    if have_vsco("counter, extra_turn, revive, wave_*, boss_arrival, level_up"):
+        counter(); extra_turn(); revive()
+        wave_egypt(); wave_greece(); wave_norse(); wave_rome(); wave_jade()
+        boss_arrival(); level_up()
+
+# ==============================================================================
 # Measurement. There is no listening in this environment, so the only check on
 # any of the above is the numbers: `python3 tools/sfx.py --check`.
 # ==============================================================================
@@ -527,9 +1551,27 @@ def check():
         if rms < 1e-4: print(f"    ! {f} is silent")
 
 def main():
-    if "--check" in sys.argv:
+    global OUT, VSCO_DIR
+    args = sys.argv[1:]
+    if "--check" in args:
         check(); return
-    build_hits(); build_kinds(); build_elements(); build_defence(); build_rest()
+    def option(flag):
+        if flag not in args: return None
+        i = args.index(flag); value = args[i + 1]; del args[i:i + 2]
+        return value
+    fetch = option("--fetch-vsco")
+    if fetch:
+        fetch_vsco(fetch); return
+    OUT = option("--out") or OUT
+    VSCO_DIR = option("--vsco") or VSCO_DIR
+    sections = {"hits": build_hits, "kinds": build_kinds, "elements": build_elements,
+                "defence": build_defence, "rest": build_rest,
+                "status": build_status, "flow": build_flow}
+    for name in args or list(sections):
+        if name not in sections:
+            sys.exit(f"no section {name!r}; the sections are {', '.join(sections)}")
+        sections[name]()
     print(f"wrote {len(os.listdir(OUT))} files to {os.path.normpath(OUT)}")
 
-main()
+if __name__ == "__main__":
+    main()

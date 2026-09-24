@@ -223,6 +223,9 @@ final class BattleViewModel: ObservableObject {
         displayedCombatants = engine.combatants
         hasBegun = false
         begin()
+        // An auto-repeat run goes on without a reckoning, so the music the
+        // last run's end stopped starts again here.
+        AudioLibrary.shared.playMusic(.battle)
     }
 
     private func repeatSummary(_ session: RepeatSession) -> BattleSummary {
@@ -531,6 +534,8 @@ final class BattleViewModel: ObservableObject {
             if autoBattle {
                 takeAutoTurn()
             } else {
+                // One soft chime: the player's turn, heard (FEEL.md W1.4).
+                AudioLibrary.shared.play(.turnChime, volume: 0.35)
                 armBasicAttack(for: actor)
             }
         }

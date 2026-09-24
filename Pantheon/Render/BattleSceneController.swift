@@ -905,6 +905,11 @@ final class BattleSceneController: NSObject {
         switch event {
         case .battleStart:
             for node in unitNodes.values { node.play(.idleCombat) }
+            // The fight was silent between its blows (Docs/FEEL.md W1.4,
+            // 2026-09-24): the realm's horn call opens it, a boss's arrival
+            // its own boom, roar and cymbal.
+            AudioLibrary.shared.play(unitNodes.values.contains(where: { $0.side == .opponent && $0.isBoss })
+                                     ? .bossArrival : .waveCall(for: environment.pantheon), volume: 0.85)
 
         case .turnBegan(let actor, _):
             returnEveryoneHome()
@@ -915,9 +920,10 @@ final class BattleSceneController: NSObject {
             // The walk-ons of the last wave are on their marks by now.
             director?.frameField()
 
-        case .turnSkipped(let actor, _):
+        case .turnSkipped(let actor, let reason):
             guard let node = unitNodes[actor] else { return 0 }
             floatText("SKIPPED", over: node, color: UIColor(hex: "#C8C8C8")!)
+            if speedMultiplier < 3 { AudioLibrary.shared.play(.status(reason), volume: 0.45) }
 
         case .skillCast(let actor, _, let name, let targets, let shot, let animation, let vfx):
             guard let casterNode = unitNodes[actor] else { return 0 }
@@ -1155,6 +1161,7 @@ final class BattleSceneController: NSObject {
                 color = .white
             }
             floatText(label, over: node, color: color, scale: profile.numberScale, pop: true)
+            if isGlancing { AudioLibrary.shared.play(.dodge, volume: 0.5) }
 
             // A heavy blow is worth dwelling on. The freeze punctuates the
             // frame of contact itself; this holds the frame just after it, so
@@ -1175,21 +1182,27 @@ final class BattleSceneController: NSObject {
             node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
             floatText("+\(Int(amount.rounded()))", over: node, color: UIColor(hex: "#7FE8A0")!)
             VFXLibrary.spawn("heal", at: node.position, in: scene, tint: UIColor(hex: "#7FE8A0")!)
+            // A drain heals once per hit, so the harp is quieter and skipped
+            // at the top speed.
+            if speedMultiplier < 3 { AudioLibrary.shared.play(.heal, volume: 0.7) }
 
         case .shieldAbsorbed(let target, let amount, _):
             guard let node = unitNodes[target] else { return 0 }
             floatText("\(Int(amount.rounded())) blocked", over: node, color: UIColor(hex: "#6BD8F2")!, scale: 0.8)
+            if speedMultiplier < 3 { AudioLibrary.shared.play(.statusShield, volume: 0.35) }
 
         case .statusApplied(_, let target, let kind, let turns):
             guard let node = unitNodes[target] else { return 0 }
             node.applyStatus(kind, turns: turns)
             VFXLibrary.spawn(kind.isBuff ? "buff" : "debuff", at: node.position, in: scene, tint: .white)
+            if speedMultiplier < 3 { AudioLibrary.shared.play(.status(kind), volume: 0.8) }
             floatText(kind.displayName, over: node,
                       color: kind.isBuff ? UIColor(hex: "#6BD8F2")! : UIColor(hex: "#F2726B")!, scale: 0.7)
 
         case .statusResisted(_, let target, _):
             guard let node = unitNodes[target] else { return 0 }
             floatText("RESIST", over: node, color: UIColor(hex: "#C8C8C8")!, scale: 0.8)
+            if speedMultiplier < 3 { AudioLibrary.shared.play(.block, volume: 0.6) }
 
         case .statusExpired(let target, let kind), .statusRemoved(let target, let kind, _):
             unitNodes[target]?.removeStatus(kind)
@@ -1203,6 +1216,7 @@ final class BattleSceneController: NSObject {
         case .counterattack(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
             floatText("COUNTER", over: node, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
+            AudioLibrary.shared.play(.counter)
             node.play(.attackBasic)
             // A counter interrupts whatever the caster was in the middle of,
             // so the follow-through owed by that cast is void; leaving it
@@ -1212,6 +1226,7 @@ final class BattleSceneController: NSObject {
         case .extraTurnGranted(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
             floatText("EXTRA TURN", over: node, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
+            AudioLibrary.shared.play(.extraTurn)
 
         case .passiveTriggered(let actor, let name):
             guard let node = unitNodes[actor] else { return 0 }
@@ -1220,9 +1235,11 @@ final class BattleSceneController: NSObject {
 
         case .revived(let target, _):
             unitNodes[target]?.revive(healthFraction: 0.3)
+            AudioLibrary.shared.play(.revive)
 
         case .defeated(let target):
             unitNodes[target]?.markDefeated()
+            AudioLibrary.shared.play(.death, volume: 0.85)
 
         case .waveStarted(_, _, let opponents):
             // The fallen wave leaves the field so the marks are free, and
@@ -1241,6 +1258,7 @@ final class BattleSceneController: NSObject {
             }
             registerMaxHealth(opponents)
             place(combatants: opponents, entering: true)
+            AudioLibrary.shared.play(opponents.contains(where: \.isBoss) ? .bossArrival : .waveCall(for: environment.pantheon))
             // Measure the field with the new wave on it now, not at the next
             // drain: in an auto fight the queue never drains between turns,
             // so a boss arriving with the third wave was never measured and
@@ -1252,7 +1270,10 @@ final class BattleSceneController: NSObject {
         case .battleEnded(let result):
             director?.returnHome()
             Juice.notify(result.outcome == .victory ? .success : .error)
-            AudioLibrary.shared.play(result.outcome == .victory ? .victory : .defeat)
+            // The fanfare is the reckoning's, played once with its ribbon
+            // (`BattleView.beginReckoning`); played here as well, victory
+            // sounded twice. The fight's music stops under it.
+            AudioLibrary.shared.stopMusic(fade: 0.6)
             for (_, node) in unitNodes where !node.isDefeated {
                 if (result.outcome == .victory && node.side == .player)
                     || (result.outcome == .defeat && node.side == .opponent) {

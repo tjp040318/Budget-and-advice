@@ -8,9 +8,10 @@ import AVFoundation
 /// playing, and a lookup by name that fails silently — a missing file means a
 /// silent event, never a crash, which is the right failure mode for audio.
 ///
-/// The files in `Resources/Audio` are synthesised (see `tools/sfx.py`), which is
-/// how a lot of shipped indie games sound and vastly better than silence. Swap
-/// any of them for a recorded sample by replacing the file; nothing else knows.
+/// The files in `Resources/Audio` are built by `tools/sfx.py`: synthesised, and
+/// since the fight got its own sounds (W1.4) some layered from CC0 orchestral
+/// recordings (VSCO 2 Community Edition). Swap any of them for another
+/// recording by replacing the file; nothing else knows.
 final class AudioLibrary {
 
     static let shared = AudioLibrary()
@@ -46,6 +47,101 @@ final class AudioLibrary {
         case starTick = "star_tick"
         case victory
         case defeat
+        // The fight's own events (FEEL.md W1.4, 2026-09-24), built by
+        // `tools/sfx.py` `build_status()` and `build_flow()`. A status that
+        // lands picks its cue through `status(_:)`, a wave its realm's horn
+        // through `waveCall(for:)`, so each hook is one line.
+        case heal
+        case statusShield = "status_shield"
+        case statusBuff = "status_buff"
+        case statusDebuff = "status_debuff"
+        case statusStun = "status_stun"
+        case statusFreeze = "status_freeze"
+        case statusBurn = "status_burn"
+        case statusProvoke = "status_provoke"
+        case statusBomb = "status_bomb"
+        case counter
+        case extraTurn = "extra_turn"
+        case revive
+        case death
+        case waveEgypt = "wave_egypt"
+        case waveGreece = "wave_greece"
+        case waveNorse = "wave_norse"
+        case waveRome = "wave_rome"
+        case waveJade = "wave_jade"
+        case bossArrival = "boss_arrival"
+        case turnChime = "turn_chime"
+        // The player's level-up fanfare (W1.6).
+        case levelUp = "level_up"
+
+        /// The cue for a status landing on a unit. The barriers ring as
+        /// crystal, the five that change how a fight plays have their own,
+        /// every other buff chimes up and every other debuff falls. No
+        /// `default`, on purpose: a new status does not compile until it is
+        /// given a sound.
+        static func status(_ kind: StatusKind) -> Sound {
+            switch kind {
+            case .shield, .invincible, .immunity, .reflect:
+                return .statusShield
+            case .attackUp, .defenseUp, .speedUp, .critRateUp, .recovery, .counterStance, .endure:
+                return .statusBuff
+            case .stun:
+                return .statusStun
+            case .freeze:
+                return .statusFreeze
+            case .burn:
+                return .statusBurn
+            case .provoke:
+                return .statusProvoke
+            case .bomb:
+                return .statusBomb
+            case .attackDown, .defenseDown, .speedDown, .glancing, .brand, .sleep, .silence, .unrecoverable:
+                return .statusDebuff
+            }
+        }
+
+        /// The horn a realm sounds when a new wave takes the field: the five
+        /// realms with chapters have their own call, and the others borrow
+        /// the Greek salpinx until they have chapters of their own.
+        static func waveCall(for pantheon: Pantheon) -> Sound {
+            switch pantheon {
+            case .egyptian: return .waveEgypt
+            case .greek: return .waveGreece
+            case .norse: return .waveNorse
+            case .roman: return .waveRome
+            case .chinese: return .waveJade
+            case .japanese, .hindu, .mesopotamian, .aztec, .celtic, .slavic, .yoruba, .polynesian:
+                return .waveGreece
+            }
+        }
+
+        /// The loudest this sound may play, whatever the caller asks. The
+        /// turn chime rings on every one of the player's turns, so it stays
+        /// a murmur under the fight (FEEL.md W1.4). Nil lets the caller's
+        /// volume stand, as it always has.
+        var volumeCap: Float? {
+            switch self {
+            case .turnChime: return 0.35
+            default: return nil
+            }
+        }
+
+        /// Fewer voices than the usual four, for a sound that never overlaps
+        /// itself much: a horn call, a boss's arrival or the level-up plays
+        /// once, and every voice keeps its own copy of the file ready. Two
+        /// where a second can start while the first still rings (an extra
+        /// turn brings the chime round again inside a second), because a
+        /// voice restarted mid-ring clicks. Nil is the usual four.
+        var voices: Int? {
+            switch self {
+            case .waveEgypt, .waveGreece, .waveNorse, .waveRome, .waveJade, .bossArrival, .levelUp:
+                return 1
+            case .revive, .death, .extraTurn, .counter, .turnChime:
+                return 2
+            default:
+                return nil
+            }
+        }
     }
 
     var isMuted = false {
@@ -114,7 +210,8 @@ final class AudioLibrary {
     }
 
     /// How many simultaneous instances of one sound to allow. Multi-hit skills
-    /// land three or four hits within a quarter second.
+    /// land three or four hits within a quarter second. A sound that never
+    /// overlaps itself much asks for fewer (`Sound.voices`).
     private let voicesPerSound = 4
     private var pools: [Sound: [AVAudioPlayer]] = [:]
     private var nextVoice: [Sound: Int] = [:]
@@ -160,7 +257,7 @@ final class AudioLibrary {
         // a first play can each build a pool for the same sound, and an index
         // advanced on a larger one must not run past a smaller (2026-09-24).
         let player = players[index % players.count]
-        player.volume = volume
+        player.volume = sound.volumeCap.map { min(volume, $0) } ?? volume
         player.currentTime = 0
         player.play()
     }
@@ -176,7 +273,7 @@ final class AudioLibrary {
             return []
         }
         var players: [AVAudioPlayer] = []
-        for _ in 0..<voicesPerSound {
+        for _ in 0..<(sound.voices ?? voicesPerSound) {
             if let player = try? AVAudioPlayer(contentsOf: url) {
                 player.prepareToPlay()
                 players.append(player)

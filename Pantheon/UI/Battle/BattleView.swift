@@ -1527,6 +1527,8 @@ struct BattleResultView: View {
         sequence += 1
         let mine = sequence
         withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+        // A forfeit never reaches `.battleEnded`, so the music stops here too.
+        AudioLibrary.shared.stopMusic(fade: 0.4)
         AudioLibrary.shared.play(won ? .victory : .defeat, volume: 0.9)
         Juice.haptic(won ? .heavy : .medium)
 
@@ -2167,6 +2169,47 @@ struct RewardChestView: UIViewRepresentable {
             node.addChildNode(bandNode)
         }
         return node
+    }
+
+    /// The chest's scene goes when the view leaves, in the order the summon
+    /// reveal's does (`SummonStageView.dismantleUIView`): the renderer
+    /// stopped first, the particle hosts dismissed the way an effect leaves
+    /// the stage, every action stopped, and only half a second later the
+    /// nodes removed and the scene let go. A representable with no teardown
+    /// keeps its scene for as long as SwiftUI keeps the view: the reveal's
+    /// did, and CI run 242's summon stress climbed 30 MB a reveal to 1.4 GB
+    /// (2026-09-24).
+    static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
+        uiView.isPlaying = false
+        uiView.rendersContinuously = false
+        uiView.delegate = nil
+        guard let root = uiView.scene?.rootNode else {
+            coordinator.scene = nil
+            coordinator.lid = nil
+            return
+        }
+        for child in root.childNodes {
+            var carries = false
+            child.enumerateHierarchy { node, stop in
+                if let systems = node.particleSystems, !systems.isEmpty {
+                    carries = true
+                    stop.pointee = true
+                }
+            }
+            if carries { VFXLibrary.dismiss(child, reportsLive: false) }
+        }
+        root.enumerateHierarchy { node, _ in
+            node.removeAllActions()
+            node.removeAllAnimations()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            for child in root.childNodes {
+                child.removeFromParentNode()
+            }
+            uiView.scene = nil
+            coordinator.scene = nil
+            coordinator.lid = nil
+        }
     }
 
     private static func standInLid() -> SCNNode {
