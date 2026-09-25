@@ -2068,31 +2068,73 @@
       "judge_notes": "Wind-up (f0-f35): the rattle is already overhead at f0, so the arm is never raised from the stance; the idle cross-fade covers that. It is held still, not shaken, with a small bob and a long step forward on the left foot (f24-f33). Release (f36-f45): a skip, the right heel kicking up behind, as both arms swing out wide to shoulder height. The arms are fastest at f41 (3.7/3.1 m/s) and fully open at"
     },
     "hephaestus_attack_basic": {
-      "prompt": "Fighting stance, both hands gripping a big smith's hammer, they swing back low beside the right leg, then a heavy step forward and a rising two-handed uppercut swing up and forward into the target's chest, the hips driving through it and the body rising onto the front foot, then back to the fighting stance. In place.",
+      "history": [
+        {
+          "prompt": "Fighting stance, both hands gripping a big smith's hammer, they swing back low beside the right leg, then a heavy step forward and a rising two-handed uppercut swing up and forward into the target's chest, the hips driving through it and the body rising onto the front foot, then back to the fighting stance. In place.",
+          "seconds": 2.0,
+          "mode": "prime",
+          "role": "basic",
+          "queued": "2026-09-25T16:45:23Z",
+          "state": "archived",
+          "touched": 1790359124.828571,
+          "motion_task": "01a0d977-49fd-75fd-9839-b611db929d32",
+          "motion_created": "2026-09-25T16:47:49Z",
+          "balance_before": 2828,
+          "motion_status": "SUCCEEDED",
+          "motion_urls": {
+            "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d977-49fd-75fd-9839-b611db929d32/output/clip.fbx?Expires=1790614085&Signature=ehgh0oHgzBXmjCNEhPGTaH3UHfRESNRdK4MnEODxr5vuvCGeHCFlTcJAacuasqEKhirSf3nQXUDuJJFUwmnP6YlOAoV4-Q209i6O~isIqWopo5q6PJWBGvMLLCVWW0kK0MSPv-f8vB~6ze3NadW-L1SqRLc4603EPjrVqakxfcPV5XzG~LmTZonuIdqjZG0kVHRCLwmQsEERuoBuMPXyAXKtxE~zaSAT3EVFvwpLXqXMOepAAMQUN0KXQ3xdQW4njE6N8is6Lu8nXvG3l8KU1IG5adhqCtGl5QZxdAZv9chQmWhPbc4ZobA-~7atO98avXT21QKBFyugRcuGX9DO6g__&Key-Pair-Id=K1VGYTHIYLM9UM"
+          },
+          "clip_task": "01a0d977-98e9-76d3-a9cd-b1e5c2ddab2a",
+          "clip_created": "2026-09-25T16:48:09Z",
+          "donor": "shield_maiden_serious",
+          "clip_status": "SUCCEEDED",
+          "archived": "Art/Motions/hephaestus_attack_basic.motion.npz",
+          "frames": 60,
+          "fps": 30.0,
+          "seconds_made": 2.0,
+          "blow_frame": 19,
+          "blow_fraction": 0.322,
+          "archived_at": "2026-09-25T16:48:26Z",
+          "contact_frames": [
+            21,
+            43
+          ],
+          "contacts": [
+            0.356,
+            0.729
+          ],
+          "judged": "reroll",
+          "judged_prompt": "Fighting stance, both hands gripping a big smith's hammer, they swing back low beside the right leg, then a heavy step forward and a rising two-handed uppercut swing up and forward into the target's chest, the hips driving through it and the body rising onto the front foot, then back to the fighting stance. In place.",
+          "judge_reason": "Wrong count, and it travels. The wind-up twists her about 100 degrees to her LEFT (hips +106 at f11, chest +110 at f13; the chest is more than 90 degrees off the target for f9-f15) and bends her double (head 1.46 to 1.11 m). The hands go low beside her LEFT knee (f6-f14), not the right leg. The 'uppercut' is a flat sweep across the belly from her left to her right (f21: right hand at 1.16 m, 8.9 m/s). The arms carry on up over the right shoulder and are held overhead for about 0.4 s (f28-f40). Then a second fast swing brings them forward and down to shoulder height in front (f41-f44, 6.5 m/s),",
+          "judge_notes": "Board /tmp/judge_4_hephaestus_attack_basic.jpg. Also re-rendered f0-f59 with a back view, and f17-f24 and f39-f46 at every frame. Contacts: f21 is the first swing crossing the front (elbow 162 deg, 0.44 m ahead of the hips). f43 is the second swing crossing in front at 1.38 m with the chest square (+2 deg). The auto peak f5 is the wind-up starting. Relative to the hips it ends on its stance (RMS 0",
+          "suggested": "Fighting stance, the chest square to the target, both hands gripping a big smith's hammer. The hammer swings back low beside the right hip, the shoulders turning a little right, then one rising two-handed uppercut straight up the middle into the target's chest as the legs drive up, the hammer stopping at shoulder height in front, then back to the fighting stance. In place."
+        }
+      ],
+      "prompt": "Fighting stance, the chest square to the target, both hands gripping a big smith's hammer. The hammer swings back low beside the right hip, the shoulders turning a little right, then one rising two-handed uppercut straight up the middle into the target's chest as the legs drive up, the hammer stopping at shoulder height in front, then back to the fighting stance. In place.",
       "seconds": 2.0,
       "mode": "prime",
       "role": "basic",
-      "queued": "2026-09-25T16:45:23Z",
+      "queued": "2026-09-25T17:59:00Z",
       "state": "archived",
-      "touched": 1790354906.0685842,
-      "motion_task": "01a0d977-49fd-75fd-9839-b611db929d32",
-      "motion_created": "2026-09-25T16:47:49Z",
-      "balance_before": 2828,
+      "touched": 1790359170.896437,
+      "motion_task": "01a0d9b8-7e96-7286-ba98-a887972f2678",
+      "motion_created": "2026-09-25T17:59:02Z",
+      "balance_before": 283,
       "motion_status": "SUCCEEDED",
       "motion_urls": {
-        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d977-49fd-75fd-9839-b611db929d32/output/clip.fbx?Expires=1790614085&Signature=ehgh0oHgzBXmjCNEhPGTaH3UHfRESNRdK4MnEODxr5vuvCGeHCFlTcJAacuasqEKhirSf3nQXUDuJJFUwmnP6YlOAoV4-Q209i6O~isIqWopo5q6PJWBGvMLLCVWW0kK0MSPv-f8vB~6ze3NadW-L1SqRLc4603EPjrVqakxfcPV5XzG~LmTZonuIdqjZG0kVHRCLwmQsEERuoBuMPXyAXKtxE~zaSAT3EVFvwpLXqXMOepAAMQUN0KXQ3xdQW4njE6N8is6Lu8nXvG3l8KU1IG5adhqCtGl5QZxdAZv9chQmWhPbc4ZobA-~7atO98avXT21QKBFyugRcuGX9DO6g__&Key-Pair-Id=K1VGYTHIYLM9UM"
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b8-7e96-7286-ba98-a887972f2678/output/clip.fbx?Expires=1790618355&Signature=YVovPTGI9l3VmiiZn9~zbklwIbe6Nc62z2lAo7Eb47TZsASCc14kGZAd9fNIT0rHXrhQE9mK-gv3dYN-6c7ULleecmH5OordAAN9KvkffBGbSorzmubIAH1eoCmZDZ64rs5fcccz5pS0F51ADbRHFDlaU4orDxbFdxu8iYyQ469IYiDGJwBo3QHpiqhh2DJL-TXGYd7-VLflrAVn5O4dw3bQA~c4l~sxMA2Re9mdChYLDEPqDwOGHTlZ8yIAyq3Cg2guNywCKPPttRBIl39IsLTbl-hwYOhWV1rCeYu98HM712~QZR39sZ4TTN7P7NFE4zMfQTVlVyRyxwygQq7u-w__&Key-Pair-Id=K1VGYTHIYLM9UM"
       },
-      "clip_task": "01a0d977-98e9-76d3-a9cd-b1e5c2ddab2a",
-      "clip_created": "2026-09-25T16:48:09Z",
+      "clip_task": "01a0d9b8-b9c3-7468-b7ae-a0f03f5eac49",
+      "clip_created": "2026-09-25T17:59:17Z",
       "donor": "shield_maiden_serious",
       "clip_status": "SUCCEEDED",
       "archived": "Art/Motions/hephaestus_attack_basic.motion.npz",
       "frames": 60,
       "fps": 30.0,
       "seconds_made": 2.0,
-      "blow_frame": 19,
-      "blow_fraction": 0.322,
-      "archived_at": "2026-09-25T16:48:26Z"
+      "blow_frame": 25,
+      "blow_fraction": 0.424,
+      "archived_at": "2026-09-25T17:59:30Z"
     },
     "hephaestus_ultimate": {
       "prompt": "Fighting stance, a roaring war cry as the right hand flings a big smith's hammer high overhead and whirls it once in a wide circle above the head, the chest thrust out, then the left hand joins it and a big step forward brings it crashing down onto the target with the whole body behind it, as if striking an anvil, then back to the fighting stance. In place.",
@@ -2101,7 +2143,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T16:45:23Z",
       "state": "archived",
-      "touched": 1790354907.1080806,
+      "touched": 1790359124.8297753,
       "motion_task": "01a0d977-4c5b-72d4-a292-0df4e46a0680",
       "motion_created": "2026-09-25T16:47:50Z",
       "balance_before": 2818,
@@ -2119,7 +2161,17 @@
       "seconds_made": 3.0,
       "blow_frame": 35,
       "blow_fraction": 0.393,
-      "archived_at": "2026-09-25T16:48:27Z"
+      "archived_at": "2026-09-25T16:48:27Z",
+      "contact_frames": [
+        40
+      ],
+      "contacts": [
+        0.449
+      ],
+      "judged": "keep",
+      "judged_prompt": "Fighting stance, a roaring war cry as the right hand flings a big smith's hammer high overhead and whirls it once in a wide circle above the head, the chest thrust out, then the left hand joins it and a big step forward brings it crashing down onto the target with the whole body behind it, as if striking an anvil, then back to the fighting stance. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board /tmp/judge_4_hephaestus_ultimate.jpg. Also re-rendered f9-f46 with a back view, and f35-f44 at every frame. Wind-up f10-f33: the arms spread and rise, the left arm straight up (2.06 m) and the right hand cocked behind the right shoulder. Both hands gather behind the head by f25 and hold there to f30, the hips rising to 1.04 m. There is no clear whirl: the right hand only arcs round the right"
     },
     "hera_attack_basic": {
       "prompt": "A standing queen's pose, the chin lifted, the right hand, holding a sceptre, rises to hold it upright in front of the face, then snaps it down and forward to point straight at the target at shoulder height in one sharp, imperious stroke, the left arm still at the side, and settles back to standing. In place.",
@@ -2128,7 +2180,7 @@
       "role": "basic",
       "queued": "2026-09-25T16:45:23Z",
       "state": "archived",
-      "touched": 1790354917.4985905,
+      "touched": 1790359124.8352249,
       "motion_task": "01a0d977-77f4-7418-8d24-ede165811f5e",
       "motion_created": "2026-09-25T16:48:01Z",
       "balance_before": 2799,
@@ -2146,7 +2198,17 @@
       "seconds_made": 2.0,
       "blow_frame": 16,
       "blow_fraction": 0.271,
-      "archived_at": "2026-09-25T16:48:37Z"
+      "archived_at": "2026-09-25T16:48:37Z",
+      "contact_frames": [
+        18
+      ],
+      "contacts": [
+        0.305
+      ],
+      "judged": "keep",
+      "judged_prompt": "A standing queen's pose, the chin lifted, the right hand, holding a sceptre, rises to hold it upright in front of the face, then snaps it down and forward to point straight at the target at shoulder height in one sharp, imperious stroke, the left arm still at the side, and settles back to standing. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board /tmp/judge_4_hera_attack_basic.jpg. Also re-rendered every 2 frames with a back view, and f14-f21 and f34-f45 at every frame. At f0 the sceptre hand is already at the shoulder (1.55 m). From f1 to f4 it rises straight overhead in front of the face (1.87 m), then it draws back behind the head (f5-f15). Then one sharp snap down and forward, f16-f18 (12.6 m/s at f16). At f18 the hand is at its "
     },
     "hera_ultimate": {
       "prompt": "A standing queen's pose, the chin raised, both arms sweep slowly out to the sides and up into a wide fan above the shoulders like a peacock spreading its tail, the right hand holding a sceptre, held for a moment, then both arms sweep forward and outward, lowering to shoulder height with the palms down like a decree laid over the allies, and settles back to standing. In place.",
@@ -2155,7 +2217,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T16:45:23Z",
       "state": "archived",
-      "touched": 1790354918.5834749,
+      "touched": 1790359124.8364015,
       "motion_task": "01a0d977-7bc2-77fa-953b-9dbd4a9d8604",
       "motion_created": "2026-09-25T16:48:01Z",
       "balance_before": 2789,
@@ -2173,34 +2235,84 @@
       "seconds_made": 3.0,
       "blow_frame": 31,
       "blow_fraction": 0.348,
-      "archived_at": "2026-09-25T16:48:38Z"
+      "archived_at": "2026-09-25T16:48:38Z",
+      "contact_frames": [
+        31
+      ],
+      "contacts": [
+        0.348
+      ],
+      "judged": "keep",
+      "judged_prompt": "A standing queen's pose, the chin raised, both arms sweep slowly out to the sides and up into a wide fan above the shoulders like a peacock spreading its tail, the right hand holding a sceptre, held for a moment, then both arms sweep forward and outward, lowering to shoulder height with the palms down like a decree laid over the allies, and settles back to standing. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board /tmp/judge_4_hera_ultimate.jpg. Also re-rendered at key frames with a back view. Wind-up: a small knee dip (f0-f5), then both straight arms sweep out and up (f5-f17, 6.7 m/s at f11) into a wide V overhead (hands 2.0 m, 1.0 m apart), held f17-f25. Release: both arms open down and outward to a wide T at shoulder height (f26-f37). The one burst is at f31 (2.8 m/s, hands 1.78 m, spread 1.30 m), "
     },
     "heracles_attack_basic": {
-      "prompt": "Fighting stance, broad and heavy, the right hand, holding a heavy club, swings back and up over the right shoulder, then a stomping step forward with the left foot and a crushing one-handed blow down and across onto the target's shoulder, the hips and torso turning hard behind it and the left arm swinging back, then back to the fighting stance. In place.",
+      "history": [
+        {
+          "prompt": "Fighting stance, broad and heavy, the right hand, holding a heavy club, swings back and up over the right shoulder, then a stomping step forward with the left foot and a crushing one-handed blow down and across onto the target's shoulder, the hips and torso turning hard behind it and the left arm swinging back, then back to the fighting stance. In place.",
+          "seconds": 2.0,
+          "mode": "prime",
+          "role": "basic",
+          "queued": "2026-09-25T16:45:23Z",
+          "state": "archived",
+          "touched": 1790359124.8373845,
+          "motion_task": "01a0d977-7ecb-7009-bc53-b41ecb55108e",
+          "motion_created": "2026-09-25T16:48:02Z",
+          "balance_before": 2779,
+          "motion_status": "SUCCEEDED",
+          "motion_urls": {
+            "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d977-7ecb-7009-bc53-b41ecb55108e/output/clip.fbx?Expires=1790614098&Signature=ZLxhN-NZbXUCgqFcPToMd-ht5nmxMyR9wlqTDLC1sXRUqCP3tvnlumNlnwccYu09AgCLmT6CrQ-55fYc2mEcUk2IGWMzzU6aITa6M~yzl9lYBo~SWl~4w-AV65MNhFT-JwKcsQ-7WdmwBrw49bKJOwGVkTk4DLb3eTF9jiTeR2h-Umm0r~WS5xPJ721lEHUTSZd-GJjLX7rPlQFvff03pWYk~FELPAnTusrIEbMEorKrtHx-zKJRAN71CtE~JdVfjfdgmaiaBLdJmemu5e8-0WYHTtyg2lRFbNGzLK5UtFxMDllV6gbGENxqaAdtsz~Ngxr7JZwGDvGp~4XXwI8bzw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+          },
+          "clip_task": "01a0d977-e720-73e6-96b4-cfb5cecb55f4",
+          "clip_created": "2026-09-25T16:48:29Z",
+          "donor": "shield_maiden_serious",
+          "clip_status": "SUCCEEDED",
+          "archived": "Art/Motions/heracles_attack_basic.motion.npz",
+          "frames": 60,
+          "fps": 30.0,
+          "seconds_made": 2.0,
+          "blow_frame": 19,
+          "blow_fraction": 0.322,
+          "archived_at": "2026-09-25T16:48:39Z",
+          "contact_frames": [
+            11
+          ],
+          "contacts": [
+            0.186
+          ],
+          "judged": "reroll",
+          "judged_prompt": "Fighting stance, broad and heavy, the right hand, holding a heavy club, swings back and up over the right shoulder, then a stomping step forward with the left foot and a crushing one-handed blow down and across onto the target's shoulder, the hips and torso turning hard behind it and the left arm swinging back, then back to the fighting stance. In place.",
+          "judge_reason": "Her back is turned for over a second, and the blow is not the one asked for. The left hand joins the club on the raise (hands 0.17 m apart at f7-f8), so the one-handed blow is two-handed. The chop is a flat sweep from right to left at head height (1.6-1.7 m). It crosses the target line at f9-f10, is fastest at f11 (10.5 m/s), never comes down onto the shoulder, and carries on round to her left and behind. The body keeps turning after it: the hips reach 138 deg and the chest 161 deg left. The chest is more than 90 deg off the target for 35 of the 60 frames (f13-f47, about 1.2 s), so from the ba",
+          "judge_notes": "Board /tmp/judge_4_heracles_attack_basic.jpg. Also re-rendered at key frames with a back view (the front view shows her back from f20 to f40). Contact f11 is the chop at its speed peak: right hand 1.63 m, 0.55 m out, 55 deg left, 10.5 m/s; left hand 12.4 m/s. It crossed straight ahead at head height at f10. The auto peaks 5, 17, 36 and 42 are the raise, the follow-through carried round behind her,",
+          "suggested": "Fighting stance, broad and heavy, a heavy club in the right hand, the left arm out for balance. The club swings back and up over the right shoulder, then a short stomp forward on the left foot and one crushing one-handed blow straight down onto the target's shoulder, the chest square to the target, the club stopping at waist height, then back to the fighting stance. In place."
+        }
+      ],
+      "prompt": "Fighting stance, broad and heavy, a heavy club in the right hand, the left arm out for balance. The club swings back and up over the right shoulder, then a short stomp forward on the left foot and one crushing one-handed blow straight down onto the target's shoulder, the chest square to the target, the club stopping at waist height, then back to the fighting stance. In place.",
       "seconds": 2.0,
       "mode": "prime",
       "role": "basic",
-      "queued": "2026-09-25T16:45:23Z",
+      "queued": "2026-09-25T17:59:00Z",
       "state": "archived",
-      "touched": 1790354919.8911085,
-      "motion_task": "01a0d977-7ecb-7009-bc53-b41ecb55108e",
-      "motion_created": "2026-09-25T16:48:02Z",
-      "balance_before": 2779,
+      "touched": 1790359172.0940976,
+      "motion_task": "01a0d9b8-81c0-70b8-9eca-b50b7d538fe9",
+      "motion_created": "2026-09-25T17:59:03Z",
+      "balance_before": 273,
       "motion_status": "SUCCEEDED",
       "motion_urls": {
-        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d977-7ecb-7009-bc53-b41ecb55108e/output/clip.fbx?Expires=1790614098&Signature=ZLxhN-NZbXUCgqFcPToMd-ht5nmxMyR9wlqTDLC1sXRUqCP3tvnlumNlnwccYu09AgCLmT6CrQ-55fYc2mEcUk2IGWMzzU6aITa6M~yzl9lYBo~SWl~4w-AV65MNhFT-JwKcsQ-7WdmwBrw49bKJOwGVkTk4DLb3eTF9jiTeR2h-Umm0r~WS5xPJ721lEHUTSZd-GJjLX7rPlQFvff03pWYk~FELPAnTusrIEbMEorKrtHx-zKJRAN71CtE~JdVfjfdgmaiaBLdJmemu5e8-0WYHTtyg2lRFbNGzLK5UtFxMDllV6gbGENxqaAdtsz~Ngxr7JZwGDvGp~4XXwI8bzw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b8-81c0-70b8-9eca-b50b7d538fe9/output/clip.fbx?Expires=1790618357&Signature=mUjYYh6G5rHYjv6VghqaB~SUJu~PjfWe0ZGzk~ETbAGOLIsgfiCI4LJOwPXRqpzeYqdEv2AmGJABTVAyqIDU~iYtNp4CrqawAYShcwWlrsKUovNZBpeIEdeNC0WZ3effE7DRysKIjLQFVoaskj9tTnKr~YGObQsWZ4x4P938~8CRPtVSojVKkWqqPn81v48gBHskTnV~-DuTWzb53WsKaIgitwdfYhT9iIQbHlxkW2gTzPkpT94rdch9P6J-sCXlUHN~LC91pxWADktMZVqKLFsImIRWqqG56NM482A~OJcewkKAPfX-qXxEZGi-weDmjDGP8kysnC2VbFPh~64p3g__&Key-Pair-Id=K1VGYTHIYLM9UM"
       },
-      "clip_task": "01a0d977-e720-73e6-96b4-cfb5cecb55f4",
-      "clip_created": "2026-09-25T16:48:29Z",
+      "clip_task": "01a0d9b8-bc0a-7431-bfd5-e5715c930b3d",
+      "clip_created": "2026-09-25T17:59:18Z",
       "donor": "shield_maiden_serious",
       "clip_status": "SUCCEEDED",
       "archived": "Art/Motions/heracles_attack_basic.motion.npz",
       "frames": 60,
       "fps": 30.0,
       "seconds_made": 2.0,
-      "blow_frame": 19,
-      "blow_fraction": 0.322,
-      "archived_at": "2026-09-25T16:48:39Z"
+      "blow_frame": 21,
+      "blow_fraction": 0.356,
+      "archived_at": "2026-09-25T17:59:32Z"
     },
     "heracles_ultimate": {
       "prompt": "Fighting stance, both hands grip a heavy club and raise it high overhead, the elbows and knees bent as if holding up the sky, straining for a moment, then a roaring heave and a colossal two-handed smash straight down onto the target, the hands stopping at knee height as the knees bend deep and the whole weight crashes behind it, then heaving back up to the fighting stance. In place.",
@@ -2209,7 +2321,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T16:45:23Z",
       "state": "archived",
-      "touched": 1790354921.061469,
+      "touched": 1790359124.8386755,
       "motion_task": "01a0d977-8269-7576-926b-1228ab940a15",
       "motion_created": "2026-09-25T16:48:03Z",
       "balance_before": 2769,
@@ -2227,34 +2339,84 @@
       "seconds_made": 3.0,
       "blow_frame": 20,
       "blow_fraction": 0.225,
-      "archived_at": "2026-09-25T16:48:41Z"
+      "archived_at": "2026-09-25T16:48:41Z",
+      "contact_frames": [
+        20
+      ],
+      "contacts": [
+        0.225
+      ],
+      "judged": "keep",
+      "judged_prompt": "Fighting stance, both hands grip a heavy club and raise it high overhead, the elbows and knees bent as if holding up the sky, straining for a moment, then a roaring heave and a colossal two-handed smash straight down onto the target, the hands stopping at knee height as the knees bend deep and the whole weight crashes behind it, then heaving back up to the fighting stance. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board /tmp/judge_4_heracles_ultimate.jpg. Also re-rendered f7-f23 and the ending with a back view. Wind-up: both hands raise the club overhead with the elbows bent (f0-f7, the 'holding up the sky' pose), held to f15 as the knees bend. Then one colossal two-handed smash, f16-f23. At f20 the hands are at full forward reach (0.81 m) passing chest height (1.22-1.29 m). The speed peaks at 17 m/s at f21"
     },
     "hermes_attack_basic": {
-      "prompt": "A standing, light-footed pose on the balls of the feet, the right hand, holding a winged staff, cocks back beside the right shoulder, then a quick springy step onto the left foot, the right leg swinging up behind, as the right arm flicks forward like throwing a dart at the target at chest height, then the right foot comes back down and settles back to standing. In place.",
+      "history": [
+        {
+          "prompt": "A standing, light-footed pose on the balls of the feet, the right hand, holding a winged staff, cocks back beside the right shoulder, then a quick springy step onto the left foot, the right leg swinging up behind, as the right arm flicks forward like throwing a dart at the target at chest height, then the right foot comes back down and settles back to standing. In place.",
+          "seconds": 2.0,
+          "mode": "prime",
+          "role": "basic",
+          "queued": "2026-09-25T16:45:23Z",
+          "state": "archived",
+          "touched": 1790359124.8398135,
+          "motion_task": "01a0d977-8578-75fc-8eaa-c9b86f7a20de",
+          "motion_created": "2026-09-25T16:48:04Z",
+          "balance_before": 2759,
+          "motion_status": "SUCCEEDED",
+          "motion_urls": {
+            "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d977-8578-75fc-8eaa-c9b86f7a20de/output/clip.fbx?Expires=1790614107&Signature=KmcSxTWnxUsQx2nStDdyRt0mHSnCjrE4C2Xva5hg9FbUwdaAHo90zef18BwrFvBwciXSO7yH4aYVj~2Z5B2FMdzHI6-HAaMvycuysPwPLKHcaUEZJugmhlhAPBwm6T40sHkOy2c9dF8G2wzGgWfznGduv4AbcCN~A5SGzSaSC7byLOi4PSJQDgXBtuTc8KDBw3ZzbaBrIZOI-FOqy7hEftRDFYkOIjRgkTOV~5KQW4S7bjmPagAJKGf11bjXmJii8fWTdw~JXKsIB1nD62FOZ0rIacl8r1Y159-V6P3iBYjkpWEO7SfaR9hsPABM8AusjSP8U9cVL~UoJAFD~93~QA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+          },
+          "clip_task": "01a0d977-ed63-7253-9f8a-aa70f2aac61d",
+          "clip_created": "2026-09-25T16:48:30Z",
+          "donor": "shield_maiden_serious",
+          "clip_status": "SUCCEEDED",
+          "archived": "Art/Motions/hermes_attack_basic.motion.npz",
+          "frames": 60,
+          "fps": 30.0,
+          "seconds_made": 2.0,
+          "blow_frame": 16,
+          "blow_fraction": 0.271,
+          "archived_at": "2026-09-25T16:48:42Z",
+          "contact_frames": [
+            17
+          ],
+          "contacts": [
+            0.288
+          ],
+          "judged": "reroll",
+          "judged_prompt": "A standing, light-footed pose on the balls of the feet, the right hand, holding a winged staff, cocks back beside the right shoulder, then a quick springy step onto the left foot, the right leg swinging up behind, as the right arm flicks forward like throwing a dart at the target at chest height, then the right foot comes back down and settles back to standing. In place.",
+          "judge_reason": "There is no throw. The right hand starts beside the shoulder (1.53 m) and drifts back (f1-f10). It then rises straight overhead (f11-f20, fastest 5.3 m/s at f16) to 2.25 m directly above the hips, never more than 0.16 m in front of them. It stays up there while the right leg lifts behind and the hips rise 0.24 m (f17-f33), then comes back down to the shoulder by f45. Nothing moves toward the target, and the chest turns up to 84 deg left (f24-f27). It reads as a one-legged skyward salute, not an attack.",
+          "judge_notes": "Board /tmp/judge_4_hermes_attack_basic.jpg. Also re-rendered at key frames with a back view. Contact 17 is only the strongest beat (the arm thrusting up, the tool's peak); nothing is released at the target. Drift 0.32 m, it ends on its start pose (RMS 0.03 m), and no arm passes through the body. The new sentence drops 'the right leg swinging up behind' (it became the one-legged pose with the arm r",
+          "suggested": "A light-footed standing pose, a winged staff in the right hand, drawn back beside the right ear. A small springy step forward onto the left foot as the right arm whips forward in one quick overhand dart throw straight at the target at chest height, the arm ending straight and pointed at the target, the chest square to it, then settles back to standing. In place."
+        }
+      ],
+      "prompt": "A light-footed standing pose, a winged staff in the right hand, drawn back beside the right ear. A small springy step forward onto the left foot as the right arm whips forward in one quick overhand dart throw straight at the target at chest height, the arm ending straight and pointed at the target, the chest square to it, then settles back to standing. In place.",
       "seconds": 2.0,
       "mode": "prime",
       "role": "basic",
-      "queued": "2026-09-25T16:45:23Z",
+      "queued": "2026-09-25T17:59:00Z",
       "state": "archived",
-      "touched": 1790354922.1899927,
-      "motion_task": "01a0d977-8578-75fc-8eaa-c9b86f7a20de",
-      "motion_created": "2026-09-25T16:48:04Z",
-      "balance_before": 2759,
+      "touched": 1790359185.6458545,
+      "motion_task": "01a0d9b8-847e-77c3-84d8-cf46d351ac6f",
+      "motion_created": "2026-09-25T17:59:04Z",
+      "balance_before": 263,
       "motion_status": "SUCCEEDED",
       "motion_urls": {
-        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d977-8578-75fc-8eaa-c9b86f7a20de/output/clip.fbx?Expires=1790614107&Signature=KmcSxTWnxUsQx2nStDdyRt0mHSnCjrE4C2Xva5hg9FbUwdaAHo90zef18BwrFvBwciXSO7yH4aYVj~2Z5B2FMdzHI6-HAaMvycuysPwPLKHcaUEZJugmhlhAPBwm6T40sHkOy2c9dF8G2wzGgWfznGduv4AbcCN~A5SGzSaSC7byLOi4PSJQDgXBtuTc8KDBw3ZzbaBrIZOI-FOqy7hEftRDFYkOIjRgkTOV~5KQW4S7bjmPagAJKGf11bjXmJii8fWTdw~JXKsIB1nD62FOZ0rIacl8r1Y159-V6P3iBYjkpWEO7SfaR9hsPABM8AusjSP8U9cVL~UoJAFD~93~QA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b8-847e-77c3-84d8-cf46d351ac6f/output/clip.fbx?Expires=1790618369&Signature=evcKdaFXPhz1nYjGvpqtt1I-BD-kvtmpKjcpauUfAjMstsjy22-wywrVhCJ62meEcHVBKtK243SySGzk9sGuQ6LIL~AY6igwQOmHebSxsLF5ZM2J6j57dDeWQ9K4eWON0E~qJVtaH-6rLtvRmCXc2WZ~ZgtQ4VyA9IHApC6tB5Ra8ZhKs0Mkap3McWYMPS9-1GNGKhtmeDQfaU0-qPvhJL2D-cdmrSWQV2XHoW5a5qr900grWvc048q3x9o8q9H-Pfx~jl4J2cgJRvfzSnMakPDV3kMviBAV8KoMka2LBA8zJIju2ZeExa34xlIp~4g2QIHCkUxjDNrX~IuChpDonw__&Key-Pair-Id=K1VGYTHIYLM9UM"
       },
-      "clip_task": "01a0d977-ed63-7253-9f8a-aa70f2aac61d",
-      "clip_created": "2026-09-25T16:48:30Z",
+      "clip_task": "01a0d9b8-f594-7147-971a-41c3516f3aeb",
+      "clip_created": "2026-09-25T17:59:32Z",
       "donor": "shield_maiden_serious",
       "clip_status": "SUCCEEDED",
       "archived": "Art/Motions/hermes_attack_basic.motion.npz",
       "frames": 60,
       "fps": 30.0,
       "seconds_made": 2.0,
-      "blow_frame": 16,
-      "blow_fraction": 0.271,
-      "archived_at": "2026-09-25T16:48:42Z"
+      "blow_frame": 21,
+      "blow_fraction": 0.356,
+      "archived_at": "2026-09-25T17:59:45Z"
     },
     "hermes_ultimate": {
       "history": [
@@ -2302,8 +2464,8 @@
       "mode": "prime",
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "clip",
-      "touched": 1790359025.9826953,
+      "state": "archived",
+      "touched": 1790359249.3954394,
       "motion_task": "01a0d9b6-7126-71e8-a828-46bf225093f3",
       "motion_created": "2026-09-25T17:56:47Z",
       "balance_before": 388,
@@ -2313,7 +2475,15 @@
       },
       "clip_task": "01a0d9b6-b7bd-778b-b4bb-849dd547f783",
       "clip_created": "2026-09-25T17:57:05Z",
-      "donor": "shield_maiden_serious"
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/hermes_ultimate.motion.npz",
+      "frames": 105,
+      "fps": 30.0,
+      "seconds_made": 3.5,
+      "blow_frame": 90,
+      "blow_fraction": 0.865,
+      "archived_at": "2026-09-25T18:00:49Z"
     },
     "hoplite_attack_basic": {
       "history": [
@@ -2361,8 +2531,8 @@
       "mode": "prime",
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "clip",
-      "touched": 1790359026.7800689,
+      "state": "archived",
+      "touched": 1790359250.3056445,
       "motion_task": "01a0d9b6-7401-7004-9069-82e66e5e5410",
       "motion_created": "2026-09-25T17:56:48Z",
       "balance_before": 378,
@@ -2372,7 +2542,15 @@
       },
       "clip_task": "01a0d9b6-baee-75fb-9a13-ec9b8f82bde1",
       "clip_created": "2026-09-25T17:57:06Z",
-      "donor": "shield_maiden_serious"
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/hoplite_attack_basic.motion.npz",
+      "frames": 60,
+      "fps": 30.0,
+      "seconds_made": 2.0,
+      "blow_frame": 12,
+      "blow_fraction": 0.203,
+      "archived_at": "2026-09-25T18:00:50Z"
     },
     "horus_attack_basic": {
       "history": [
@@ -2422,8 +2600,8 @@
       "mode": "prime",
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "clip",
-      "touched": 1790359027.5416074,
+      "state": "archived",
+      "touched": 1790359251.586181,
       "motion_task": "01a0d9b6-76da-74f8-a196-b60c5e5aff47",
       "motion_created": "2026-09-25T17:56:49Z",
       "balance_before": 368,
@@ -2433,7 +2611,15 @@
       },
       "clip_task": "01a0d9b6-bdbb-768b-acc9-022a969b34ce",
       "clip_created": "2026-09-25T17:57:07Z",
-      "donor": "shield_maiden_serious"
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/horus_attack_basic.motion.npz",
+      "frames": 75,
+      "fps": 30.0,
+      "seconds_made": 2.5,
+      "blow_frame": 26,
+      "blow_fraction": 0.351,
+      "archived_at": "2026-09-25T18:00:51Z"
     },
     "horus_ultimate": {
       "history": [
@@ -2481,8 +2667,8 @@
       "mode": "prime",
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "clip",
-      "touched": 1790359032.112487,
+      "state": "archived",
+      "touched": 1790359252.657386,
       "motion_task": "01a0d9b6-79e3-7117-a399-b0afe6e09cbd",
       "motion_created": "2026-09-25T17:56:50Z",
       "balance_before": 358,
@@ -2492,7 +2678,15 @@
       },
       "clip_task": "01a0d9b6-cf74-707c-8ee7-5bad42471b28",
       "clip_created": "2026-09-25T17:57:12Z",
-      "donor": "shield_maiden_serious"
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/horus_ultimate.motion.npz",
+      "frames": 90,
+      "fps": 30.0,
+      "seconds_made": 3.0,
+      "blow_frame": 33,
+      "blow_fraction": 0.371,
+      "archived_at": "2026-09-25T18:00:52Z"
     },
     "isis_attack_basic": {
       "history": [
@@ -2536,8 +2730,8 @@
       "mode": "prime",
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "clip",
-      "touched": 1790359030.5444713,
+      "state": "archived",
+      "touched": 1790359254.705867,
       "motion_task": "01a0d9b6-7d51-779a-945a-df72e49002de",
       "motion_created": "2026-09-25T17:56:50Z",
       "balance_before": 348,
@@ -2547,7 +2741,15 @@
       },
       "clip_task": "01a0d9b6-c922-754b-a89a-7cc5298ef5fb",
       "clip_created": "2026-09-25T17:57:10Z",
-      "donor": "shield_maiden_serious"
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/isis_attack_basic.motion.npz",
+      "frames": 60,
+      "fps": 30.0,
+      "seconds_made": 2.0,
+      "blow_frame": 35,
+      "blow_fraction": 0.593,
+      "archived_at": "2026-09-25T18:00:54Z"
     },
     "isis_ultimate": {
       "history": [
@@ -2591,11 +2793,26 @@
       "mode": "prime",
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "motion",
-      "touched": 1790359011.5908756,
+      "state": "archived",
+      "touched": 1790359276.5905695,
       "motion_task": "01a0d9b6-7fe9-705d-88f0-0679f216ed17",
       "motion_created": "2026-09-25T17:56:51Z",
-      "balance_before": 338
+      "balance_before": 338,
+      "motion_status": "SUCCEEDED",
+      "motion_urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b6-7fe9-705d-88f0-0679f216ed17/output/clip.fbx?Expires=1790618239&Signature=RqKHL~imPs8QY3ibJvYBo5rM79LT~aM4dFHrTnuBexnXgzUC6gT-Aynu-clOPMV8cx1eSz8293OG-Pj8GGLRzco6iBWheubVSONKj0mknUVUJteQ-M9NjJj68Vf9~gpcygMjfJJlDacmNeeyTbRLoRtyqolFQdEE5q-yCRJ16f1wsiZ8ICWcOdNyBUkptB7KQf7LqgKUYuYNTQF-Hc39orZkCKcXa6aA-i7kcZdrC1TNKHEbguZQ9bjyff-F9a9o8bq6wYmHnroWKX5jk91IV2Tq4EhvHecJx-4nPl665mz3jTkS4MNEYo4cterXSrs-p3o4rf44VHd8BZd1PgYCFQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "clip_task": "01a0d9ba-3803-742c-be6b-cf07c34a0d9a",
+      "clip_created": "2026-09-25T18:00:55Z",
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/isis_ultimate.motion.npz",
+      "frames": 90,
+      "fps": 30.0,
+      "seconds_made": 3.0,
+      "blow_frame": 30,
+      "blow_fraction": 0.337,
+      "archived_at": "2026-09-25T18:01:16Z"
     },
     "jackal_warrior_attack_basic": {
       "history": [
@@ -2643,11 +2860,26 @@
       "mode": "prime",
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "motion",
-      "touched": 1790359012.7155461,
+      "state": "archived",
+      "touched": 1790359287.194288,
       "motion_task": "01a0d9b6-8275-708a-9385-f535102d306e",
       "motion_created": "2026-09-25T17:56:52Z",
-      "balance_before": 328
+      "balance_before": 328,
+      "motion_status": "SUCCEEDED",
+      "motion_urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b6-8275-708a-9385-f535102d306e/output/clip.fbx?Expires=1790618234&Signature=G6xWQLLDN4rkH~clDdr9bB~RJV9rC2GVR49uwgYdv5csafMbVjEkMZRQKQe9JBpSiuH5Vt50qc95fLHJBTG2kDKiWjaBfMdA30G4adL12jriYW-mbXUa6rIP9Vgvp2O4R2oasG6Y2xfae0TUkLoAYOffjkN3jnQFwICIoHwTRvafkMdFdGaFZHwzXVAtfcrEtVqaNdsUNz0bQaJxyn2kLQCzDaFxxhtzMsN0vJpp~6Z0Kdwg6bllzrMd6y2HYJPnbk8PS~3-NbGfq08qlAvLWAzhihf0d8olTz1ioCsj3bwHHUYjgo04cTkvs9voN0ET~ir2Fq0Yz2r3lx6XQiYFjw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "clip_task": "01a0d9ba-3b14-7469-be96-561b9e77a004",
+      "clip_created": "2026-09-25T18:00:56Z",
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/jackal_warrior_attack_basic.motion.npz",
+      "frames": 60,
+      "fps": 30.0,
+      "seconds_made": 2.0,
+      "blow_frame": 12,
+      "blow_fraction": 0.203,
+      "archived_at": "2026-09-25T18:01:27Z"
     },
     "khnum_attack_basic": {
       "prompt": "Fighting stance, a short mace in the right hand. He lowers his head like a butting ram and drives forward one heavy step off the back foot, ramming the target at chest height with the head and shoulders, both arms pulled back for power, then back to the fighting stance. In place.",
@@ -5904,7 +6136,7 @@
       "role": "basic",
       "queued": "2026-09-25T16:56:05Z",
       "state": "archived",
-      "touched": 1790355568.3120468,
+      "touched": 1790359140.5625403,
       "motion_task": "01a0d981-33d8-75fe-8e28-1617ee96f18e",
       "motion_created": "2026-09-25T16:58:38Z",
       "balance_before": 1761,
@@ -5922,7 +6154,19 @@
       "seconds_made": 2.0,
       "blow_frame": 46,
       "blow_fraction": 0.78,
-      "archived_at": "2026-09-25T16:59:28Z"
+      "archived_at": "2026-09-25T16:59:28Z",
+      "contact_frames": [
+        46
+      ],
+      "contacts": [
+        0.78
+      ],
+      "judged": "reroll",
+      "judged_prompt": "A standing archer's pose, the bow in the left hand. She plants the feet wide and bends the knees into a skier's crouch, raising the bow level toward the target in front as the right hand draws the string back to the cheek, holds the aim a moment, then looses, the right hand springing back past the ear, and rises back to standing. In place.",
+      "judge_reason": "Barely moves. The whole 2 s is one held aiming pose. No joint moves more than 12 cm, and the draw hand peaks at 0.4 m/s. The hips stay at 0.96-0.98 m, so there is no skier's crouch and no rise. The right hand stays at the cheek, 0.22-0.25 m before the neck, and never looses or springs back past the ear. The bow arm is held about 60 deg to her left and 10 deg below level from f0 to f59.",
+      "judge_notes": "Board /tmp/judge_4_skadi_attack_basic.jpg; every frame measured. Contact 46 is nominal: the strongest automatic peak, where the draw hand drifts 4 cm outward. The auto peaks at 6-46 are all under 0.3 m/s. Root drift 0.02 m. The side-on bow arm alone would be fixed by the archer aim at ship; the stillness is the fault.",
+      "suggested": "A standing archer's pose, the bow lowered in the left hand. She sinks into a low skier's crouch as she raises the bow, the left arm straight at the target in front, and draws the right hand back to the cheek, then looses, the right hand snapping back past the ear, and rises back to standing. In place.",
+      "retired": "a held aim that never looses; archery fails in text to motion; the palette archery clip, aimed"
     },
     "skadi_ultimate": {
       "prompt": "A standing archer's pose, the bow in the left hand. She leans back and raises the bow high toward the sky in front, the right hand drawing the string to the cheek, the whole body straining tall for a moment, then looses high into the air so the shot rains down across the whole enemy line, the right hand flying back, and settles back to standing. In place.",
@@ -5931,7 +6175,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T16:56:05Z",
       "state": "archived",
-      "touched": 1790355569.4574096,
+      "touched": 1790359140.5625432,
       "motion_task": "01a0d981-5f06-7493-b2e4-0aa3ec02af87",
       "motion_created": "2026-09-25T16:58:49Z",
       "balance_before": 1742,
@@ -5949,52 +6193,148 @@
       "seconds_made": 3.0,
       "blow_frame": 55,
       "blow_fraction": 0.618,
-      "archived_at": "2026-09-25T16:59:29Z"
+      "archived_at": "2026-09-25T16:59:29Z",
+      "contact_frames": [
+        56
+      ],
+      "contacts": [
+        0.629
+      ],
+      "judged": "reroll",
+      "judged_prompt": "A standing archer's pose, the bow in the left hand. She leans back and raises the bow high toward the sky in front, the right hand drawing the string to the cheek, the whole body straining tall for a moment, then looses high into the air so the shot rains down across the whole enemy line, the right hand flying back, and settles back to standing. In place.",
+      "judge_reason": "The release is an overhand throw, not a loose. The draw is level: at f14-f24 the bow arm is straight at head height, 44 deg to her left, and the draw hand is at the cheek at f22. Then the bow hand sinks to the hip (1.58 to 0.88 m by f60). The right hand rises beside the head and sweeps over the top, forward and across to her left (f51-f62, 4.9 m/s at f56, the elbow opening to 151 deg), as the body turns 40 deg left. The bow is never raised toward the sky and the draw hand never flies back from the cheek. It reads as a spear throw.",
+      "judge_notes": "Board /tmp/judge_4_skadi_ultimate.jpg, plus renders of f0-f89 with the hands marked. Contact 56 is the throw's release, the strongest peak (auto 56, 61). The only move back from the cheek is a slow drift at f24-f36 at about 1 m/s. Drift 0.08 m, and it ends in its stance. The bow arm hangs at the hip at f56, so the archer aim at the loose would read a hanging arm.",
+      "suggested": "A standing archer's pose, the bow in the left hand. She leans back, the left arm lifting the bow high toward the sky in front, draws the string with the right hand to the cheek, then releases the arrow high so it rains on the whole enemy line, the bow still raised as the right hand flies back past the ear, and lowers back to standing. In place.",
+      "retired": "an overhand throw, not a loose; archery fails in text to motion; the palette archery clip, aimed"
     },
     "surtr_attack_basic": {
-      "prompt": "Fighting stance, heavy and broad, a short sword in the right hand. He dips the sword down beside the right knee, then stamps forward on the left foot and rips it upward in one heavy rising slash from low right to high left across the target's chest, the whole body uncoiling upward behind it like a leaping flame, then back to the fighting stance. In place.",
+      "history": [
+        {
+          "prompt": "Fighting stance, heavy and broad, a short sword in the right hand. He dips the sword down beside the right knee, then stamps forward on the left foot and rips it upward in one heavy rising slash from low right to high left across the target's chest, the whole body uncoiling upward behind it like a leaping flame, then back to the fighting stance. In place.",
+          "seconds": 2.0,
+          "mode": "prime",
+          "role": "basic",
+          "queued": "2026-09-25T16:56:05Z",
+          "state": "archived",
+          "touched": 1790359124.8470056,
+          "motion_task": "01a0d981-61ac-702c-a1ab-6120b8075f91",
+          "motion_created": "2026-09-25T16:58:50Z",
+          "balance_before": 1732,
+          "motion_status": "SUCCEEDED",
+          "motion_urls": {
+            "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d981-61ac-702c-a1ab-6120b8075f91/output/clip.fbx?Expires=1790614752&Signature=XNsQRPJOqclJZwwKqJ9FpoPzzIOgd8qXZa44U3HihMSF4mzkPBe8Oe54VTMtHrhrv4peJsUZPX80vnPQhx2AY15fCpzH7ThueB2W4SXqna2gMsPxzsJ0-pLCZPnj7TOblUM-a~96~nF6LMCw1~87g08IrgeWiuNOKTYxkejS2X49cYD5V99UoW3VwPikCqWs7qt9ictr9SuGuIDqRAWgQsVxBiKLVcyfNETTAv41CYisZrBwUYhJHUYtbo7u62k9Pk8122R31hIoB6ICrCpGUQnV4LoSydSJc2q-DdqGwS14n8JIZt6Hykkk7I4nAnlgK-yL943B8tD6APpZ39pZdQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+          },
+          "clip_task": "01a0d981-d482-7765-92f1-c992c235ccc6",
+          "clip_created": "2026-09-25T16:59:19Z",
+          "donor": "shield_maiden_serious",
+          "clip_status": "SUCCEEDED",
+          "archived": "Art/Motions/surtr_attack_basic.motion.npz",
+          "frames": 60,
+          "fps": 30.0,
+          "seconds_made": 2.0,
+          "blow_frame": 26,
+          "blow_fraction": 0.441,
+          "archived_at": "2026-09-25T16:59:30Z",
+          "contact_frames": [
+            6,
+            16,
+            26
+          ],
+          "contacts": [
+            0.102,
+            0.271,
+            0.441
+          ],
+          "judged": "reroll",
+          "judged_prompt": "Fighting stance, heavy and broad, a short sword in the right hand. He dips the sword down beside the right knee, then stamps forward on the left foot and rips it upward in one heavy rising slash from low right to high left across the target's chest, the whole body uncoiling upward behind it like a leaping flame, then back to the fighting stance. In place.",
+          "judge_reason": "Three swings and a spin instead of one rising slash, with the back turned and 1.2 m of travel. First comes a waist-high sweep to her left (f6, 10.4 m/s, the hand at 0.93 m). Then a downward cut as she keeps turning (f16, 13.8 m/s) and a crouch. Then a two-handed swing rises overhead (f26, 11.9 m/s) with the hips at 130-158 deg and the upper spine up to 167 deg. Her back is to the target at f26-f42, and she is past side-on at f14-f44. The root ends 1.21 m off its mark. No slash crosses the chest in front.",
+          "judge_notes": "Board /tmp/judge_4_surtr_attack_basic.jpg; every frame measured and rendered in three views. The contacts are the three swings' speed peaks (auto 7, 16, 27). Auto 46 is the arm returning to guard as she unwinds. It ends in its stance, facing front, at f52-f59.",
+          "suggested": "Fighting stance, heavy and broad, a short sword in the right hand. Facing the target, he lowers the sword beside the right knee, then steps in on the left foot and rips it upward in one heavy rising slash from low right to high left across the target's chest, rising tall like a flame, chest still toward the target, then back to the fighting stance. In place."
+        }
+      ],
+      "prompt": "Fighting stance, heavy and broad, a short sword in the right hand. Facing the target, he lowers the sword beside the right knee, then steps in on the left foot and rips it upward in one heavy rising slash from low right to high left across the target's chest, rising tall like a flame, chest still toward the target, then back to the fighting stance. In place.",
       "seconds": 2.0,
       "mode": "prime",
       "role": "basic",
-      "queued": "2026-09-25T16:56:05Z",
+      "queued": "2026-09-25T17:59:00Z",
       "state": "archived",
-      "touched": 1790355570.4691997,
-      "motion_task": "01a0d981-61ac-702c-a1ab-6120b8075f91",
-      "motion_created": "2026-09-25T16:58:50Z",
-      "balance_before": 1732,
+      "touched": 1790359186.7449362,
+      "motion_task": "01a0d9b8-87c8-7484-b2e4-ec01bd6a5637",
+      "motion_created": "2026-09-25T17:59:04Z",
+      "balance_before": 253,
       "motion_status": "SUCCEEDED",
       "motion_urls": {
-        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d981-61ac-702c-a1ab-6120b8075f91/output/clip.fbx?Expires=1790614752&Signature=XNsQRPJOqclJZwwKqJ9FpoPzzIOgd8qXZa44U3HihMSF4mzkPBe8Oe54VTMtHrhrv4peJsUZPX80vnPQhx2AY15fCpzH7ThueB2W4SXqna2gMsPxzsJ0-pLCZPnj7TOblUM-a~96~nF6LMCw1~87g08IrgeWiuNOKTYxkejS2X49cYD5V99UoW3VwPikCqWs7qt9ictr9SuGuIDqRAWgQsVxBiKLVcyfNETTAv41CYisZrBwUYhJHUYtbo7u62k9Pk8122R31hIoB6ICrCpGUQnV4LoSydSJc2q-DdqGwS14n8JIZt6Hykkk7I4nAnlgK-yL943B8tD6APpZ39pZdQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b8-87c8-7484-b2e4-ec01bd6a5637/output/clip.fbx?Expires=1790618370&Signature=M04G6xk29hCwC5KxVB4c8BNZC7p5pCfRGAVkqX5hJJ7koW84x2LoX3Sy55hRK23iSNT~BWEFJQoFSheGH2MZBkBi13jds342WsYBIoHKSCoF9rZQMzEqr4VIY2yJrHLtwYSS6EtHDs863PZdBTvG4hzAw~B6Vcxj5-3vL110KT2pJPg1rLgnszlcSs~tov-lS8AtqM4yPzRDsYHlk-AAaKkiGvjBjJwQsfPQIa4hitHFgWoPgfwJl31S0Pr5sb1bNJfVXuaZnu1PYqkgrn8H0U1nHLfjnp0WbMWd25WVfKcNycxBpVh3cPSgON1JwKAjpyRBhCUOF9x~xrNhPhACFg__&Key-Pair-Id=K1VGYTHIYLM9UM"
       },
-      "clip_task": "01a0d981-d482-7765-92f1-c992c235ccc6",
-      "clip_created": "2026-09-25T16:59:19Z",
+      "clip_task": "01a0d9b8-f828-71e1-a5f5-c45651ea6d57",
+      "clip_created": "2026-09-25T17:59:33Z",
       "donor": "shield_maiden_serious",
       "clip_status": "SUCCEEDED",
       "archived": "Art/Motions/surtr_attack_basic.motion.npz",
       "frames": 60,
       "fps": 30.0,
       "seconds_made": 2.0,
-      "blow_frame": 26,
-      "blow_fraction": 0.441,
-      "archived_at": "2026-09-25T16:59:30Z"
+      "blow_frame": 12,
+      "blow_fraction": 0.203,
+      "archived_at": "2026-09-25T17:59:46Z"
     },
     "surtr_ultimate": {
-      "prompt": "Fighting stance, a short sword in the right hand. He lifts the sword straight up to the sky with a roar, stretching tall, for a second, then steps forward and brings it down in one colossal sweep from high right to low left across the whole enemy line, ending bent over the front knee as if setting the world alight, then back to the fighting stance. In place.",
+      "history": [
+        {
+          "prompt": "Fighting stance, a short sword in the right hand. He lifts the sword straight up to the sky with a roar, stretching tall, for a second, then steps forward and brings it down in one colossal sweep from high right to low left across the whole enemy line, ending bent over the front knee as if setting the world alight, then back to the fighting stance. In place.",
+          "seconds": 3.0,
+          "mode": "prime",
+          "role": "ultimate",
+          "queued": "2026-09-25T16:56:05Z",
+          "state": "archived",
+          "touched": 1790359124.848167,
+          "motion_task": "01a0d981-6503-772d-8b54-f0d15ed0946d",
+          "motion_created": "2026-09-25T16:58:51Z",
+          "balance_before": 1722,
+          "motion_status": "SUCCEEDED",
+          "motion_urls": {
+            "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d981-6503-772d-8b54-f0d15ed0946d/output/clip.fbx?Expires=1790614757&Signature=NGos8-SUNbqn0QM~GujHOUypKBC7MjS5ZPVPhwUi6NvxY2NDIGYJMqfjBJCm7wvcPJ~kgEfauXZb-290ivf0WHpFju3hLxcfHmGUycICsu3CCU6wCa1stqJp23HpwvdllfPLGAn8AA4gyOJ~kUXtiRRIEmP~vZEmhObrO0sl0PiRLQsUvlbsBvaA0OEZw6UU1Ck0u7tyo5OiapdiYPAHTCKHZaAxsWc~M8HmzeGAjEbcGWQf7WPdtkx6pvxQnIoqZ0XvRkugVE9hSnz4C8dlFQDu6VqQO-qCuGdPBRpaH8QsrANJffzqIQqd88jaaN3uHG3uJgUzfQqr88~IqEk~qw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+          },
+          "clip_task": "01a0d981-d723-733e-ae9c-433864c165e1",
+          "clip_created": "2026-09-25T16:59:20Z",
+          "donor": "shield_maiden_serious",
+          "clip_status": "SUCCEEDED",
+          "archived": "Art/Motions/surtr_ultimate.motion.npz",
+          "frames": 90,
+          "fps": 30.0,
+          "seconds_made": 3.0,
+          "blow_frame": 26,
+          "blow_fraction": 0.292,
+          "archived_at": "2026-09-25T16:59:31Z",
+          "contact_frames": [
+            27
+          ],
+          "contacts": [
+            0.303
+          ],
+          "judged": "reroll",
+          "judged_prompt": "Fighting stance, a short sword in the right hand. He lifts the sword straight up to the sky with a roar, stretching tall, for a second, then steps forward and brings it down in one colossal sweep from high right to low left across the whole enemy line, ending bent over the front knee as if setting the world alight, then back to the fighting stance. In place.",
+          "judge_reason": "The wind-up is a spin with a hop, and the blow lands off to her left. From f6 to f25 she turns about 280 deg to her right, her back to the target at f16-f20. The right knee is lifted and both feet leave the floor at f22-f26 as the sword goes overhead. The one chop (f26-f29) comes down with the hips 79 deg left and lands about 80 deg left of the target. She holds that side-on crouch over the front knee for 1.4 s (f30-f72) before turning back. Root drift 0.63 m, ending 0.37 m off.",
+          "judge_notes": "Board /tmp/judge_4_surtr_ultimate.jpg; every frame measured and rendered. Contact 27: both hands pass chest height (1.46-1.58 m) at 16.5 m/s. It is the only automatic peak. It ends in its stance (pelvis +2 deg, hips 0.93 m).",
+          "suggested": "Fighting stance, a short sword in the right hand. Facing the target, he lifts the sword straight up to the sky with a roar, feet planted, then steps forward on the left foot and brings it down in one colossal sweep from high right to low left across the whole line in front, ending bent over the front knee, and rises back to the fighting stance. In place."
+        }
+      ],
+      "prompt": "Fighting stance, a short sword in the right hand. Facing the target, he lifts the sword straight up to the sky with a roar, feet planted, then steps forward on the left foot and brings it down in one colossal sweep from high right to low left across the whole line in front, ending bent over the front knee, and rises back to the fighting stance. In place.",
       "seconds": 3.0,
       "mode": "prime",
       "role": "ultimate",
-      "queued": "2026-09-25T16:56:05Z",
+      "queued": "2026-09-25T17:59:00Z",
       "state": "archived",
-      "touched": 1790355571.49135,
-      "motion_task": "01a0d981-6503-772d-8b54-f0d15ed0946d",
-      "motion_created": "2026-09-25T16:58:51Z",
-      "balance_before": 1722,
+      "touched": 1790359200.3946438,
+      "motion_task": "01a0d9b8-8a75-7478-ba2e-19f919d7fedd",
+      "motion_created": "2026-09-25T17:59:05Z",
+      "balance_before": 243,
       "motion_status": "SUCCEEDED",
       "motion_urls": {
-        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d981-6503-772d-8b54-f0d15ed0946d/output/clip.fbx?Expires=1790614757&Signature=NGos8-SUNbqn0QM~GujHOUypKBC7MjS5ZPVPhwUi6NvxY2NDIGYJMqfjBJCm7wvcPJ~kgEfauXZb-290ivf0WHpFju3hLxcfHmGUycICsu3CCU6wCa1stqJp23HpwvdllfPLGAn8AA4gyOJ~kUXtiRRIEmP~vZEmhObrO0sl0PiRLQsUvlbsBvaA0OEZw6UU1Ck0u7tyo5OiapdiYPAHTCKHZaAxsWc~M8HmzeGAjEbcGWQf7WPdtkx6pvxQnIoqZ0XvRkugVE9hSnz4C8dlFQDu6VqQO-qCuGdPBRpaH8QsrANJffzqIQqd88jaaN3uHG3uJgUzfQqr88~IqEk~qw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b8-8a75-7478-ba2e-19f919d7fedd/output/clip.fbx?Expires=1790618383&Signature=DSWnsXTMITNsUGS3SWO6yf99I~fij~jLHlxlDlMJfNHxBWAc6tEFTCTLXeUX~Vtg8xGQfMKRSNNn3Q-TGBUustzF8xYvBB1v6vvw9n8yuz6oI9yGphiK4zkxCYzPSe0XVC5oNFDNt-wA5mXNa53VUvJOHfmTIj2~tQUULJP0bmh7ZxYmsPq-B98kVenMD1PV9SIOIg03FIav8JtH6RbT5ba2i83bhNOmLEC~URkaQnHTLs4ndfiVBZxjzg80kg0ceosF2pup4F9nZHnZXvN50~P9fxXpocZby-gcxCPfPeP~HpIrTfZrSdl97eW5lZEXAePcFaoh6qn-UQBjTPjmsg__&Key-Pair-Id=K1VGYTHIYLM9UM"
       },
-      "clip_task": "01a0d981-d723-733e-ae9c-433864c165e1",
-      "clip_created": "2026-09-25T16:59:20Z",
+      "clip_task": "01a0d9b9-2e90-7698-aa8a-e6131356d4a2",
+      "clip_created": "2026-09-25T17:59:47Z",
       "donor": "shield_maiden_serious",
       "clip_status": "SUCCEEDED",
       "archived": "Art/Motions/surtr_ultimate.motion.npz",
@@ -6003,7 +6343,7 @@
       "seconds_made": 3.0,
       "blow_frame": 26,
       "blow_fraction": 0.292,
-      "archived_at": "2026-09-25T16:59:31Z"
+      "archived_at": "2026-09-25T18:00:00Z"
     },
     "thor_attack_basic": {
       "prompt": "Fighting stance, a short war hammer in the right hand. He draws the hammer back behind the right shoulder, then steps in on the left foot and swings it forward and around in one fast, flat hook that smashes into the target's chest, the hips and shoulders turning hard behind the blow and the left fist pulling back, then back to the fighting stance. In place.",
@@ -6012,7 +6352,7 @@
       "role": "basic",
       "queued": "2026-09-25T16:56:05Z",
       "state": "archived",
-      "touched": 1790355572.553671,
+      "touched": 1790359124.8490524,
       "motion_task": "01a0d981-67b0-77ee-8dcc-22cd5727c4be",
       "motion_created": "2026-09-25T16:58:52Z",
       "balance_before": 1712,
@@ -6030,34 +6370,84 @@
       "seconds_made": 2.0,
       "blow_frame": 17,
       "blow_fraction": 0.288,
-      "archived_at": "2026-09-25T16:59:32Z"
+      "archived_at": "2026-09-25T16:59:32Z",
+      "contact_frames": [
+        18
+      ],
+      "contacts": [
+        0.305
+      ],
+      "judged": "keep",
+      "judged_prompt": "Fighting stance, a short war hammer in the right hand. He draws the hammer back behind the right shoulder, then steps in on the left foot and swings it forward and around in one fast, flat hook that smashes into the target's chest, the hips and shoulders turning hard behind the blow and the left fist pulling back, then back to the fighting stance. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board /tmp/judge_4_thor_attack_basic.jpg. One hook, as written: the backswing behind the right shoulder (f0-f10), then a flat hook at chest height (1.44-1.51 m) across the front at f17-f18 as the left fist pulls back. The follow-through wraps side-on (hips 62-73, spine 81-98, head 29-47 deg, f22-f34), then unwinds to the stance. Contact 18 is the farthest reach, 11.5 m/s. Auto 7 is the backswing."
     },
     "thor_ultimate": {
-      "prompt": "Fighting stance, a short war hammer in the right hand. With the feet planted wide, the right arm swings the hammer round in two fast circles above the head, calling the storm, then he stamps forward on the left foot and smashes it overhand onto the ground in front, the knees bending deep and the hand stopping at knee height, and rises back to the fighting stance. In place.",
+      "history": [
+        {
+          "prompt": "Fighting stance, a short war hammer in the right hand. With the feet planted wide, the right arm swings the hammer round in two fast circles above the head, calling the storm, then he stamps forward on the left foot and smashes it overhand onto the ground in front, the knees bending deep and the hand stopping at knee height, and rises back to the fighting stance. In place.",
+          "seconds": 3.0,
+          "mode": "prime",
+          "role": "ultimate",
+          "queued": "2026-09-25T16:56:05Z",
+          "state": "archived",
+          "touched": 1790359124.84999,
+          "motion_task": "01a0d981-6aeb-731c-84b1-cdf39c370fb4",
+          "motion_created": "2026-09-25T16:58:52Z",
+          "balance_before": 1702,
+          "motion_status": "SUCCEEDED",
+          "motion_urls": {
+            "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d981-6aeb-731c-84b1-cdf39c370fb4/output/clip.fbx?Expires=1790614764&Signature=dDuq0pHX-mgTEL1onymHEJjRLFcR91ib9qhKvZ7n2bRkeXA99Ugn9tbN5UcSoyBOZpZHla2WDVgo7UN8R9tgTXQHkFC~Fxa9rzJR-8mQYrKmtU3QmouEhmrtjHZAWcmwg0RZyqDiQYUqkvA4BCbJr-ZZYnVxjMNy-aYZKLpfjR1gOBcMpyik1PXQ6l7jS54icOwhBJh9Yvcg7~jfX~rxRDb0ixIrPRYwXs0jLllM-iJ-wQnxz-5eGbOp3sItZQRdpRU8WM3eiJZM6npNRg6vskhqxS29-gwrgrHbA82-ugIL2cSuLEe1gFYECOP7ZRnR44wT4EsD-T025gm3ngoj~w__&Key-Pair-Id=K1VGYTHIYLM9UM"
+          },
+          "clip_task": "01a0d981-ebe7-7398-bef6-5b3724ec5b08",
+          "clip_created": "2026-09-25T16:59:26Z",
+          "donor": "shield_maiden_serious",
+          "clip_status": "SUCCEEDED",
+          "archived": "Art/Motions/thor_ultimate.motion.npz",
+          "frames": 90,
+          "fps": 30.0,
+          "seconds_made": 3.0,
+          "blow_frame": 35,
+          "blow_fraction": 0.393,
+          "archived_at": "2026-09-25T16:59:36Z",
+          "contact_frames": [
+            36
+          ],
+          "contacts": [
+            0.404
+          ],
+          "judged": "reroll",
+          "judged_prompt": "Fighting stance, a short war hammer in the right hand. With the feet planted wide, the right arm swings the hammer round in two fast circles above the head, calling the storm, then he stamps forward on the left foot and smashes it overhand onto the ground in front, the knees bending deep and the hand stopping at knee height, and rises back to the fighting stance. In place.",
+          "judge_reason": "Not one wind-up and one release, and it travels. The hammer never circles overhead; it chops forward and down in front at f6 (8.5 m/s). She sidesteps 0.5 m left and bounds forward on a high left knee with the left arm up (f16-f26), and the hips end 0.75 m off (1.0 m at most). After the smash (f36) she squats, the head under 1 m, for 1.1 s (f40-f72). She then rises with a fast upward swing through the target zone (f76-f78, 8.8 m/s, 92% of the smash on the board's signal) that reads as a second blow. The smash lands 40-60 deg left.",
+          "judge_notes": "Board /tmp/judge_4_thor_ultimate.jpg; every frame measured and rendered. Contact 36: the smash at full forward reach, passing 1.0-1.4 m at 12.6 m/s. It reaches knee height and the ground at f38-f40. Auto peaks: 6, 16, 22, 27, 36, 77. The bound with the left arm raised to the sky read well as calling the storm, so the new sentence keeps it.",
+          "suggested": "Fighting stance, a short war hammer in the right hand, facing the target. Feet planted wide, he raises the hammer high overhead, the left arm reaching up to the sky, calling the storm, then stamps the left foot down and smashes the hammer overhand onto the ground in front, the knees bending deep, the hand stopping at knee height, and rises slowly back to the fighting stance. In place."
+        }
+      ],
+      "prompt": "Fighting stance, a short war hammer in the right hand, facing the target. Feet planted wide, he raises the hammer high overhead, the left arm reaching up to the sky, calling the storm, then stamps the left foot down and smashes the hammer overhand onto the ground in front, the knees bending deep, the hand stopping at knee height, and rises slowly back to the fighting stance. In place.",
       "seconds": 3.0,
       "mode": "prime",
       "role": "ultimate",
-      "queued": "2026-09-25T16:56:05Z",
+      "queued": "2026-09-25T17:59:00Z",
       "state": "archived",
-      "touched": 1790355576.0021935,
-      "motion_task": "01a0d981-6aeb-731c-84b1-cdf39c370fb4",
-      "motion_created": "2026-09-25T16:58:52Z",
-      "balance_before": 1702,
+      "touched": 1790359202.0367618,
+      "motion_task": "01a0d9b8-8d02-7697-a064-b3f67681eb29",
+      "motion_created": "2026-09-25T17:59:06Z",
+      "balance_before": 233,
       "motion_status": "SUCCEEDED",
       "motion_urls": {
-        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d981-6aeb-731c-84b1-cdf39c370fb4/output/clip.fbx?Expires=1790614764&Signature=dDuq0pHX-mgTEL1onymHEJjRLFcR91ib9qhKvZ7n2bRkeXA99Ugn9tbN5UcSoyBOZpZHla2WDVgo7UN8R9tgTXQHkFC~Fxa9rzJR-8mQYrKmtU3QmouEhmrtjHZAWcmwg0RZyqDiQYUqkvA4BCbJr-ZZYnVxjMNy-aYZKLpfjR1gOBcMpyik1PXQ6l7jS54icOwhBJh9Yvcg7~jfX~rxRDb0ixIrPRYwXs0jLllM-iJ-wQnxz-5eGbOp3sItZQRdpRU8WM3eiJZM6npNRg6vskhqxS29-gwrgrHbA82-ugIL2cSuLEe1gFYECOP7ZRnR44wT4EsD-T025gm3ngoj~w__&Key-Pair-Id=K1VGYTHIYLM9UM"
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b8-8d02-7697-a064-b3f67681eb29/output/clip.fbx?Expires=1790618380&Signature=g9mTmu9Ll01Ogst1S5ADgT8twaiyEngk4iv2hrizGQSwXHpL~MjX1yc8csqiE0nkv4umxlFPwcHnRWg~uSJYgmWTX61llPbu896IB2YYa~48stqXRBzx1rxWcNvMRytTzy2wlH61D4~aNluEb4K4X8l6a6BTv5ojpVCvNCMPO7jC1Ge~kthLszMGNjUOlSNFFcSxnB4YcAT8F~iUrSs-Oi0yp6zN692uWfTUmKIhndabWDSpDOp-M2BkGOWIVAKei01VpDBkyvSD~xNPZ1VMIx5DnzwfDENkX2rr2CwMfXorbYRIx8WMM4vWL8Rqhsn2MTblIY~M46hvRknC7MLMJQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
       },
-      "clip_task": "01a0d981-ebe7-7398-bef6-5b3724ec5b08",
-      "clip_created": "2026-09-25T16:59:26Z",
+      "clip_task": "01a0d9b9-3151-72b5-b229-b61cd4bb1535",
+      "clip_created": "2026-09-25T17:59:48Z",
       "donor": "shield_maiden_serious",
       "clip_status": "SUCCEEDED",
       "archived": "Art/Motions/thor_ultimate.motion.npz",
       "frames": 90,
       "fps": 30.0,
       "seconds_made": 3.0,
-      "blow_frame": 35,
-      "blow_fraction": 0.393,
-      "archived_at": "2026-09-25T16:59:36Z"
+      "blow_frame": 28,
+      "blow_fraction": 0.315,
+      "archived_at": "2026-09-25T18:00:02Z"
     },
     "tyr_attack_basic": {
       "prompt": "Fighting stance, a hand axe in the right hand cocked back at the hip and the left fist up by the chin. A short step in on the left foot and the right fist drives straight forward into the target's chest like a piston, the shoulder and hips turning behind it, then snaps back to the fighting stance. In place.",
@@ -6066,7 +6456,7 @@
       "role": "basic",
       "queued": "2026-09-25T16:56:05Z",
       "state": "archived",
-      "touched": 1790355588.839935,
+      "touched": 1790359124.8554227,
       "motion_task": "01a0d981-6d52-7268-aead-2c513699e9ea",
       "motion_created": "2026-09-25T16:58:53Z",
       "balance_before": 1692,
@@ -6084,7 +6474,17 @@
       "seconds_made": 2.0,
       "blow_frame": 25,
       "blow_fraction": 0.424,
-      "archived_at": "2026-09-25T16:59:48Z"
+      "archived_at": "2026-09-25T16:59:48Z",
+      "contact_frames": [
+        26
+      ],
+      "contacts": [
+        0.441
+      ],
+      "judged": "keep",
+      "judged_prompt": "Fighting stance, a hand axe in the right hand cocked back at the hip and the left fist up by the chin. A short step in on the left foot and the right fist drives straight forward into the target's chest like a piston, the shoulder and hips turning behind it, then snaps back to the fighting stance. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board /tmp/judge_4_tyr_attack_basic.jpg. One blow. The axe hand drops to the hip (f11-f22), then drives forward and up. At f26 it is on the centre line, 0.64 m before the neck and 1.18 m up, at 13.5 m/s, then carries on across at chest height. The hips turn hard behind it (side-on f28-f40); back in the stance by f57. Drift 0.23 m. A straight-arm drive, not a piston. Auto 32 is the arm dropping."
     },
     "tyr_ultimate": {
       "prompt": "Fighting stance, a hand axe in the right hand. He throws both arms up high in a wide V and roars with the chest out for a moment, then tucks the right fist up by the chin, drops the right shoulder and lunges forward off the back foot, driving the shoulder into the target's chest in one crushing body blow, then back to the fighting stance. In place.",
@@ -7298,11 +7698,26 @@
       "mode": "prime",
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "motion",
-      "touched": 1790359013.530874,
+      "state": "archived",
+      "touched": 1790359292.8319035,
       "motion_task": "01a0d9b6-8703-73e2-9d59-e4b4e851b65a",
       "motion_created": "2026-09-25T17:56:53Z",
-      "balance_before": 318
+      "balance_before": 318,
+      "motion_status": "SUCCEEDED",
+      "motion_urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b6-8703-73e2-9d59-e4b4e851b65a/output/clip.fbx?Expires=1790618243&Signature=n7UFMXUiMnrpM93UYgYtjikMb1-FIdlEC7O6vQUvV-yNDzjBqk9TR-5Od8lnlqtX862Yz6NCm18tpuHOj9QhfGRYHCyJG75ex-kIdTiWjr20EvWIji8LVcssk4o3okgmvCOB9nyA6iiM795A5Ps3MNfHurzFUPyoPQQS~oSHlBm-Jhn5C25w8wN52tJ9QqBYVi0UFwSOtDDuJKrS2V~Wb-sIepUsb0Tql4byFyY4JlrOIZJGanHJooBdCIoXnm0xPeqlnoHsASUdstPxOJhsDWg13pf9WQfAA1-nQIdybPAuJi~GWBA2ogTQFioNA-dBMyEY9z~XgcoAkY9Dg0Y0uA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "clip_task": "01a0d9ba-3e9d-7329-82a0-69b51c611ad6",
+      "clip_created": "2026-09-25T18:00:57Z",
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/chang_e_ultimate.motion.npz",
+      "frames": 90,
+      "fps": 30.0,
+      "seconds_made": 3.0,
+      "blow_frame": 65,
+      "blow_fraction": 0.73,
+      "archived_at": "2026-09-25T18:01:32Z"
     },
     "fox_spirit_attack_basic": {
       "history": [
@@ -7350,11 +7765,26 @@
       "mode": "prime",
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
-      "state": "motion",
-      "touched": 1790359014.1718476,
+      "state": "archived",
+      "touched": 1790359296.822142,
       "motion_task": "01a0d9b6-89ef-70bd-a758-e9ca433f7956",
       "motion_created": "2026-09-25T17:56:54Z",
-      "balance_before": 308
+      "balance_before": 308,
+      "motion_status": "SUCCEEDED",
+      "motion_urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0d9b6-89ef-70bd-a758-e9ca433f7956/output/clip.fbx?Expires=1790618241&Signature=b8Lc4yBnODEsttnV1gFeByemioIrGmSHN2e~t06rugahLYycwUgEjRQLextrS16TBu8P3xixQooN7QMybf6vxoGvt~FWDatFfDPeU5kEuvFpK-HdnQek9iogahSAJiap21IH-4~tqPyDBOv6XounO6rsnAFOLx5bHclqUZQ~nABaf2JNPPhDl3v1jEgh2NLmoc8woaJf37WKnFsgthGe1wdUgF17Lls5kqrR7j8tl3JLmb9odJLxJGHX6ljAPfNPEeKbMhkeHC6mklyxzJ-PavoXjDNN4t31KxRGClfwNcJ5VPWeJNXXEI7jMf6X7cS8k2Hn4JwGzyyIMbAgTbEUAw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "clip_task": "01a0d9ba-417d-72f7-89c8-70bd6e1a7fbc",
+      "clip_created": "2026-09-25T18:00:57Z",
+      "donor": "shield_maiden_serious",
+      "clip_status": "SUCCEEDED",
+      "archived": "Art/Motions/fox_spirit_attack_basic.motion.npz",
+      "frames": 60,
+      "fps": 30.0,
+      "seconds_made": 2.0,
+      "blow_frame": 25,
+      "blow_fraction": 0.424,
+      "archived_at": "2026-09-25T18:01:36Z"
     },
     "guan_yu_attack_basic": {
       "prompt": "Fighting stance, tall and dignified, a broad curved sword in the right hand, the left hand at the belt. He draws the sword back past the right hip, then one heavy step forward on the left foot and a powerful flat cut from right to left across the target's chest in a crescent arc, the whole weight behind it, then a measured step back to the fighting stance. In place.",
