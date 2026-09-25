@@ -1027,7 +1027,8 @@ environment can and cannot do. The short version:
   which names its unit up front and so builds its figure before the
   view's first frame, animated on the same code. `SCNNode.startLoop`
   (ModelLibrary.swift) is the one way a stage starts an idle: the figure
-  into the scene first, then an `SCNAnimationPlayer` told to `play()`;
+  into the scene first, then an `SCNAnimationPlayer` told to `play()`, at a
+  random `timeOffset` since 2026-09-25;
   the stage views set `isPlaying` as well, and `TrainingView.target`
   falls back to the rail's first unit so the hall never opens empty. A
   unit picked from a rail afterwards always goes into a live scene, so
@@ -1351,7 +1352,9 @@ environment can and cannot do. The short version:
   `decor_<id>.png` from `tools/decor_thumbs.py`), a brazier burning with a
   flame, a light and a glow on the sand. The tour seeds a brazier and the
   sphinx. `UnitNode.restartIdle()` restarts a figure rebuilt into the live
-  scene. The painting was generated at 9:16 and its sea extended to 3:4,
+  scene in its resting idle (it played the battle stance until 2026-09-25,
+  so a team changed under a live island crouched; `-tour-island-rebuild`
+  photographs that path as `0-island-rebuild`). The painting was generated at 9:16 and its sea extended to 3:4,
   because a phone shows only the central 62% of the painting's width; the
   anchors were measured off it (`Docs/ART_2D.md` §6). `tools/island.py` is
   the stand-in painter, kept for reference. `Docs/PLAN.md` *The home island
@@ -1520,8 +1523,11 @@ environment can and cannot do. The short version:
   frame that judges the awakened look every run), the Allies screen (47,
   `allies`, four frames, one per tab by `-tour-social-tab`), the Regalia
   sheet (46), the events calendar on a Festival Monday (45), the island's decoration
-  sheet (44, `island_decor`; step 0 is photographed twice, at rest and
-  relaunched with `-tour-island-zoom 1.5` onto the circle), the Hall of Ka's
+  sheet (44, `island_decor`; step 0 is photographed three times, at rest,
+  relaunched with `-tour-island-zoom 1.5` onto the circle, and with
+  `-tour-island-rebuild`, the team changed under the live island), the pose
+  lab on step 3 (`-tour-pose-lab constraint|write`: a 20° head turn over the
+  playing idle, `3-training-pose-*`, `[PoseLab]` lines), the Hall of Ka's
   Awaken panel (43, `awaken`: the seed's strongest unawakened unit with
   the bill met, since the training step opens on Power up), an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
@@ -1837,7 +1843,11 @@ environment can and cannot do. The short version:
   arrow is in the boss bar, never on it.
 - **Motion.** A melee unit's dash is a 0.3 s leap (the model container
   hops while the node moves), clips cross-fade over 0.22/0.30 s
-  (`ModelLibrary`), one-shot clips are never sped past 2× (the contracts in
+  (`ModelLibrary`), a loop that starts over a DIFFERENT loop takes it off
+  over 0.25 s (`UnitNode.handOver(to:)`, `currentLoop`, 2026-09-25: nothing
+  took a loop off before, so an island figure that had strolled evaluated
+  `idle_combat`, `walk` and `idle` every frame), a revived unit goes back to
+  the fight's stance (`idleAfterClip`), one-shot clips are never sped past 2× (the contracts in
   `AnimationClip.fallbackDuration` were lengthened instead: basic 1.3 s,
   heavy 1.7 s), every skill without an effect of its own lands in its
   caster's element (`VFXLibrary` `impact_<element>`) and a closing strike
@@ -2369,22 +2379,43 @@ environment can and cannot do. The short version:
   paper-white skin (#F7DAD4, value 0.96) was paint too: `gold_skin`
   takes it to #A37B69 beside the base Ares's own, applied on 2026-09-23
   to the shipped textures alone, and `proportions.sh` names it.
-- **Every family has a standing idle now, and the stages play it
-  (2026-09-18).** No family shipped a plain `idle` (0 of 116), so the
-  reveal, the altar, the collection's Stage and the island had always
-  played Meshy's *combat idle* preset — a crouched guard stance, knees bent
-  and spine folded — and on the Ares family it photographed as a hunch seen
-  from behind (the owner: "the screenshot is still fucked"). Skinning the
-  shipped base with its shipped clip offline (`tools/base_plus_clip.py`,
-  joints matched by name as the game does) reproduced the frame exactly and
-  the raw Meshy clip has the same pose: the clip, not the pipeline.
-  `tools/stand_idle.py` derives `<name>_idle.usdz` from the combat idle for
-  every family (rotations slerped toward rest — spine 35%, legs 45%, arms
-  85% kept — the hips' dip halved, every frame re-grounded on the FOOT
-  JOINTS), `UnitNode.restingIdle` prefers it on the island and in
-  `restartIdle`, and the three stages already preferred `.idle`; the battle
-  keeps the crouch. `build_asset.sh` and `proportions.sh` derive it after
-  every ship — a re-shipped combat idle leaves a stale standing one.
+- **Every family stands in a natural idle of its own, and the stages play
+  it (2026-09-25; `Docs/MOTION.md` §11, PLAN.md *Natural poses*; the owner:
+  "more of a fluid design and poses, instead of all the same static, frozen
+  style poses. Something more natural").** `<family>_idle.usdz` — the
+  island, the reveal, the altar, the collection's Stage, the unit sheet's
+  well — is `tools/natural_idle.py`'s for 115 of the 117 rigs: built from
+  the rig's own BIND pose (the concepts hang the arms 22° out for the
+  rigger), in its archetype's way of standing (`motion_palette.ARCHETYPE`,
+  ten rows of `STYLES` — sovereign, champion, soldier, brute, mystic,
+  grace, hunter, trickster, beast, construct — each number drawn from a
+  hash of the family's key): a contrapposto on the leg opposite the weapon
+  hand, the feet planted by IK, the arms at the bind's hang, a breath, a
+  sway, the head's survey and the row's own tics, a 6.6–14.2 s loop
+  written as F+1 keys at 20 a second (`FPS`; 30 would have added 22.8 MB,
+  20 added 13.8), no root lock. Its guards refuse a foot that drifts or
+  leaves the floor, a carrier binding off the base, more tear than the
+  file it replaces (measured before that is overwritten), a hand in the
+  body and an open loop; `OVERRIDES` holds the judged rests and the HELD —
+  Bastet and Serqet keep the stood guard until their `retry` passes a
+  board. Edges past 3x 22,202 → 599, the arms 51°/39° → 18.5° from
+  straight down, hips tilted over 3° on 79 of 115 (1 of 117 before). The
+  35 calm families (the sovereigns, graces and mystics the deal stood up
+  for battle: `motion_palette.CALM`, stance `natural`) wear the same file
+  as `_idle_combat` (9,994 → 198). `motion_palette.py ship` takes
+  `idle=natural` and `idle_combat=natural` and `roll` passes them;
+  `build_asset.sh` and `proportions.sh` run `natural_idle.py ship <family>
+  --calm-stances` after every ship (a refused family gets the guard stood
+  up and a `NATURAL IDLE REFUSED` line); `clip_fix --rearm` no longer
+  re-derives the idle; `stand_idle.py` stays for the `stand` and `half`
+  battle stances, the held two and that fallback. Before this the idle was
+  `stand_idle.py`'s Meshy 89 guard stood up (2026-09-18: no family had
+  shipped a plain idle and every stage played the crouch — "the screenshot
+  is still fucked"), which kept 85% of the guard's arms, so every figure
+  held an invisible shield and panted 47 times a minute. Left: the weapon
+  lies level at the hip on eleven families (the judge's wrist pitch is
+  next), and the breath is quiet on purpose — raise it if `[StageDoctor]`
+  reads still on the phone.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 
@@ -2422,7 +2453,9 @@ environment can and cannot do. The short version:
   them every frame with a spring simulation — `Render/ClothChain.swift`
   (VRM's spring bone: tails with velocity, a pull toward the rest
   direction, gravity, the bone's length, eight spheres and a back plane
-  through the hips, a fixed 1/60 s step), attached in `ModelLibrary.node`
+  through the hips — the chest's found by position since 2026-09-25,
+  `Cloth.chestKey`, as the awakened Hera's rig has no `Spine01` — a fixed
+  1/60 s step), attached in `ModelLibrary.node`
   after `repairSkinners` and stepped from every stage's
   `didApplyAnimationsAtTime` (the battle coordinator, `StageDoctor`, a
   `ClothStepper` on the reveal and the island). `tools/cape_sim.py` is the

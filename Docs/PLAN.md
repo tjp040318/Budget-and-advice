@@ -10014,3 +10014,113 @@ before he tests (rule 1).
   every arm motion on them. The cure is a remake (MOTION.md §6).
 - **Meshy's turns in place** (575, 576, 577, 578, 586) could step the unit
   sheet's figure round on a drag instead of spinning it.
+
+### As built (steps 1-3)
+
+Built on 2026-09-24/25 by three lanes and a judge; no credits, no Gemini,
+nothing compiled here, nothing pushed yet, so the CI run that verifies
+steps 2 and 3 is still to come.
+
+**Step 1, the tool.** `tools/natural_idle.py` (the prototype made whole:
+ten style rows dealt by `motion_palette.ARCHETYPE`, 27 / 18 / 14 / 14 / 10 /
+9 / 7 / 7 / 6 / 5 rigs; `survey`, `board`, `sheet`, `gif`, `ship`). Two
+things the plan said turned out otherwise, both measured:
+- **The head is not "the joint under `Head`".** On the eleven rigs that
+  call the joint over the hips `neck`, `Head` is an empty end marker and the
+  skull is skinned to the joint named Head1 or Spine1 (all 1,689 of Zeus's
+  skull vertices); on Hephaestus, Fenrir and Ullr the skull sits on the
+  joint named `neck`. The tool finds the head from the SKIN, and step 6's
+  gaze must turn the joint that carries the skull.
+- **The survey refused four families on the way, each a fault fixed:** Hel's
+  foot rose 1.3 mm (the breath lifted the pelvis past a straight leg's
+  reach; it is held inside it now), Bragi's heel sank 4-5 mm (skinned half
+  to the shin: the floor guard allows 5 mm under, 1 mm over), Bes read
+  false arm-through hits under his cloak (only forearms and hands are tested
+  now, below the armpits, deeper than they lay in the bind), and the
+  Jötunn's heels sank 2 cm (a third on the shins; judged, 25 mm allowed).
+  The prototype also turned the free foot IN and let a straight bind's
+  offset point Bastet's knees at each other; both are mended.
+
+**The judge** read all ten archetype sheets, T1's 22 boards and 32 more:
+90 SHIP, 25 SHIP-WITH-NOTE, 2 HOLD. Nothing torn, flared or through the
+body badly enough to hold, no foot off the floor, no monster or boss posed
+wrongly. What was applied (lane T2, 2026-09-25):
+- **HOLD: Bastet and Serqet** keep today's idle (`OVERRIDES`' `hold`, with
+  the reason): the beast row's crouch read as a squat on a slim goddess and
+  as the combat guard on the scorpion queen. Their `retry` (the row's plain
+  values as the whole style) is what the re-run tries.
+- **The arms of three square stances brought in:** Horus 22° → 14° and the
+  awakened Ra 23° → 13-14°, tearing no more (`arm_in` 13-15); Diana by 2°
+  only, since further in tore her (9-12 edges against 5).
+- **The bolder sovereign:** a sovereign that tears nothing tries a pelvis
+  rolled 4.0-5.5° and the weight 0.66-0.72 of the way over (`BOLD`) and
+  keeps it only if it still tears nothing and pushes no more of the arm or
+  the weapon into the body: 14 took it, Athena, the awakened Horus and
+  Osiris did not.
+- **Vidar on the right leg** (`side`), so he no longer stands as Tyr does.
+- **The measures:** the hip tilt is read against the bind's own (Heimdall's
+  rig sets its left hip joint 3 cm high: the survey's 11.8° is 2.1°); the
+  survey prints each family once; the notes carry the shipped counts.
+- **Not applied:** the weapon held level (eleven families: Athena's spear at
+  the lens, Hades's bident, Poseidon's and Neptune's tridents, Guan Yu,
+  Baldr, the awakened Ares, Mars and the awakened Mars, Anhur, the Jötunn's
+  axe) needs a pitch at the weapon wrist, a tool change of its own; the
+  breath waits on the phone's `[StageDoctor]` lines.
+
+**Step 2, shipped.** `natural_idle.py ship --all --bundle
+Pantheon/Resources/Models --calm-stances`: 115 `<family>_idle.usdz` and 35
+`<family>_idle_combat.usdz`, every file re-read by `character.verify`, bound
+as its base, its loop closed, and made in a work folder before it replaced
+anything; re-derived over the shipped bundle, the tool reproduces all 150 key
+for key, so a re-ship on an unchanged base changes nothing. **The files are written at 20 keys a second, not 30:** at 30 the
+150 files added 22.8 MB against this plan's 16; at 20 they added 13.8 MB
+(133-285 keys, 224-510 KB a file), and a 4 s breath still gets 80 keys a
+cycle. Measured on the shipped bases:
+
+| | the stood guard | as shipped |
+|---|---|---|
+| edges past 3x, 117 idles | 22,202 | 599 (512 on the 115, 87 on the two held) |
+| the prototype, for the record | | 1,005 |
+| families with none | 21 of 117 | 69 of 115 |
+| the median family's worst stretch | 6.8x | 2.3x |
+| families that tear more | — | none |
+| the 35 calm stances | 9,994 | 198 |
+| the loop | 1.27 s | 8.05 s (6.6-14.2), 14.9 breaths a minute (8.5-18.2) |
+| the upper arms from straight down | 51° / 39° | 18.5° |
+| hips tilted over 3° (against the bind) | 1 of 117 | 79 of 115, 4.0° at the median |
+| the weight | centred in 102 | 0.64 of the way over the standing foot |
+| the hips' sway | 0.0 cm | 1.2 cm |
+| the feet | slide 1.3 cm | 0.001 mm; 0.9 mm off the floor at most |
+
+82 families keep their whole style and 33 part of it; 23 stand on the other
+leg from the chiasm because it tore less (or, for Vidar, by judgment).
+Freya 1,719 → 28, Frigg 1,359 → 4, Heracles 1,095 → 20, Hera 957 → 7,
+Achilles 385 → 0, Ares 275 → 0; the worst left are Horus and the awakened
+Hera at 75 each, a kilt or a skirt skinned to both thighs.
+
+**The derivations point at it:** `motion_palette.py ship` takes
+`idle=natural` and `idle_combat=natural` (`CALM`, the plan's stance
+`natural`), and `roll` passes them; `build_asset.sh` and `proportions.sh`
+run `natural_idle.py ship <family> --calm-stances` after a ship and stand
+the guard up only where it refuses (`NATURAL IDLE REFUSED`); `clip_fix.py
+--rearm` no longer re-derives the idle; `stand_idle.py` stays for the `stand`
+and `half` stances, the held two and that fallback. `Docs/MOTION.md` §11
+is the stage idle; §9's table reads `natural` for the 35.
+
+**Step 3, the Swift and the lab** (lane S, reviewed; `swiftcheck` clean,
+`balance.py` unchanged): `restartIdle()` plays `restingIdle`; `play(_:)`
+takes a different previous loop off over 0.25 s (`handOver(to:)`,
+`currentLoop`); `revive` hands back to `idleAfterClip`; `startLoop` starts
+at a random `timeOffset`; `ClothChain`'s chest collider is found by position
+(Found on the way 1, 2, 3 and 5; 4 is the F+1 keys). The tour adds
+`-tour-island-rebuild` (`0-island-rebuild`, the `[Idle] … restarted in`
+line) and `-tour-pose-lab constraint|write` (`3-training-pose-constraint`,
+`3-training-pose-write`, the `[PoseLab]` lines); the lab turns the joint
+`Head` hangs from, since on the eleven rigs `Head` holds no skin.
+
+**Still to verify on the next CI run:** the frames of steps 0, 2, 3, 5, 21
+and 43 and the battles that field one of the 35; `[StageDoctor]` Hips and
+Hand (raise the breath to 1.5-2.5° if they read still); `[Mem]` (15 keys a
+second if it climbs); the `[Reveal] facing` line, now that the free foot
+turns out; `0-island-rebuild`'s figures standing; and the lab's verdict,
+which decides step 6.

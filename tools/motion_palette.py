@@ -36,8 +36,13 @@ retargeted onto the family's rig GLB (Art/Models/<asset>.glb) in a work
 folder and shipped by tools/mesh.py with its source and bundle folders
 pointed there, so grounding, the carrier and the bind check are the same as
 any Meshy clip's. A value may also be a .motion.npz path (a god's bespoke
-clip) or `stand` for `idle` (tools/stand_idle.py's standing idle, derived
-from the idle_combat just shipped).
+clip). `idle=natural` is the stages' standing idle, built by
+tools/natural_idle.py from the rig's own bind pose after the clips are in
+(2026-09-25; `roll` passes it for every family), and `idle_combat=natural`
+makes that same file the battle stance - the plan's calm families (CALM).
+`idle=stand` (tools/stand_idle.py's derivation of the idle_combat just
+shipped, the guard stood up) is kept for the record; `stand` and `half` as a
+STANCE still stand the guard up for the battle.
 """
 import argparse
 import json
@@ -594,12 +599,23 @@ def cmd_ship(a):
         link.symlink_to(rig)
     from retarget import Motion
     assign = dict(item.split("=", 1) for item in a.assign)
-    stand = assign.pop("idle", None) == "stand"
+    idle_mode = assign.pop("idle", None)
+    if idle_mode not in (None, "stand", "natural"):
+        sys.exit(f"idle={idle_mode}: the stages' idle is `natural` (tools/natural_idle.py) or `stand` (the guard stood up)")
+    natural = idle_mode == "natural"
+    stand = idle_mode == "stand"
     stance = assign.get("idle_combat")
+    natural_stance = stance == "natural"
+    if natural_stance:
+        # the stance IS the natural idle: the guard is retargeted only as the
+        # carrier mesh.py writes this rig's skeleton on, and
+        # tools/natural_idle.py writes the idle over it as both files
+        assign["idle_combat"] = "89"
+        natural = True
     stance_stand = stance in ("stand", "half")
     if stance_stand:
         assign["idle_combat"] = "89"          # the guard, then stood up (all the way, or half) and worn as the stance
-        stand = True
+        stand = stand or not natural
     # A stance that is not at rest (226: a bow held at full draw) is no pose
     # for the stages: their standing idle is the guard (89) stood up instead,
     # shipped as `idle` and stood in place below.
@@ -688,7 +704,36 @@ def cmd_ship(a):
         shutil.copyfile(bundle / f"{a.family}_idle.usdz", bundle / f"{a.family}_idle_combat.usdz")
         report["idle_combat"]["preset"] = f"89 {stance}"
         print(f"  the battle stance is the guard stood {'up' if stance == 'stand' else 'half up'} ({a.family}_idle_combat.usdz)")
-    if rest_from_guard:
+    if natural:
+        # the stages' standing idle from the rig's own bind (and, for a calm
+        # family, the battle stance as the same file): made AFTER the clips,
+        # on the carrier just shipped, so it binds as they do
+        import shutil
+        cmd = [sys.executable, str(REPO / "tools/natural_idle.py"), "ship", a.family, "--bundle", str(bundle),
+               "--jobs", "1"] + (["--also-combat"] if natural_stance else [])
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO))
+        line = next((l for l in r.stdout.splitlines() if l.startswith(a.family)), "")
+        print(f"  natural idle: {' '.join(line.split()[1:])[:400]}")
+        held = " HELD (" in line
+        report["idle"] = dict(preset="89 stood: held by tools/natural_idle.py's OVERRIDES" if held
+                              else "natural (tools/natural_idle.py)")
+        if natural_stance and not held:
+            report["idle_combat"]["preset"] = "natural (tools/natural_idle.py)"
+        elif natural_stance and held and not r.returncode:
+            # a held calm family's stance: the guard stood up, as its idle is
+            stand_idle(1.0)
+            shutil.copyfile(bundle / f"{a.family}_idle.usdz", bundle / f"{a.family}_idle_combat.usdz")
+            report["idle_combat"]["preset"] = "89 stand (held by tools/natural_idle.py's OVERRIDES)"
+        if r.returncode:
+            why = [l for l in (r.stdout + r.stderr).splitlines() if "PROBLEM" in l or "REFUSED" in l or "Error" in l]
+            print(f"  PROBLEM: no natural idle for {a.family}: {'; '.join(why[:2])}")
+            # never leave the guard's raw carrier as a stage idle or a calm stance
+            stand_idle(1.0)
+            report["idle"] = dict(preset="89 stood (the natural idle was refused)")
+            if natural_stance:
+                shutil.copyfile(bundle / f"{a.family}_idle.usdz", bundle / f"{a.family}_idle_combat.usdz")
+                report["idle_combat"]["preset"] = "89 stand (the natural idle was refused)"
+    elif rest_from_guard:
         stand_in_place(bundle, a.family, "idle")
         report["idle"]["preset"] = "89 stood (the stance is not at rest)"
         print(f"  the standing idle is the guard stood up ({a.family}_idle.usdz), not the {stance} stance")
@@ -923,6 +968,55 @@ POOLS = {
     "archer":   {"attack_basic": ["224@70:135^117"], "attack_heavy": [224], "ultimate": [222],
                  "idle_combat": [89, 226, "half"], "victory": [298, 412]},
 }
+# How each family STANDS (Docs/PLAN.md, *Natural poses*; the archetypes of the
+# craft study of 2026-09-24): the row of tools/natural_idle.py's STYLES its
+# standing idle is drawn from. The deal above is by weapon (what the arms can
+# swing); this is by character (how the body carries itself at rest) - a king
+# still but for a slow survey, a brute's heave, a trickster's cocked hip, a
+# beast's crouch. An awakened form takes its family's (`archetype`).
+ARCHETYPE = {
+    **{f: "sovereign" for f in ("anubis", "horus", "isis", "osiris", "ra", "boss_unwrapped_king", "zeus", "athena",
+                                "poseidon", "hera", "hades", "odin", "frigg", "minerva", "neptune", "pluto",
+                                "guan_yu")},
+    **{f: "champion" for f in ("sekhmet", "anhur", "ares", "perseus", "nike", "achilles", "amazon", "tyr", "sif",
+                               "vidar", "valkyrie", "mars", "bellona", "gladiator", "nezha")},
+    **{f: "soldier" for f in ("hoplite", "heimdall", "njord", "shield_maiden", "einherjar", "centurion",
+                              "scarab_knight")},
+    **{f: "brute" for f in ("sobek", "khnum", "taweret", "heracles", "hephaestus", "cyclops", "minotaur", "thor",
+                            "surtr", "berserker", "frost_troll", "dwarf_smith", "boss_jotunn")},
+    **{f: "mystic" for f in ("thoth", "ptah", "nephthys", "cobra_priestess", "medusa", "hel", "vestal", "nuwa")},
+    **{f: "grace" for f in ("maat", "hathor", "apollo", "aphrodite", "demeter", "siren", "nymph", "freya", "baldr",
+                            "idunn", "bragi", "light_elf", "chang_e")},
+    **{f: "hunter" for f in ("medjay", "artemis", "atalanta", "skadi", "ullr", "diana")},
+    **{f: "trickster" for f in ("set", "bes", "satyr", "hermes", "dionysus", "loki", "dark_elf", "mercury",
+                                "sun_wukong", "fox_spirit")},
+    **{f: "beast" for f in ("bastet", "serqet", "jackal_warrior", "harpy", "fenrir")},
+    **{f: "construct" for f in ("shabti", "mummy", "draugr", "jiangshi", "terracotta_soldier", "sandstone_sentinel",
+                                "boss_colossus")},
+}
+
+
+def archetype(family):
+    """The family's ARCHETYPE row; an awakened form takes its family's. None
+    for a family not in the table (tools/natural_idle.py refuses it)."""
+    return ARCHETYPE.get(family) or ARCHETYPE.get(family.replace("_awakened", ""))
+
+
+# The calm archetypes: a family of these whose deal stands the guard up for
+# its battle stance (`stand`) stands in its natural idle instead - the
+# genre's casters and kings stand calm in battle (Docs/PLAN.md, *Natural
+# poses*, step 2). 35 families; the guard's stood-up stance tore 9,994 edges
+# past 3x on them, the natural idle a few hundred. The other ten `stand`
+# families keep the stood guard until step 4's ready stances.
+CALM = ("sovereign", "grace", "mystic")
+
+
+def natural_stances():
+    """The families whose plan stance is `natural` (make_plan)."""
+    plan, _ = make_plan()
+    return sorted(f for f, p in plan.items() if str(p["clips"].get("idle_combat")) == "natural")
+
+
 BESPOKE = {"anubis", "sekhmet", "zeus", "ares", "thoth"}      # Art/Motions/<family>_<clip>.motion.npz
 BRUTES = {"minotaur", "cyclops", "frost_troll", "berserker", "draugr", "fenrir", "sobek", "surtr", "heracles", "boss_colossus", "khnum", "taweret"}
 HAND_WRITTEN = {"anubis": 4, "sekhmet": 5, "zeus": 5, "ares": 5, "thoth": 5, "heracles": 4, "perseus": 4,
@@ -1208,6 +1302,10 @@ def make_plan():
         if kept:
             p["kept"] = kept
     for f, p in plan.items():
+        # after the deal and the judgments, so no other family's deal moves
+        if str(p["clips"].get("idle_combat")) == "stand" and archetype(f) in CALM:
+            p["clips"]["idle_combat"] = "natural"
+    for f, p in plan.items():
         p["hand"] = weapon_hand(f)
         p["mirror"] = mirrored_clips(f, p["clips"])
     return plan, taken
@@ -1219,7 +1317,7 @@ def plan_label(v):
         return v[:-len(NO_MIRROR)].split("@")[0]
     if v.endswith(".npz"):
         return "own:" + Path(v).name.split("_")[0]
-    if v in ("stand", "half"):
+    if v in ("stand", "half", "natural"):
         return v
     return v.split("@")[0]
 
@@ -1259,7 +1357,8 @@ def ship_argv(family, p, bundle, real=False):
     """The `ship` arguments for one family of the plan. A god's attack clips
     are its bespoke motions, already on its rig and its awakened rig and
     timed by BattleSceneController.contactFraction's own row, so only its
-    stance and victory are dealt; every family takes the standing idle."""
+    stance and victory are dealt; every family takes the natural idle
+    (tools/natural_idle.py), and a calm one wears it as its stance too."""
     base = family.replace("_awakened", "")
     argv = [p["asset"], family]
     for clip, value in p["clips"].items():
@@ -1268,7 +1367,7 @@ def ship_argv(family, p, bundle, real=False):
         if clip in p.get("kept", ()):
             continue                            # the pre-palette file stays (KEPT)
         argv.append(f"{clip}={value}")
-    argv += ["idle=stand", "--bundle", str(bundle)] + (["--real"] if real else [])
+    argv += ["idle=natural", "--bundle", str(bundle)] + (["--real"] if real else [])
     if p.get("height"):
         argv += ["--height", str(p["height"])]
     return argv
@@ -1322,7 +1421,7 @@ def main():
     p = sub.add_parser("free"); p.add_argument("presets", nargs="+"); p.add_argument("--prefer", default="shield_maiden_serious")
     p.add_argument("--keep", action="store_true"); p.add_argument("--force", action="store_true")
     sub.add_parser("list")
-    p = sub.add_parser("ship"); p.add_argument("asset"); p.add_argument("family"); p.add_argument("assign", nargs="+", help="clip=preset_id | clip=path.motion.npz | idle=stand")
+    p = sub.add_parser("ship"); p.add_argument("asset"); p.add_argument("family"); p.add_argument("assign", nargs="+", help="clip=preset_id | clip=path.motion.npz | idle=natural | idle_combat=natural")
     p.add_argument("--bundle", required=True); p.add_argument("--height", type=float); p.add_argument("--keep", action="store_true"); p.add_argument("--real", action="store_true")
     p.add_argument("--with-base", action="store_true", help="also build the base (no LOD) from the same rig, so a board in a scratch bundle is self-consistent")
     p.add_argument("--no-mirror", action="store_true", help="never mirror a clip to the family's weapon hand (WEAPON_HAND), for a before/after board")

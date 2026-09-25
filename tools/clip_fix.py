@@ -6,7 +6,7 @@ is. Nothing here spends a credit.
 
     python3 tools/clip_fix.py --mirror hephaestus attack_heavy --out DIR
     python3 tools/clip_fix.py --survey-arms                      # every family's arms vs the archived preset
-    python3 tools/clip_fix.py --rearm baldr --out DIR            # every clip; the standing idle re-derived
+    python3 tools/clip_fix.py --rearm baldr --out DIR            # every clip (the stage idle is natural_idle.py's)
     python3 tools/clip_fix.py --mirror skadi attack_basic,attack_heavy,ultimate --bow-wrist --out DIR
     python3 tools/clip_fix.py --lift-snout sobek attack_heavy,ultimate --limit 75 --out DIR
     python3 tools/clip_fix.py --skirt skadi --out DIR            # character.reweight_skirt, base + LOD
@@ -64,7 +64,11 @@ tools/base_plus_clip.py matches them.
    Art/Models/<asset>.meshy.json; the frame counts match to the frame), and
    keeps every other track as shipped — the hips, legs and spine, and so the
    grounding and the feet, do not move. The standing idle (<fam>_idle.usdz)
-   is re-derived from the fixed combat idle by tools/stand_idle.py's own sum.
+   is NOT re-derived from the fixed combat idle any more (2026-09-25): the
+   stages' idle is tools/natural_idle.py's, built from the rig's own bind
+   pose, which a re-arm does not touch (it was stand_idle.py's sum of the
+   combat idle until then, and re-deriving it here would put the stood
+   guard back).
 
    --bow-wrist: the concept's grip (the rigger's rule: everything held
    hangs along the thigh) holds a bow ALONG the forearm, so an arm raised to
@@ -816,7 +820,7 @@ def do_mirror(family, clips, bundle, out, mode="pose", wrist=False):
         write_carrier(c, out / src.name)
 
 
-def do_rearm(family, clips, bundle, out, idle=True):
+def do_rearm(family, clips, bundle, out):
     from retarget import Motion
     ids = preset_ids(family)
     clips = clips or [c for c in all_clips(bundle, family) if c in ids]
@@ -842,13 +846,9 @@ def do_rearm(family, clips, bundle, out, idle=True):
               f"(body {before[1]:.0f} -> {after[1]:.0f})")
         c.name = family
         write_carrier(c, out / f"{family}_{clip}.usdz")
-    if idle and (out / f"{family}_idle_combat.usdz").exists() and (bundle / f"{family}_idle.usdz").exists():
-        from stand_idle import stand
-        c = read(out / f"{family}_idle_combat.usdz")
-        stand(c, 1.0)
-        c.name = family
-        print(f"  {family}_idle: the standing idle re-derived from the fixed combat idle")
-        write_carrier(c, out / f"{family}_idle.usdz")
+    # The stage idle is not re-derived from the fixed combat idle: it is
+    # tools/natural_idle.py's, made from the bind pose, which a re-arm leaves
+    # as it was (2026-09-25).
 
 
 def do_neck(family, clips, bundle, out, keep):
@@ -922,7 +922,6 @@ def main():
     ap.add_argument("--bundle", default=str(BUNDLE))
     ap.add_argument("--out")
     ap.add_argument("--in-place", action="store_true")
-    ap.add_argument("--no-idle", action="store_true")
     args = ap.parse_args()
     bundle = Path(args.bundle)
 
@@ -952,7 +951,7 @@ def main():
     if args.rearm:
         fam = args.rearm[0]
         clips = args.rearm[1].split(",") if len(args.rearm) > 1 else None
-        do_rearm(fam, clips, bundle, out, idle=not args.no_idle)
+        do_rearm(fam, clips, bundle, out)
     if args.damp_neck:
         fam, clips = args.damp_neck
         do_neck(fam, clips.split(","), bundle, out, args.keep)

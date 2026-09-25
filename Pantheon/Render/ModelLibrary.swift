@@ -1289,9 +1289,17 @@ extension SCNNode {
     /// and carried into a live scene is the one order SceneKit did not start.
     /// So: into the scene first, then a player, then `play()` — the three
     /// things the paths that worked had and the frozen one lacked.
+    ///
+    /// The loop starts at a random point of its cycle (2026-09-24), as
+    /// `UnitNode.play` has always started the battle's and the island's, so
+    /// figures started together do not breathe in step and a stage does not
+    /// open on the clip's first frame every time it appears (Docs/PLAN.md
+    /// *Natural poses*, build step 3).
     func startLoop(_ clip: CAAnimation, key: String) {
         let animation = SCNAnimation(caAnimation: clip)
         animation.usesSceneTimeBase = false
+        let cycle: TimeInterval = max(0.05, animation.duration)
+        animation.timeOffset = TimeInterval.random(in: 0..<cycle)
         let player = SCNAnimationPlayer(animation: animation)
         addAnimationPlayer(player, forKey: key)
         player.play()
@@ -1771,8 +1779,32 @@ enum MaterialTuner {
 /// following its bones. This says which.
 final class StageDoctor: NSObject, SCNSceneRendererDelegate {
     let label: String
-    weak var figure: SCNNode?
+    /// The figure on the stage, set on the main thread as it is placed —
+    /// in the scene, its idle playing. Under `-tour-pose-lab` a new figure
+    /// on the altar gets the pose lab's probe (`PoseLab`, TourView.swift).
+    weak var figure: SCNNode? {
+        didSet {
+            #if DEBUG
+            guard figure !== oldValue else { return }
+            let probe: PoseLabProbe? = figure.flatMap { PoseLab.probe(for: $0, stage: label) }
+            labLock.lock()
+            lab = probe
+            labLock.unlock()
+            #endif
+        }
+    }
     weak var view: SCNView?
+    #if DEBUG
+    /// The pose lab's probe for the figure, made on the main thread and
+    /// read on the render thread, so it changes hands under a lock.
+    private let labLock = NSLock()
+    private var lab: PoseLabProbe?
+    private var currentLab: PoseLabProbe? {
+        labLock.lock()
+        defer { labLock.unlock() }
+        return lab
+    }
+    #endif
     private var frames = 0
     private var firstTime: TimeInterval = 0
     private var lastReport: TimeInterval = 0
@@ -1785,10 +1817,23 @@ final class StageDoctor: NSObject, SCNSceneRendererDelegate {
     }
 
     /// The cloth chains are stepped here on every stage this doctor watches
-    /// (the Hall of Ka's altar, the collection's Stage), tour or not.
+    /// (the Hall of Ka's altar, the collection's Stage), tour or not. The
+    /// pose lab reads the head as the clip left it first (and, `write`,
+    /// turns it), so the cloth steps under whatever the lab laid on.
     func renderer(_ renderer: SCNSceneRenderer, didApplyAnimationsAtTime time: TimeInterval) {
+        #if DEBUG
+        currentLab?.afterAnimations()
+        #endif
         ClothSimulation.shared.step(in: renderer.scene, at: time)
     }
+
+    #if DEBUG
+    /// The pose lab reads the head again once the constraints have run:
+    /// what the skinner is handed.
+    func renderer(_ renderer: SCNSceneRenderer, didApplyConstraintsAtTime time: TimeInterval) {
+        currentLab?.afterConstraints(at: time)
+    }
+    #endif
 
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
         guard enabled else { return }

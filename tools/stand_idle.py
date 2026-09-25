@@ -1,5 +1,14 @@
 """A standing idle for every family, derived from its combat idle.
 
+Since 2026-09-25 this is the BATTLE STANCE's tool, not the stages': the
+stages' idle is tools/natural_idle.py's, built from the rig's own bind pose
+(Docs/MOTION.md, *The stage idle*). This sum stays for the stances still made
+from the guard - motion_palette's `stand` and `half` (stood all the way, or
+70% of the crouch kept) - until the ready stances replace them, for a family
+natural_idle.py holds (OVERRIDES' `hold`: Bastet and Serqet keep this idle),
+and as the fallback a batch script takes, loudly, where natural_idle.py
+refuses a family. What follows is how it came to be.
+
 No family ships a plain `idle` (2026-09-18: 0 of 116), so every stage that
 shows a figure at rest — the summon reveal, the Hall of Ka's altar, the
 collection's Stage, the island — played Meshy's *combat idle* preset, a

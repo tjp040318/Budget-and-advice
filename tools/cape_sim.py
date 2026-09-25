@@ -53,9 +53,13 @@ REFERENCE_HEIGHT = 1.9
 # cannot swing forward between the legs when the figure stops (the spheres catch only what
 # enters them). Its offset is the chain's rest clearance behind the pelvis, at most this share.
 BACK_PLANE = ("hips", 0.06)
+# The chest is CHEST, the middle joint of the spine found by where it sits (`_chest`), not a name:
+# 106 of the 117 rigs call it spine01 and eleven (the awakened Hera among them, the one with a cape)
+# have no spine01 at all. Mirror: ClothChain.Cloth.chestKey and ClothChain.chest(in:).
+CHEST = "chest"
 COLLIDERS = (
     ("hips", "hips", 0.0, 0.085),
-    ("spine01", "spine01", 0.0, 0.09),
+    (CHEST, CHEST, 0.0, 0.09),
     ("leftupleg", "leftleg", 0.40, 0.06), ("leftupleg", "leftleg", 0.80, 0.06),
     ("rightupleg", "rightleg", 0.40, 0.06), ("rightupleg", "rightleg", 0.80, 0.06),
     ("leftleg", "leftfoot", 0.50, 0.045), ("rightleg", "rightfoot", 0.50, 0.045),
@@ -64,6 +68,29 @@ COLLIDERS = (
 
 def _leaf(j):
     return j.split("/")[-1]
+
+
+def _chest(char, idx):
+    """The chest: the MIDDLE joint of the spine. The joint over Head is the neck, and the joints
+    between it and Hips are the spine, bottom to top (three on every shipped rig, whatever they are
+    called), so this is Spine01 on the 106 rigs that name it and Spine02 on the eleven that run
+    Hips > neck > Spine02 > Spine > Head1|Spine1 > Head. None when the rig has no Head over Hips.
+    Mirror: ClothChain.chest(in:)."""
+    hips, head = idx.get("hips"), idx.get("head")
+    if hips is None or head is None:
+        return None
+    neck = int(char.parents[head])
+    if neck < 0:
+        return None
+    spine = []
+    j = int(char.parents[neck])
+    while j >= 0 and j != hips:
+        spine.append(j)
+        j = int(char.parents[j])
+    if j != hips or not spine:
+        return None
+    spine.reverse()
+    return spine[len(spine) // 2]
 
 
 def _rot_col(world_row):
@@ -132,7 +159,8 @@ class CapeSim:
         self.colliders = []
         chain_pts = self._rest_particles(rest_world)
         for a, b, frac, share in COLLIDERS:
-            ia, ib = self.idx.get(a), self.idx.get(b)
+            ia = _chest(char, self.idx) if a == CHEST else self.idx.get(a)
+            ib = _chest(char, self.idx) if b == CHEST else self.idx.get(b)
             if ia is None or ib is None:
                 continue
             centre = rest_world[ia][3, :3] * (1 - frac) + rest_world[ib][3, :3] * frac

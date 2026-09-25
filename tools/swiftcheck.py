@@ -1166,6 +1166,9 @@ def check_unknown_types(files, declared, errors):
         "MetricKit","MXMetricManager","MXMetricManagerSubscriber","MXMetricPayload",
         "MXDiagnosticPayload","MXCrashDiagnostic","MXCallStackTree","NSObjectProtocol","Name",
         "DispatchSource","KERN_SUCCESS","TASK_VM_INFO",
+        # The pose lab (2026-09-24, Docs/PLAN.md *Natural poses*): a transform
+        # constraint on a joint over a playing clip.
+        "SCNTransformConstraint",
     }
     used = defaultdict(list)
     for path in files:

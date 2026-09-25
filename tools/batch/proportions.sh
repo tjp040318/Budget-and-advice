@@ -43,8 +43,13 @@ for name in "${names[@]}"; do
   src=$(source_for "$name")
   [ -z "$src" ] && { echo "$name: no source; skipped"; continue; }
   echo "$(date -u +%T) $name <- $src"
-  if python3 tools/mesh.py "$src" --as "$name" --tris 16000 --lod 6000 --lod-texture 2048 --proportions "$RECIPE" ${GRADE[$name]:-} > "$S/$name.log" 2>&1 && python3 tools/stand_idle.py "$name" >> "$S/$name.log" 2>&1; then
-    touch "$S/$name.done"; done_n=$((done_n + 1)); grep -E "proportions:|cape:|every file verified" "$S/$name.log" | tail -3
+  # the stages' idle after the ship, from the rig's own bind (tools/natural_idle.py
+  # since 2026-09-25; the guard stood up by tools/stand_idle.py only where it refuses)
+  if python3 tools/mesh.py "$src" --as "$name" --tris 16000 --lod 6000 --lod-texture 2048 --proportions "$RECIPE" ${GRADE[$name]:-} > "$S/$name.log" 2>&1 && {
+       python3 tools/natural_idle.py ship "$name" --bundle Pantheon/Resources/Models --calm-stances --jobs 1 >> "$S/$name.log" 2>&1 || {
+         echo "NATURAL IDLE REFUSED for $name: the guard stood up instead" >> "$S/$name.log"
+         python3 tools/stand_idle.py "$name" >> "$S/$name.log" 2>&1; }; }; then
+    touch "$S/$name.done"; done_n=$((done_n + 1)); grep -E "proportions:|cape:|every file verified|NATURAL IDLE REFUSED" "$S/$name.log" | tail -4
   else
     echo "  FAILED: $(grep -E 'PROBLEM|Error|Traceback' "$S/$name.log" | head -2 | tr '\n' ' ')"
   fi

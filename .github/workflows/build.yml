@@ -56,7 +56,10 @@ jobs:
     # to wait on — the unit sheet's four tablets, the bag's select, confirm
     # and kit, Manage's draft and best, the card's awaken, stones and wearer,
     # the filter's set — each a five-second sleep and a shot: about two and
-    # a half minutes against run 253's 81.
+    # a half minutes against run 253's 81. The natural poses' lab (the
+    # same day) adds three relaunches — step 0's -tour-island-rebuild, on a
+    # cue of at most 20 s, and step 3's two -tour-pose-lab — about half a
+    # minute against run 256's 61.
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
@@ -499,10 +502,18 @@ jobs:
               # onto the summoning circle (-tour-island-zoom 1.5), so the
               # diorama is seen close: the buildings as targets, the
               # bubbles, the figures and the decorations at the larger size.
+              # Then -tour-island-rebuild (Docs/PLAN.md, "Natural poses",
+              # build step 3): the campaign team goes round under the live
+              # island and back, rebuilding the figures into the running
+              # scene — the one path that stood them in the battle's crouch —
+              # and the frame is taken on its cue; they must stand as
+              # 0-island's do, and the console's "[Idle] … restarted" lines
+              # name the one idle each carries.
               island)
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-island-zoom 1.5 >/dev/null
-                sleep 6; shoot "$step-${names[$step]}-zoomed" ;;
+                sleep 6; shoot "$step-${names[$step]}-zoomed"
+                again -tour-island-rebuild; cue_again island-rebuilt 20; sleep 2; shoot "$step-${names[$step]}-rebuild" ;;
               # Phase B (2026-09-22): every rebuilt screen in the states its
               # plain frame cannot show. The plain frame keeps its old name,
               # so a run still compares with the one before; the relaunches
@@ -519,10 +530,19 @@ jobs:
               # The Hall of Ka's other three ledgers: the offering Auto chose,
               # the evolution, and the fusion board — six seconds, so the
               # prize's mesh has loaded onto the altar.
+              # Then the pose lab (Docs/PLAN.md, "Natural poses", build step
+              # 3): the altar's figure with its head turned 20 degrees over
+              # the playing idle, by a transform constraint and by a write in
+              # didApplyAnimationsAtTime. Each is judged beside 3-training,
+              # and its console's [PoseLab] lines give the head's yaw with the
+              # turn and without it, and a verdict.
               training)
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 for m in feed evolve fuse; do
                   again -tour-training $m; sleep 6; shoot_lit "$step-${names[$step]}-$m"
+                done
+                for m in constraint write; do
+                  again -tour-pose-lab $m; sleep 6; shoot_lit "$step-${names[$step]}-pose-$m"
                 done ;;
               # More's Diagnostics row, opened: where the model board and the
               # console went when they left More's front page.

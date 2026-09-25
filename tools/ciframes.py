@@ -207,6 +207,13 @@ def main():
         lines = open(log, errors="replace").read().splitlines()
         wanted = [l for l in lines if "[ModelLibrary]" in l or "[Diagnostics]" in l
                   or any(k in l for k in ("rror", "SCNMetal", "shader", "Shader", "compile", "fatal", "Fatal"))]
+        # The pose lab's yaw lines and verdict ([PoseLab], step 3's
+        # -tour-pose-lab relaunches) and the island's restarted idles
+        # ("[Idle] … restarted", step 0's -tour-island-rebuild), every one,
+        # ahead of the capped list, which the loader's lines fill long before
+        # a relaunch. The other [Idle] lines (a loop handed over) stay in the
+        # console file: a battle prints a dozen a launch.
+        lab = [l for l in lines if "[PoseLab]" in l or ("[Idle]" in l and "restarted" in l)]
         print(f"-- {os.path.basename(log)}: {len(lines)} lines, {len(wanted)} of interest")
         # The step's frame pacing beside it (Docs/FEEL.md W2.26): each
         # stage's latest [Frames] line — the governor prints one every three
@@ -214,6 +221,8 @@ def main():
         # last before a relaunch is the nearest to its photographs — and
         # every hitch line, a single frame over 100 ms with when it came.
         for l in frames_summary(lines):
+            print("   " + l[:220])
+        for l in lab:
             print("   " + l[:220])
         for l in wanted[:a.log_lines]:
             print("   " + l[:220])

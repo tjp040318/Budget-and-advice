@@ -99,6 +99,24 @@ final class UnitNode: SCNNode {
     /// screenshots — until its first attack.
     private var currentClip: AnimationClip?
 
+    /// The skeletal LOOP the model is playing — the battle's stance, the
+    /// stage's standing idle, the walk — whichever `play` last attached; nil
+    /// before one plays and after `restartIdle` clears the model. Kept apart
+    /// from `currentClip`, which a one-shot takes over while this loop runs
+    /// on under it: the swing blends out onto it, and `idleAfterClip` hands
+    /// back to it.
+    ///
+    /// Until 2026-09-24 nothing took a loop off (Docs/PLAN.md *Natural
+    /// poses*, "Found on the way" 2): each was added under its own key, so an
+    /// island figure that had strolled evaluated `idle_combat` (from `init`),
+    /// `walk` and `idle` every frame, and whichever SceneKit applied last won.
+    private var currentLoop: AnimationClip?
+
+    /// How long a loop takes to leave as a DIFFERENT loop starts: the 0.25 s
+    /// the new loop fades in over (`play`), so one stance becomes the next
+    /// as a cross-fade rather than a cut.
+    static let loopBlendOut: CGFloat = 0.25
+
     /// Where the model container rests, read before anything has had a chance
     /// to animate it. The dash writes the container's height every frame to
     /// arc the leap and a recoil writes its depth, so both need a rest value
@@ -419,10 +437,12 @@ final class UnitNode: SCNNode {
 
     /// The clip a figure AT REST plays on a stage — the island, and a
     /// figure restarted there: the family's standing `idle` when it ships
-    /// one (`tools/stand_idle.py` derives one from the combat idle for every
-    /// family, 2026-09-18), the combat idle otherwise. No family shipped a
-    /// plain idle before that day, so every stage played Meshy's crouched
-    /// guard stance; the battle keeps the crouch, which is right there.
+    /// one (every family since 2026-09-18; since 2026-09-25 it is
+    /// `tools/natural_idle.py`'s, built from the rig's own bind pose in its
+    /// archetype's contrapposto, a 7-14 s loop), the combat idle
+    /// otherwise. No family shipped a plain idle before 2026-09-18, so every
+    /// stage played Meshy's crouched guard stance; the battle keeps its
+    /// stance, which is right there.
     var restingIdle: AnimationClip {
         ModelLibrary.shared.animation(.idle, for: clipAsset) != nil ? .idle : .idleCombat
     }
@@ -545,16 +565,49 @@ final class UnitNode: SCNNode {
     /// into a scene that is already rendering never starts (the Hall of
     /// Ka's frozen Zeus, 2026-09-17), and the island rebuilds its figures
     /// into a live scene whenever the team changes.
+    ///
+    /// The figure is AT REST, so it takes its resting idle (the family's
+    /// standing `idle`). This played `.idleCombat` from the day it was
+    /// written, a day before the standing idle existed, so a team changed
+    /// while the island was up crouched every figure in the battle's guard
+    /// until its first hop (Docs/PLAN.md *Natural poses*, "Found on the
+    /// way" 1; `-tour-island-rebuild` photographs that path,
+    /// `0-island-rebuild`).
     func restartIdle() {
         guard !isDefeated else { return }
         currentClip = nil
+        currentLoop = nil
         modelContainer.removeAllAnimations()
         modelContainer.removeAllActions()
         // A figure rebuilt into a live scene may carry nodes it did not have
         // when it was built; the light layer is every node's own.
         markFigure()
-        play(.idleCombat)
+        play(restingIdle)
+        #if DEBUG
+        reportRestartUnderTour()
+        #endif
     }
+
+    #if DEBUG
+    /// Under the CI tour, a second after `restartIdle`: the loop the figure
+    /// plays and every key on its model, which after the fix is the one
+    /// idle (`-tour-island-rebuild`, `0-island-rebuild`'s console).
+    private func reportRestartUnderTour() {
+        guard Self.touring else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self else { return }
+            let keys: [String] = self.modelContainer.animationKeys.sorted()
+            print("[Idle] \(self.clipAsset) restarted in \(self.currentLoop?.rawValue ?? "no loop"): keys \(keys)")
+        }
+    }
+
+    /// The CI tour, read once.
+    private static let touring: Bool = ProcessInfo.processInfo.arguments.contains("-tour")
+    /// Hand-over lines printed so far (`handOver(to:)`): the first dozen of
+    /// a launch, the island's figures and a wave's first walk-ons, and then
+    /// quiet.
+    private static var handOverLines = 0
+    #endif
 
     // MARK: - Animation
 
@@ -631,6 +684,7 @@ final class UnitNode: SCNNode {
             animation.speed = Float(max(0.05, rate))
 
             modelContainer.addAnimation(animation, forKey: clip.rawValue)
+            if clip.loops { handOver(to: clip) }
             if !clip.loops {
                 let played = animation.duration > 0
                     ? animation.duration / Double(max(0.05, animation.speed))
@@ -650,6 +704,29 @@ final class UnitNode: SCNNode {
         }
 
         playProcedural(clip, completion: completion)
+    }
+
+    /// A skeletal loop has just been attached: the loop it replaces, if it
+    /// is a DIFFERENT one, leaves over `loopBlendOut` while the new one fades
+    /// in, so the model evaluates one loop and not every loop it ever
+    /// played. Only a loop takes a loop off. A one-shot plays over the loop
+    /// and leaves it running, so the swing still blends out onto the stance
+    /// and `idleAfterClip` re-seats the same key it always did; the same
+    /// loop started again replaces itself under its own key, as before. A
+    /// loop with no clip of its own is procedural (`playProcedural`: a bob
+    /// on the container) and never gets here, so the skeletal loop under it
+    /// stays and the figure is never left in its bind pose.
+    private func handOver(to loop: AnimationClip) {
+        if let previous = currentLoop, previous != loop {
+            modelContainer.removeAnimation(forKey: previous.rawValue, blendOutDuration: Self.loopBlendOut)
+            #if DEBUG
+            if Self.touring, Self.handOverLines < 12 {
+                Self.handOverLines += 1
+                print("[Idle] \(clipAsset): \(previous.rawValue) off over \(Self.loopBlendOut) s for \(loop.rawValue)")
+            }
+            #endif
+        }
+        currentLoop = loop
     }
 
     /// Hands a one-shot back to the idle when it finishes.
@@ -1633,7 +1710,14 @@ final class UnitNode: SCNNode {
             shadow.runAction(.fadeOpacity(to: 1, duration: beat(0.35)))
         }
         setHealth(fraction: healthFraction, animated: false)
-        play(restingIdle)
+        // Back into the fight's stance, the loop every one-shot hands back
+        // to (`idleAfterClip`: the combat stance, or the standing idle once
+        // the unit has posed for the triumph). This played `restingIdle`,
+        // harmless while the standing idle was the guard stood up; with a
+        // figure at ease there, a revived unit would stand relaxed among the
+        // guards until its turn (Docs/PLAN.md *Natural poses*, "Found on the
+        // way" 3).
+        play(idleAfterClip)
     }
 
     /// World position for spawning a VFX or a damage number on this unit.

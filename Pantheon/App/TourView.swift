@@ -1,6 +1,7 @@
 #if DEBUG
 import Combine
 import SceneKit
+import simd
 import SwiftUI
 
 /// A self-driving pass through the app's screens, for a machine with no
@@ -91,6 +92,15 @@ struct TourView: View {
               let zoom = Double(args[at + 1]) else { return nil }
         return CGFloat(zoom)
     }
+
+    /// `-tour-island-rebuild` (Docs/PLAN.md *Natural poses*, build step 3):
+    /// the island's step with its campaign team changed once the island is
+    /// up — the one path that stood the figures in the battle's crouch
+    /// (`UnitNode.restartIdle`) — and then changed back, so the save every
+    /// later launch reads keeps its team (`rebuildIslandTeam`). The CI job
+    /// photographs it on `[TourCue] island-rebuilt` as `0-island-rebuild`,
+    /// whose figures must stand as `0-island`'s do.
+    static var pinnedIslandRebuild: Bool { ProcessInfo.processInfo.arguments.contains("-tour-island-rebuild") }
 
     /// The word after `flag` on the launch line, or nil when the flag is
     /// absent or last. Every relaunch argument below that takes a word is
@@ -387,6 +397,7 @@ struct TourView: View {
             if current == "dungeon_battle" { startDungeonBattle() }
             if current == "realm_battle" { startRealmBattle() }
             if current == "victory", Self.pinnedVictoryField { startVictoryField() }
+            if current == "island", Self.pinnedIslandRebuild { rebuildIslandTeam() }
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
@@ -1122,6 +1133,34 @@ struct TourView: View {
         realmModel = model
     }
 
+    /// `-tour-island-rebuild`: three seconds after the island appears, the
+    /// campaign team goes round by one — the same figures on other stands
+    /// when it has two or more, the strongest unit not in it as the leader
+    /// when it has one — which rebuilds the island's figures into its live
+    /// scene through `UnitNode.restartIdle`; a second and a half later the
+    /// team is put back, a second live rebuild on the same path, so the
+    /// tour's save is left as it was. Then `[TourCue] island-rebuilt`.
+    private func rebuildIslandTeam() {
+        let game = store
+        let original = game.player.campaignTeam
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            var ids: [UUID] = original.unitIDs
+            if ids.count >= 2 {
+                ids.append(ids.removeFirst())
+            } else if let other = game.resolvedUnits.sorted(by: { $0.power > $1.power }).first(where: { !ids.contains($0.id) }) {
+                ids.insert(other.id, at: 0)
+            }
+            var changed = original
+            changed.unitIDs = ids
+            game.setTeam(changed, for: .campaign)
+            print("[Tour] island rebuild: the campaign team went round under the live island (\(ids.count) units)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                game.setTeam(original, for: .campaign)
+                print("[TourCue] island-rebuilt")
+            }
+        }
+    }
+
     private func seedIfNeeded() {
         guard !seeded else { return }
         seeded = true
@@ -1817,6 +1856,305 @@ private final class TourStressDriver: ObservableObject {
             await pause(Self.dismissal)
             MemoryProbe.log("stress battle \(plan.stage) closed")
         }
+    }
+}
+
+// MARK: - The pose lab (Docs/PLAN.md *Natural poses*, build step 3)
+
+/// Whether a layer laid over a PLAYING skeletal clip shows on today's iOS,
+/// and by which road — the question Docs/PLAN.md's build step 6 (the gaze)
+/// turns on. `-tour-pose-lab constraint` relaunches the Hall of Ka (step 3)
+/// with an `SCNTransformConstraint` turning the figure's head 20° about the
+/// figure's upright over the idle it is playing — on the joint `Head` hangs
+/// from, which carries the head on every rig (`PoseLabProbe.joint`);
+/// `-tour-pose-lab write` turns it the same 20° by writing that joint in
+/// `renderer(_:didApplyAnimationsAtTime:)`. Either way the altar's
+/// `StageDoctor` reads the head's yaw against the figure's own facing twice
+/// a frame — after the animations (the clip's head, WITHOUT the turn) and
+/// after the constraints (what the skinner is handed, WITH it) — and prints
+/// both in `[PoseLab]` lines: half a second after the figure first draws,
+/// then once a second, five in all, the last with a verdict. The frames are
+/// `3-training-pose-constraint` and `3-training-pose-write` beside
+/// `3-training`: the lines say whether the head's presentation turned, the
+/// frame whether the mesh followed it.
+enum PoseLab {
+    enum Mode: String {
+        /// An `SCNTransformConstraint` on the joint the head hangs from.
+        case constraint
+        /// That joint's orientation written after the animations.
+        case write
+    }
+
+    /// The lab named on the launch line, under the tour only.
+    static let mode: Mode? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("-tour"), let at = args.firstIndex(of: "-tour-pose-lab"), at + 1 < args.count else { return nil }
+        return Mode(rawValue: args[at + 1])
+    }()
+
+    /// The turn laid over the idle, toward the figure's left: from the
+    /// altar's three-quarter stance that is toward the lens.
+    static let turnDegrees: Float = 20
+
+    /// A probe for a figure just placed on a stage, or nil: no lab named, a
+    /// stage other than the Hall of Ka's altar, or a rig with no head.
+    static func probe(for figure: SCNNode, stage: String) -> PoseLabProbe? {
+        guard let lab = PoseLab.mode, stage == "altar" else { return nil }
+        return PoseLabProbe(figure: figure, mode: lab)
+    }
+
+    /// The constraint the `constraint` lab hangs on the joint `Head` hangs
+    /// from. Built here, off the main actor: SceneKit calls the block on its
+    /// render thread in the middle of the frame, and a closure formed in a
+    /// main-actor context carries a check that traps there under Swift 6.
+    /// The block touches nothing but the turn, through its lock.
+    nonisolated static func headTurn(_ turn: PoseLabTurn) -> SCNTransformConstraint {
+        SCNTransformConstraint.orientationConstraint(inWorldSpace: false) { _, orientation in
+            turn.turned(orientation)
+        }
+    }
+}
+
+/// The turn the `constraint` lab's block lays on, and what the block saw:
+/// read and written under a lock (`ClipPace`'s pattern), since the block
+/// runs on SceneKit's render thread and the turn is set on the main one.
+final class PoseLabTurn {
+    private let lock = NSLock()
+    private var axis = SIMD3<Float>(0, 1, 0)
+    private var radians: Float = 0
+    private var lastOut: simd_quatf?
+    private var heldCount = 0
+
+    func set(axis: SIMD3<Float>, radians: Float) {
+        lock.lock()
+        self.axis = axis
+        self.radians = radians
+        lock.unlock()
+    }
+
+    /// Frames the block was handed its own last answer back: the clip had
+    /// NOT rewritten the joint since, and turning it again would have spun
+    /// the head a further 20° a frame, so it was returned as it came.
+    var held: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return heldCount
+    }
+
+    /// The turned joint's local orientation (in its parent's frame, as the
+    /// constraint hands it over) turned about the figure's upright.
+    func turned(_ orientation: SCNVector4) -> SCNVector4 {
+        let local = simd_quatf(ix: Float(orientation.x), iy: Float(orientation.y), iz: Float(orientation.z), r: Float(orientation.w))
+        lock.lock()
+        defer { lock.unlock() }
+        if let lastOut, PoseLabProbe.angle(between: local, lastOut) < PoseLabProbe.sameAngle {
+            heldCount += 1
+            return orientation
+        }
+        let out: simd_quatf = simd_normalize(simd_quatf(angle: radians, axis: axis) * local)
+        lastOut = out
+        return SCNVector4(x: out.imag.x, y: out.imag.y, z: out.imag.z, w: out.real)
+    }
+}
+
+/// One figure's lab (`PoseLab`): made on the main thread as the figure is
+/// placed — the head found, the face's direction and the upright read off
+/// the bind, the constraint hung — and then the RENDER thread's alone,
+/// through `StageDoctor`'s two callbacks.
+final class PoseLabProbe {
+    let mode: PoseLab.Mode
+    private weak var figure: SCNNode?
+    /// The joint named `Head`, whose facing is read: every shipped rig has
+    /// one.
+    private let head: SCNNode
+    /// The joint TURNED: the one `Head` hangs from, found by where it sits.
+    /// On 106 rigs that is `neck`, which carries the head with it; on the
+    /// eleven that call the joint over the hips `neck` (Docs/PLAN.md
+    /// *Natural poses*) it is `Head1` or `Spine1`, which carries the head's
+    /// skin — their `Head` is a skinless tip, and turning it would turn
+    /// nothing drawn (Zeus's weighs 0 against `Head1`'s 1,110). Measured on
+    /// the shipped bases, a turn of this joint moves a median 99% of the
+    /// top of the head, and a turn of `Head` none of it on those eleven.
+    private let joint: SCNNode
+    /// The face's direction in the head's own frame: the figure's front
+    /// (+Z) at the bind.
+    private let faceLocal: SIMD3<Float>
+    /// The figure's upright in the frame of the turned joint's parent at the
+    /// bind: the axis the turn is laid on about.
+    private let axisInParent: SIMD3<Float>
+    private let radians: Float
+    private let turn = PoseLabTurn()
+
+    // The render thread's alone from here.
+    private var without: Float?
+    private var firstTime: TimeInterval = 0
+    private var lastReport: TimeInterval = 0
+    private var reports = 0
+    private var samples = 0
+    private var sumWithout: Double = 0
+    private var sumWith: Double = 0
+    private var sumTurn: Double = 0
+    private var lowTurn: Float = .greatestFiniteMagnitude
+    private var highTurn: Float = -.greatestFiniteMagnitude
+    private var allTurn: Double = 0
+    private var allSamples = 0
+    private var lastWritten: simd_quatf?
+    private var writeBase: simd_quatf?
+    private var writesHeld = 0
+
+    init?(figure: SCNNode, mode: PoseLab.Mode) {
+        guard let head = PoseLabProbe.joint(named: "head", in: figure),
+              let joint = head.parent, let above = joint.parent else {
+            print("[PoseLab] \(mode.rawValue): \(figure.name ?? "the figure") has no head over a neck; no lab")
+            return nil
+        }
+        self.mode = mode
+        self.figure = figure
+        self.head = head
+        self.joint = joint
+        // A figure just cloned stands at rest in its model tree, and a
+        // canonical rig's rest is its bind; the clip moves the presentation.
+        let toFigure: simd_quatf = PoseLabProbe.rotation(of: figure.simdWorldTransform).inverse
+        let headRest: simd_quatf = toFigure * PoseLabProbe.rotation(of: head.simdWorldTransform)
+        let aboveRest: simd_quatf = toFigure * PoseLabProbe.rotation(of: above.simdWorldTransform)
+        faceLocal = headRest.inverse.act(SIMD3<Float>(0, 0, 1))
+        axisInParent = simd_normalize(aboveRest.inverse.act(SIMD3<Float>(0, 1, 0)))
+        radians = PoseLab.turnDegrees * .pi / 180
+        if mode == .constraint {
+            turn.set(axis: axisInParent, radians: radians)
+            var hung = joint.constraints ?? []
+            hung.append(PoseLab.headTurn(turn))
+            joint.constraints = hung
+        }
+        print("[PoseLab] \(mode.rawValue): \(figure.name ?? "the figure")'s \(joint.name ?? "neck") (under \(above.name ?? "?"), over "
+              + "\(head.name ?? "head")) turned \(Int(PoseLab.turnDegrees))° about its upright over the playing idle")
+    }
+
+    /// After the animations: the head as the clip left it, before any turn.
+    /// The `write` lab lays the turn on here, on the joint's model value.
+    func afterAnimations() {
+        without = yaw()
+        guard mode == .write else { return }
+        let presented: simd_quatf = joint.presentation.simdOrientation
+        // The clip rewrites the joint every frame it owns it. Handed back
+        // the value written last frame, it did not, and turning that again
+        // would spin the head: the base it was turned from is kept instead.
+        var base: simd_quatf = presented
+        if let lastWritten, let writeBase, Self.angle(between: presented, lastWritten) < Self.sameAngle {
+            base = writeBase
+            writesHeld += 1
+        }
+        let out: simd_quatf = simd_normalize(simd_quatf(angle: radians, axis: axisInParent) * base)
+        writeBase = base
+        lastWritten = out
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = 0
+        joint.simdOrientation = out
+        SCNTransaction.commit()
+    }
+
+    /// After the constraints: the head as it will be drawn. Tallies the two
+    /// yaws and prints a line when one is due.
+    func afterConstraints(at time: TimeInterval) {
+        guard let before = without, let after = yaw() else { return }
+        without = nil
+        if firstTime == 0 {
+            firstTime = time
+            lastReport = time
+        }
+        let turned: Float = Self.wrapped(after - before)
+        samples += 1
+        sumWithout += Double(before)
+        sumWith += Double(after)
+        sumTurn += Double(turned)
+        lowTurn = min(lowTurn, turned)
+        highTurn = max(highTurn, turned)
+        allTurn += Double(turned)
+        allSamples += 1
+        let due: TimeInterval = reports == 0 ? 0.5 : 1.0
+        guard reports < 5, time - lastReport >= due else { return }
+        lastReport = time
+        reports += 1
+        let count = Double(max(1, samples))
+        let held: Int = mode == .constraint ? turn.held : writesHeld
+        var line = String(format: "[PoseLab] %@ t=%.1f frames=%d head yaw without %+.1f° with %+.1f°: turned %+.1f° (%+.1f…%+.1f) of %+.0f, held %d",
+                          mode.rawValue, time - firstTime, samples, sumWithout / count, sumWith / count,
+                          sumTurn / count, lowTurn, highTurn, PoseLab.turnDegrees, held)
+        if reports == 5 {
+            let mean: Double = allTurn / Double(max(1, allSamples))
+            let target = Double(PoseLab.turnDegrees)
+            let word: String
+            if held * 2 > allSamples {
+                // The clip did not rewrite the joint: the lab kept the turn
+                // from compounding, so the head stands turned whatever the
+                // two readings say, and only the frame can tell.
+                word = "is UNREAD (the clip did not rewrite the joint on most frames; judge the frame)"
+            } else if abs(mean - target) <= 2 {
+                word = "SHOWS"
+            } else if abs(mean) < 2 {
+                word = "does NOT show"
+            } else {
+                word = "shows IN PART"
+            }
+            line += String(format: "; verdict: the %@ %@ over the playing idle (%+.1f° of %+.0f over %d frames)",
+                           mode.rawValue, word, mean, target, allSamples)
+        }
+        print(line)
+        samples = 0
+        sumWithout = 0
+        sumWith = 0
+        sumTurn = 0
+        lowTurn = .greatestFiniteMagnitude
+        highTurn = -.greatestFiniteMagnitude
+    }
+
+    /// The head's yaw against the figure's own facing, in degrees: the
+    /// face's direction carried into the figure's frame, measured about its
+    /// upright. Nil once the figure has gone.
+    private func yaw() -> Float? {
+        guard let figure else { return nil }
+        let figureRotation: simd_quatf = Self.rotation(of: figure.presentation.simdWorldTransform)
+        let headRotation: simd_quatf = Self.rotation(of: head.presentation.simdWorldTransform)
+        let face: SIMD3<Float> = (figureRotation.inverse * headRotation).act(faceLocal)
+        return atan2(face.x, face.z) * 180 / .pi
+    }
+
+    /// Two orientations closer than this (radians, about half a degree) are
+    /// one value handed back: the turn is 20°, so the clip's own head and
+    /// the turned one are never this close, and a float's `acos` near 1 is
+    /// too coarse for a tighter test.
+    static let sameAngle: Float = 0.01
+
+    /// The angle between two orientations, in radians.
+    static func angle(between a: simd_quatf, _ b: simd_quatf) -> Float {
+        let dot: Float = abs(simd_dot(a.vector, b.vector))
+        return 2 * acos(min(1, dot))
+    }
+
+    /// Degrees brought into −180…180.
+    private static func wrapped(_ degrees: Float) -> Float {
+        var d = degrees
+        while d > 180 { d -= 360 }
+        while d < -180 { d += 360 }
+        return d
+    }
+
+    /// The rotation of a world transform, its scale stripped (Meshy's
+    /// joints carry the armature's scale).
+    private static func rotation(of m: simd_float4x4) -> simd_quatf {
+        let c0: SIMD3<Float> = simd_normalize(SIMD3<Float>(m.columns.0.x, m.columns.0.y, m.columns.0.z))
+        let c1: SIMD3<Float> = simd_normalize(SIMD3<Float>(m.columns.1.x, m.columns.1.y, m.columns.1.z))
+        let c2: SIMD3<Float> = simd_normalize(SIMD3<Float>(m.columns.2.x, m.columns.2.y, m.columns.2.z))
+        return simd_normalize(simd_quatf(simd_float3x3(columns: (c0, c1, c2))))
+    }
+
+    /// A joint by its lowercased name.
+    private static func joint(named key: String, in model: SCNNode) -> SCNNode? {
+        let matches = model.childNodes { node, stop in
+            if node.name?.lowercased() == key { stop.pointee = true; return true }
+            return false
+        }
+        return matches.first
     }
 }
 #endif

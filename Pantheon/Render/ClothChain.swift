@@ -71,16 +71,27 @@ final class ClothChain {
         /// along a→b, the radius as a share of the height — the pelvis, the
         /// chest, two on each thigh, one on each shin. Every radius is
         /// capped at 0.97 of the sphere's rest distance to the chain, so
-        /// nothing pushes at rest.
+        /// nothing pushes at rest. The chest is `chestKey`, a joint found by
+        /// where it sits (`chest(in:)`), not a name.
         static let colliders: [(a: String, b: String, fraction: Float, share: Float)] = [
             ("hips", "hips", 0.0, 0.085),
-            ("spine01", "spine01", 0.0, 0.09),
+            (chestKey, chestKey, 0.0, 0.09),
             ("leftupleg", "leftleg", 0.40, 0.06), ("leftupleg", "leftleg", 0.80, 0.06),
             ("rightupleg", "rightleg", 0.40, 0.06), ("rightupleg", "rightleg", 0.80, 0.06),
             ("leftleg", "leftfoot", 0.50, 0.045), ("rightleg", "rightfoot", 0.50, 0.045)
         ]
         /// The prefix the cape pass names the joints with.
         static let jointPrefix = "cape_"
+        /// The collider key read as the chest, the middle joint of the spine
+        /// (`ClothChain.chest(in:)`). It was the name `spine01`, which 106
+        /// of the 117 rigs give that joint; the other eleven (Zeus, Thor,
+        /// Poseidon, the Unwrapped King, the smith, Idunn, Skadi and the
+        /// awakened Thor, Poseidon, Sekhmet and Hera) run `Hips > neck >
+        /// Spine02 > Spine > Head1|Spine1 > Head` and have none, so the
+        /// awakened Hera — the one of them with a cape — hung it on seven
+        /// spheres instead of eight (Docs/PLAN.md *Natural poses*, "Found on
+        /// the way" 5). No rig names a joint `chest`.
+        static let chestKey = "chest"
     }
 
     private struct Link {
@@ -202,7 +213,7 @@ final class ClothChain {
         }
         // The colliders in the bind pose, each radius capped at its rest clearance.
         for spec in Cloth.colliders {
-            guard let a = Self.joint(named: spec.a, in: model), let b = Self.joint(named: spec.b, in: model) else { continue }
+            guard let a = Self.collider(spec.a, in: model), let b = Self.collider(spec.b, in: model) else { continue }
             let pa = Self.vector(a.convertPosition(SCNVector3Zero, to: model))
             let pb = Self.vector(b.convertPosition(SCNVector3Zero, to: model))
             let centre = pa * (1 - spec.fraction) + pb * spec.fraction
@@ -466,6 +477,35 @@ final class ClothChain {
             return false
         }
         return matches.first
+    }
+
+    /// A collider's joint: the chest by where it sits, every other by name.
+    private static func collider(_ key: String, in model: SCNNode) -> SCNNode? {
+        key == Cloth.chestKey ? chest(in: model) : joint(named: key, in: model)
+    }
+
+    /// The chest: the MIDDLE joint of the spine, found by where it sits in
+    /// the skeleton. The joint over `Head` is the neck, and the joints
+    /// between it and `Hips` are the spine, bottom to top — three on every
+    /// shipped rig, whatever they are called — so the middle one is
+    /// `Spine01` on the 106 rigs that name it and `Spine02` on the eleven
+    /// that do not (`Cloth.chestKey`) — the same place in the body: 0.68 of
+    /// the figure's height on both Heras' binds, and the awakened one's
+    /// eighth sphere comes back at the base's 0.189 m (`tools/cape_sim.py`).
+    /// Nil when the rig has no `Head` over `Hips`.
+    private static func chest(in model: SCNNode) -> SCNNode? {
+        guard let hips = joint(named: "hips", in: model),
+              let head = joint(named: "head", in: model),
+              let neck = head.parent else { return nil }
+        var spine: [SCNNode] = []
+        var cursor: SCNNode? = neck.parent
+        while let current = cursor, current !== hips {
+            spine.append(current)
+            cursor = current.parent
+        }
+        guard cursor === hips, !spine.isEmpty else { return nil }
+        spine.reverse()
+        return spine[spine.count / 2]
     }
 }
 
