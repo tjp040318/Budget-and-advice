@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "97",
-  "frames": 67,
-  "seconds": 2.23,
-  "blow_source": 0.318,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.76,
-  "follow_speed": 1.18,
-  "rate": 1.72
+  "preset": "Art/Motions/aimed/scarab_knight_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "221",
@@ -73,5 +68,11 @@
    53.3
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_heavy_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
  }
 }

@@ -1,15 +1,9 @@
 {
  "attack_basic": {
-  "preset": "128",
-  "frames": 76,
-  "seconds": 2.53,
-  "recover": 20,
-  "blow_source": 0.6,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 1.43,
-  "follow_speed": 0.69,
-  "rate": 1.95
+  "preset": "Art/Motions/aimed/berserker_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "221",
@@ -115,5 +109,17 @@
    14.8
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/style_heavy_x2.motion.npz",
+  "frames": 86,
+  "seconds": 2.87,
+  "rate": 1.2
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/style_heavy_x3.motion.npz",
+  "frames": 100,
+  "seconds": 3.33,
+  "rate": 1.19
  }
 }

@@ -41,5 +41,17 @@
    29.2
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_caster_area.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 0.96
+ },
+ "skill_x4": {
+  "preset": "Art/Motions/style_caster_x4.motion.npz",
+  "frames": 92,
+  "seconds": 3.07,
+  "rate": 0.96
  }
 }

@@ -820,18 +820,23 @@ def aimed_blow(src, key):
     return out if degrees else src
 
 
-def aimed_heavy():
-    """The archers' heavy shot (preset 224, cut and its loose warped as the
-    palette cuts it), turned to aim; its contact in a side record."""
+def aimed_preset(pid, clip):
+    """An archery preset as the palette cuts it for `clip` (PRESET_CUTS: the
+    window and the loose), turned to aim like every archery motion — the
+    palette's own shots loose 50-86 degrees to the side as Meshy made them
+    (224 +71, 222 +52, measured 2026-09-25) — with its contact in a side
+    record. The archers' heavy is 224, and so are the basic and the ultimate
+    (222) of an archer whose signature failed or was retired."""
     from retarget import Motion
-    from motion_palette import prepare
-    pid, cut = HEAVY_ARCHERY
+    from motion_palette import prepare, PRESET_CUTS
+    role = clip.replace("attack_", "")
     src = MOTIONS / f"preset_{pid}.motion.npz"
-    out = AIMED / f"preset_{pid}_heavy.motion.npz"
-    side = AIMED / f"preset_{pid}_heavy.json"
+    out = AIMED / f"preset_{pid}_{role}.motion.npz"
+    side = AIMED / f"preset_{pid}_{role}.json"
     if out.exists() and side.exists() and out.stat().st_mtime >= src.stat().st_mtime:
         return out
-    m, facts = prepare(Motion.load(src), "attack_heavy", **cut)
+    cut = {k: v for k, v in PRESET_CUTS[pid].items() if k in ("window", "blow")}
+    m, facts = prepare(Motion.load(src), clip, **cut)
     F = len(m.anim["T"])
     blow = facts.get("blow", 0.55)
     yaw = bow_yaw(m, [int(round(blow * (F - 1)))])
@@ -839,8 +844,17 @@ def aimed_heavy():
     turned(m, -yaw).save(out)
     side.write_text(json.dumps(dict(recipe=f"preset {pid} {cut}, aimed", frames=F, seconds=round(F / m.anim['fps'], 3),
                                     contact_fractions=[blow]), indent=1) + "\n")
-    print(f"  aimed preset {pid} as the heavy shot: the bow arm pointed {yaw:+.0f} deg; turned {-yaw:+.0f}")
+    print(f"  aimed preset {pid} as the {role}: the bow arm pointed {yaw:+.0f} deg; turned {-yaw:+.0f}")
     return out
+
+
+def aimed_heavy():
+    """The archers' heavy shot (preset 224), aimed."""
+    return aimed_preset(HEAVY_ARCHERY[0], "attack_heavy")
+
+
+# The palette's archery for a slot no signature fills (the archers' deal).
+ARCHER_PALETTE = {"attack_basic": 224, "ultimate": 222}
 
 
 RITE_ULTIMATES = set()
@@ -865,10 +879,12 @@ def skill_assign(family, plan_row, shapes):
     def usable(key):
         """A bought move plays once it is archived and no judge has sent it
         back; a move sent back plays nothing until its new take lands (the
-        family keeps the clip the palette dealt it). A composed move has no
-        record and always plays."""
+        family keeps the clip the palette dealt it), and a RETIRED one never
+        (`retired`: the reason; archery twice in text to motion). A composed
+        move has no record and always plays."""
         rec = moves.get(key)
-        return rec is None or (rec.get("state") == "archived" and rec.get("judged") != "reroll")
+        return rec is None or (rec.get("state") == "archived" and rec.get("judged") != "reroll"
+                               and not rec.get("retired"))
 
     def source(src, key, blow=True):
         if archer:
@@ -890,8 +906,12 @@ def skill_assign(family, plan_row, shapes):
         if src.exists() and usable(f"style_{kind}_{shape}"):
             assign[SHAPE_CLIP[shape]] = source(src, f"style_{kind}_{shape}", blow=shape.startswith("x"))
     if archer:
-        # the heavy shot the palette dealt every archer, re-shipped aimed
+        # the heavy shot the palette dealt every archer, re-shipped aimed, and
+        # its basic and ultimate wherever no signature fills the slot
         assign["attack_heavy"] = str(aimed_heavy().relative_to(REPO)) + side
+        for clip, pid in ARCHER_PALETTE.items():
+            if clip not in assign:
+                assign[clip] = str(aimed_preset(pid, clip).relative_to(REPO)) + side
     return assign
 
 

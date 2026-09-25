@@ -1,18 +1,13 @@
 {
  "attack_basic": {
-  "preset": "220",
-  "frames": 59,
-  "seconds": 1.97,
-  "blow_source": 0.483,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 1.15,
-  "follow_speed": 0.89,
-  "rate": 1.52,
+  "preset": "Art/Motions/harpy_attack_basic.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 1.25,
   "mirrored": {
    "mode": "delta, on the donor",
    "weapon_hand": "L",
-   "round_trip": 8.5e-08
+   "round_trip": 7.1e-08
   }
  },
  "attack_heavy": {
@@ -84,5 +79,16 @@
    21.0
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/aimed/style_blade_x3.motion.npz",
+  "frames": 92,
+  "seconds": 3.07,
+  "rate": 1.1,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "L",
+   "round_trip": 6.9e-08
+  }
  }
 }

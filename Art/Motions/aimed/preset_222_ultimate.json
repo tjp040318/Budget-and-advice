@@ -1,0 +1,8 @@
+{
+ "recipe": "preset 222 {'window': (110, 230), 'blow': 205}, aimed",
+ "frames": 121,
+ "seconds": 4.033,
+ "contact_fractions": [
+  0.62
+ ]
+}

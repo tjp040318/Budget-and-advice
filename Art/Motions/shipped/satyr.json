@@ -1,14 +1,14 @@
 {
  "attack_basic": {
-  "preset": "133",
-  "frames": 68,
-  "seconds": 2.27,
-  "blow_source": 0.433,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 1.03,
-  "follow_speed": 0.98,
-  "rate": 1.75
+  "preset": "Art/Motions/satyr_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 6.5e-08
+  }
  },
  "attack_heavy": {
   "preset": "130",
@@ -74,5 +74,11 @@
    5.3
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_caster_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
  }
 }

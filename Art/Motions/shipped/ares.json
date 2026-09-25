@@ -81,5 +81,17 @@
    3.3
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_blade_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/aimed/style_blade_x3.motion.npz",
+  "frames": 92,
+  "seconds": 3.07,
+  "rate": 1.1
  }
 }

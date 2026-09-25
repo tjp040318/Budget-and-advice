@@ -1,7 +1,9 @@
 {
  "attack_basic": {
-  "preset": "kept",
-  "kept": "Meshy's own 219 (891 edges past 3x; the palette's 219 1,145, 128 1,523, 97 1,560)"
+  "preset": "Art/Motions/aimed/dwarf_smith_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "221",
@@ -67,5 +69,11 @@
    14.7
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_heavy_area.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 0.96
  }
 }

@@ -78,5 +78,17 @@
    23.8
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/aimed/style_unarmed_x2.motion.npz",
+  "frames": 72,
+  "seconds": 2.4,
+  "rate": 1.0
+ },
+ "skill_x4": {
+  "preset": "Art/Motions/aimed/style_unarmed_x4.motion.npz",
+  "frames": 111,
+  "seconds": 3.7,
+  "rate": 1.16
  }
 }

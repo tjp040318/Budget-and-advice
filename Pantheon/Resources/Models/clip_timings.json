@@ -1,0 +1,2671 @@
+{
+ "assets": {
+  "achilles": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "amazon": {
+   "attack_basic": {
+    "contacts": [
+     0.284,
+     0.689
+    ],
+    "seconds": 2.5
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "skill_x2": {
+    "contacts": [
+     0.306,
+     0.706
+    ],
+    "seconds": 2.87
+   },
+   "skill_x4": {
+    "contacts": [
+     0.203,
+     0.432,
+     0.627,
+     0.746
+    ],
+    "seconds": 3.97
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.53
+   }
+  },
+  "anhur": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "anubis": {
+   "attack_basic": {
+    "contacts": [
+     0.38
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.5
+    ],
+    "seconds": 2.467
+   },
+   "skill_x3": {
+    "contacts": [
+     0.198,
+     0.451,
+     0.648
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.967
+   }
+  },
+  "aphrodite": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "apollo": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "ares": {
+   "attack_basic": {
+    "contacts": [
+     0.47
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.5
+    ],
+    "seconds": 2.467
+   },
+   "cast_release": {
+    "contacts": [
+     0.573
+    ],
+    "seconds": 3.0
+   },
+   "skill_x3": {
+    "contacts": [
+     0.198,
+     0.451,
+     0.648
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.45
+    ],
+    "seconds": 2.967
+   }
+  },
+  "ares_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.47
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.5
+    ],
+    "seconds": 2.467
+   },
+   "cast_release": {
+    "contacts": [
+     0.573
+    ],
+    "seconds": 3.0
+   },
+   "skill_x3": {
+    "contacts": [
+     0.198,
+     0.451,
+     0.648
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.45
+    ],
+    "seconds": 2.967
+   }
+  },
+  "artemis": {
+   "attack_basic": {
+    "contacts": [
+     0.489
+    ],
+    "seconds": 3.03
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.03
+   },
+   "skill_x2": {
+    "contacts": [
+     0.528,
+     0.792
+    ],
+    "seconds": 2.43
+   },
+   "skill_x3": {
+    "contacts": [
+     0.414,
+     0.621,
+     0.839
+    ],
+    "seconds": 2.93
+   },
+   "skill_x5": {
+    "contacts": [
+     0.28,
+     0.415,
+     0.568,
+     0.72,
+     0.873
+    ],
+    "seconds": 3.97
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.03
+   }
+  },
+  "atalanta": {
+   "attack_basic": {
+    "contacts": [
+     0.508
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.03
+   },
+   "skill_x2": {
+    "contacts": [
+     0.528,
+     0.792
+    ],
+    "seconds": 2.43
+   },
+   "skill_x3": {
+    "contacts": [
+     0.414,
+     0.621,
+     0.839
+    ],
+    "seconds": 2.93
+   },
+   "skill_x5": {
+    "contacts": [
+     0.28,
+     0.415,
+     0.568,
+     0.72,
+     0.873
+    ],
+    "seconds": 3.97
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.03
+   }
+  },
+  "athena": {
+   "attack_basic": {
+    "contacts": [
+     0.288
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "cast_release": {
+    "contacts": [
+     0.438
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.393
+    ],
+    "seconds": 3.0
+   }
+  },
+  "athena_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.288
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "cast_release": {
+    "contacts": [
+     0.438
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.393
+    ],
+    "seconds": 3.0
+   }
+  },
+  "baldr": {
+   "attack_basic": {
+    "contacts": [
+     0.373
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "cast_release": {
+    "contacts": [
+     0.371
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.348
+    ],
+    "seconds": 3.0
+   }
+  },
+  "bastet": {
+   "attack_basic": {
+    "contacts": [
+     0.271
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "skill_x2": {
+    "contacts": [
+     0.268,
+     0.549
+    ],
+    "seconds": 2.4
+   },
+   "skill_x3": {
+    "contacts": [
+     0.207,
+     0.427,
+     0.683
+    ],
+    "seconds": 2.77
+   },
+   "ultimate": {
+    "contacts": [
+     0.404
+    ],
+    "seconds": 3.0
+   }
+  },
+  "bellona": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "berserker": {
+   "attack_basic": {
+    "contacts": [
+     0.271,
+     0.729
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "skill_x2": {
+    "contacts": [
+     0.306,
+     0.706
+    ],
+    "seconds": 2.87
+   },
+   "skill_x3": {
+    "contacts": [
+     0.253,
+     0.545,
+     0.687
+    ],
+    "seconds": 3.33
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "bes": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "boss_colossus": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "skill_area": {
+    "contacts": [
+     0.324
+    ],
+    "seconds": 2.5
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.03
+   }
+  },
+  "boss_unwrapped_king": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "skill_area": {
+    "contacts": [
+     0.257
+    ],
+    "seconds": 2.5
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "bragi": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "centurion": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "chang_e": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "cobra_priestess": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "cyclops": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.03
+   }
+  },
+  "dark_elf": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "demeter": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "diana": {
+   "attack_basic": {
+    "contacts": [
+     0.446
+    ],
+    "seconds": 2.2
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.03
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.03
+   }
+  },
+  "dionysus": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "draugr": {
+   "attack_basic": {
+    "contacts": [
+     0.203,
+     0.593
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "cast_release": {
+    "contacts": [
+     0.416
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "dwarf_smith": {
+   "attack_basic": {
+    "contacts": [
+     0.203
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "skill_area": {
+    "contacts": [
+     0.324
+    ],
+    "seconds": 2.5
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.53
+   }
+  },
+  "einherjar": {
+   "attack_basic": {
+    "contacts": [
+     0.373
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "cast_release": {
+    "contacts": [
+     0.416
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.53
+   }
+  },
+  "fenrir": {
+   "attack_basic": {
+    "contacts": [
+     0.203
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "skill_x2": {
+    "contacts": [
+     0.268,
+     0.549
+    ],
+    "seconds": 2.4
+   },
+   "skill_x3": {
+    "contacts": [
+     0.207,
+     0.427,
+     0.683
+    ],
+    "seconds": 2.77
+   },
+   "ultimate": {
+    "contacts": [
+     0.742
+    ],
+    "seconds": 3.0
+   }
+  },
+  "fox_spirit": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "freya": {
+   "attack_basic": {
+    "contacts": [
+     0.373
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "cast_release": {
+    "contacts": [
+     0.674
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.731
+    ],
+    "seconds": 3.5
+   }
+  },
+  "freya_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.373
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "cast_release": {
+    "contacts": [
+     0.674
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.731
+    ],
+    "seconds": 3.5
+   }
+  },
+  "frigg": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "frost_troll": {
+   "attack_basic": {
+    "contacts": [
+     0.695
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "skill_area": {
+    "contacts": [
+     0.324
+    ],
+    "seconds": 2.5
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.03
+   }
+  },
+  "gladiator": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.47
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.23
+   }
+  },
+  "guan_yu": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.53
+   }
+  },
+  "hades": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "hades_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "harpy": {
+   "attack_basic": {
+    "contacts": [
+     0.338
+    ],
+    "seconds": 2.5
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "skill_x3": {
+    "contacts": [
+     0.198,
+     0.451,
+     0.648
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "hathor": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "heimdall": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.47
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "hel": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "hephaestus": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.03
+   }
+  },
+  "hera": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "hera_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "heracles": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "hermes": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "hoplite": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "horus": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "horus_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "idunn": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "isis": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "isis_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "jackal_warrior": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.37
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "jiangshi": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "skill_x2": {
+    "contacts": [
+     0.268,
+     0.549
+    ],
+    "seconds": 2.4
+   },
+   "skill_x4": {
+    "contacts": [
+     0.155,
+     0.309,
+     0.491,
+     0.709
+    ],
+    "seconds": 3.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "khnum": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.03
+   }
+  },
+  "light_elf": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "loki": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "maat": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "mars": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "mars_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "medjay": {
+   "attack_basic": {
+    "contacts": [
+     0.446
+    ],
+    "seconds": 2.2
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.03
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.03
+   }
+  },
+  "medusa": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "mercury": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.37
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.23
+   }
+  },
+  "minerva": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "minotaur": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "mummy": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "nephthys": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "neptune": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "nezha": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "nike": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "njord": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "nuwa": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.27
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "nymph": {
+   "attack_basic": {
+    "contacts": [
+     0.458
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "cast_release": {
+    "contacts": [
+     0.371
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "odin": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "odin_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "osiris": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "osiris_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "perseus": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.37
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "pluto": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.17
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "poseidon": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "poseidon_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "ptah": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.17
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "ra": {
+   "attack_basic": {
+    "contacts": [
+     0.271
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "skill_x2": {
+    "contacts": [
+     0.175,
+     0.561
+    ],
+    "seconds": 1.93
+   },
+   "skill_x3": {
+    "contacts": [
+     0.122,
+     0.378,
+     0.662
+    ],
+    "seconds": 2.5
+   },
+   "skill_x5": {
+    "contacts": [
+     0.076,
+     0.248,
+     0.419,
+     0.581,
+     0.762
+    ],
+    "seconds": 3.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.416
+    ],
+    "seconds": 3.0
+   }
+  },
+  "ra_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.271
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "skill_x2": {
+    "contacts": [
+     0.175,
+     0.561
+    ],
+    "seconds": 1.93
+   },
+   "skill_x3": {
+    "contacts": [
+     0.122,
+     0.378,
+     0.662
+    ],
+    "seconds": 2.5
+   },
+   "skill_x5": {
+    "contacts": [
+     0.076,
+     0.248,
+     0.419,
+     0.581,
+     0.762
+    ],
+    "seconds": 3.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.416
+    ],
+    "seconds": 3.0
+   }
+  },
+  "satyr": {
+   "attack_basic": {
+    "contacts": [
+     0.271
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "cast_release": {
+    "contacts": [
+     0.371
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.7
+   }
+  },
+  "scarab_knight": {
+   "attack_basic": {
+    "contacts": [
+     0.22
+    ],
+    "seconds": 2.0
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "cast_release": {
+    "contacts": [
+     0.416
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.03
+   }
+  },
+  "sekhmet": {
+   "attack_basic": {
+    "contacts": [
+     0.45
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.467
+   },
+   "skill_x3": {
+    "contacts": [
+     0.198,
+     0.451,
+     0.648
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.45
+    ],
+    "seconds": 2.967
+   }
+  },
+  "sekhmet_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.45
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.467
+   },
+   "skill_x3": {
+    "contacts": [
+     0.198,
+     0.451,
+     0.648
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.45
+    ],
+    "seconds": 2.967
+   }
+  },
+  "serqet": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "set": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.47
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.83
+   }
+  },
+  "shabti": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.47
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "shield_maiden": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.23
+   }
+  },
+  "sif": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "siren": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "skadi": {
+   "attack_basic": {
+    "contacts": [
+     0.446
+    ],
+    "seconds": 2.2
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.03
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.03
+   }
+  },
+  "sobek": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "sun_wukong": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.23
+   }
+  },
+  "surtr": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "taweret": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.27
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "terracotta_soldier": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.97
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.58
+    ],
+    "seconds": 4.4
+   }
+  },
+  "thor": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.53
+   }
+  },
+  "thor_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 2.53
+   }
+  },
+  "thoth": {
+   "attack_basic": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.6
+    ],
+    "seconds": 2.467
+   },
+   "cast_release": {
+    "contacts": [
+     0.674
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.65
+    ],
+    "seconds": 2.967
+   }
+  },
+  "thoth_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.6
+    ],
+    "seconds": 2.467
+   },
+   "cast_release": {
+    "contacts": [
+     0.674
+    ],
+    "seconds": 3.0
+   },
+   "ultimate": {
+    "contacts": [
+     0.65
+    ],
+    "seconds": 2.967
+   }
+  },
+  "tyr": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "ullr": {
+   "attack_basic": {
+    "contacts": [
+     0.446
+    ],
+    "seconds": 2.2
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 3.03
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.03
+   }
+  },
+  "valkyrie": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 1.53
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.23
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.23
+   }
+  },
+  "vestal": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.3
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.7
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 4.33
+   }
+  },
+  "vidar": {
+   "attack_basic": {
+    "contacts": [
+     0.42
+    ],
+    "seconds": 2.23
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.55
+    ],
+    "seconds": 2.53
+   },
+   "ultimate": {
+    "contacts": [
+     0.62
+    ],
+    "seconds": 3.37
+   }
+  },
+  "zeus": {
+   "attack_basic": {
+    "contacts": [
+     0.47
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.4
+    ],
+    "seconds": 2.467
+   },
+   "skill_area": {
+    "contacts": [
+     0.257
+    ],
+    "seconds": 2.5
+   },
+   "skill_x4": {
+    "contacts": [
+     0.099,
+     0.297,
+     0.505,
+     0.725
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.78
+    ],
+    "seconds": 2.967
+   }
+  },
+  "zeus_awakened": {
+   "attack_basic": {
+    "contacts": [
+     0.47
+    ],
+    "seconds": 1.967
+   },
+   "attack_heavy": {
+    "contacts": [
+     0.4
+    ],
+    "seconds": 2.467
+   },
+   "skill_area": {
+    "contacts": [
+     0.257
+    ],
+    "seconds": 2.5
+   },
+   "skill_x4": {
+    "contacts": [
+     0.099,
+     0.297,
+     0.505,
+     0.725
+    ],
+    "seconds": 3.07
+   },
+   "ultimate": {
+    "contacts": [
+     0.78
+    ],
+    "seconds": 2.967
+   }
+  }
+ },
+ "version": 1
+}

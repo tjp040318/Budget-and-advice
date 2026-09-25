@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "133",
-  "frames": 68,
-  "seconds": 2.27,
-  "blow_source": 0.433,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 1.03,
-  "follow_speed": 0.98,
-  "rate": 1.75
+  "preset": "Art/Motions/aimed/ra_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "125",
@@ -22,15 +17,10 @@
   "rate": 1.59
  },
  "ultimate": {
-  "preset": "126",
-  "frames": 130,
-  "seconds": 4.33,
-  "blow_source": 0.574,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 0.93,
-  "follow_speed": 1.12,
-  "rate": 1.8
+  "preset": "Art/Motions/ra_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88
  },
  "idle_combat": {
   "preset": "ready (b) over the 89 guard half",
@@ -78,5 +68,23 @@
    24.0
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/style_caster_x2.motion.npz",
+  "frames": 58,
+  "seconds": 1.93,
+  "rate": 0.8
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/style_caster_x3.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 0.89
+ },
+ "skill_x5": {
+  "preset": "Art/Motions/style_caster_x5.motion.npz",
+  "frames": 106,
+  "seconds": 3.53,
+  "rate": 0.98
  }
 }
