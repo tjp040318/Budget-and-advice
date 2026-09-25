@@ -68,6 +68,25 @@ final class PoseLifeTests: XCTestCase {
         XCTAssertEqual(up, 12, accuracy: 1e-4)
     }
 
+    /// A hand-back is told from a slow frame of the clip: the angle reads a
+    /// fifth of a degree as a fifth of a degree, and only a turn under
+    /// `sameAngle` is taken for the block's own answer handed back.
+    func testTheGazeTellsAHandBackFromASlowClip() {
+        let degree: Float = .pi / 180
+        let rest = simd_quatf(angle: 0.3, axis: simd_normalize(SIMD3<Float>(0.2, 1, 0.1)))
+        let nudge = simd_quatf(angle: 0.2 * degree, axis: SIMD3<Float>(0, 1, 0))
+        let moved: simd_quatf = nudge * rest
+        let slow: Float = Gaze.angle(between: moved, rest)
+        let fifth: Float = 0.2 * degree
+        XCTAssertEqual(slow, fifth, accuracy: 1e-5)
+        XCTAssertGreaterThan(slow, Gaze.sameAngle)
+        let same: Float = Gaze.angle(between: rest, rest)
+        XCTAssertLessThan(same, Gaze.sameAngle)
+        let flipped = simd_quatf(vector: -rest.vector)
+        let sign: Float = Gaze.angle(between: flipped, rest)
+        XCTAssertLessThan(sign, Gaze.sameAngle)
+    }
+
     // MARK: - The victories (build step 8.4)
 
     /// The four victories dealt from the bought presets are found by their

@@ -52,9 +52,13 @@ final class Gaze {
     static let followTime: Float = 0.35
     /// The gaze gives way to a break over this, and comes back over it.
     static let yieldTime: Float = 0.25
-    /// Two orientations closer than this (radians, about half a degree) are
-    /// one value handed back (`GazeState.turned`).
-    static let sameAngle: Float = 0.01
+    /// Two orientations closer than this (radians) are one value handed
+    /// back (`GazeState.turned`): the same quaternion to float precision.
+    /// Not the pose lab's 0.01 — its turn was a fixed 20°, but the gaze's
+    /// eases through zero on every break, and there an idle's neck moving
+    /// under half a degree a frame read as a hand-back and the head moved
+    /// in 0.6° steps (the review of 2026-09-25).
+    static let sameAngle: Float = 1e-4
 
     /// The block's state: the lens, the strength, the turn laid on.
     let state: GazeState
@@ -126,10 +130,12 @@ final class Gaze {
         return (yaw, pitch)
     }
 
-    /// The angle between two orientations, in radians.
+    /// The angle between two orientations, in radians, read off the vector
+    /// part of the turn between them: exact near zero, where `acos` of a
+    /// dot product near 1 is not, and the same for q and -q.
     static func angle(between a: simd_quatf, _ b: simd_quatf) -> Float {
-        let dot: Float = abs(simd_dot(a.vector, b.vector))
-        return 2 * acos(min(1, dot))
+        let between: simd_quatf = b.inverse * a
+        return 2 * asin(min(1, simd_length(between.imag)))
     }
 
     /// The rotation of a world transform, its scale stripped (Meshy's
