@@ -30,7 +30,8 @@ final class AudioLibrary {
         case hitMagic = "hit_magic"
         // One per element, named to match `impact_<element>` in VFXLibrary, so
         // a skill with no effect of its own can sound in its caster's element
-        // the way it already looks in it.
+        // the way it already looks in it; since 2026-09-25 also the element
+        // under every melee blow (`SkillSound.hit`).
         case impactEmber = "impact_ember"
         case impactTide = "impact_tide"
         case impactGale = "impact_gale"
@@ -126,6 +127,31 @@ final class AudioLibrary {
         case relicRoll = "relic_roll"
         case relicRing = "relic_ring"
         case relicCrack = "relic_crack"
+        // A skill's own sounds (Docs/PLAN.md *Skills that look like
+        // themselves*, 2026-09-25), built by `tools/sfx.py` `build_skills()`
+        // and asked for by what they are (`SkillSound`, `play(_:volume:)`),
+        // never by these names, so a missing file can fall back to the sound
+        // the fight used before it had its own: a blow through the air, light
+        // or heavy; a spell's release in its element as its shot leaves the
+        // hand; an ultimate's gathering swell and its boom in its element; a
+        // bowstring's loose and the arrow striking; a rite's release. The
+        // element under a melee blow is the element's impact, above.
+        case swingLight = "swing_light"
+        case swingHeavy = "swing_heavy"
+        case castEmber = "cast_ember"
+        case castTide = "cast_tide"
+        case castGale = "cast_gale"
+        case castRadiance = "cast_radiance"
+        case castUmbra = "cast_umbra"
+        case ultimateCharge = "charge"
+        case bowLoose = "loose"
+        case arrowStrike = "arrow_hit"
+        case riteRelease = "rite"
+        case boomEmber = "boom_ember"
+        case boomTide = "boom_tide"
+        case boomGale = "boom_gale"
+        case boomRadiance = "boom_radiance"
+        case boomUmbra = "boom_umbra"
 
         /// The cue for a status landing on a unit. The barriers ring as
         /// crystal, the five that change how a fight plays have their own,
@@ -252,6 +278,10 @@ final class AudioLibrary {
                  .spoil11, .spoil12, .spoilLegend:
                 return 1
             case .relicRoll, .relicRing, .relicCrack:
+                return 2
+            // One an ultimate or a rite: a second only for the next caster's
+            // while the first still rings.
+            case .ultimateCharge, .riteRelease, .boomEmber, .boomTide, .boomGale, .boomRadiance, .boomUmbra:
                 return 2
             case .revive, .death, .extraTurn, .counter, .turnChime,
                  .summonIgnite, .summonChargeBase, .summonChargeRise, .summonChargeTell, .summonChargeLightDark,
@@ -462,6 +492,15 @@ final class AudioLibrary {
         }
     }
 
+    /// Whether `sound` has a file to play: its pool, built the first time it
+    /// is asked for (the launch's `preload` asks for every one off the main
+    /// thread), came back with at least one voice. A missing file's empty
+    /// pool is kept, so asking again costs a lookup.
+    fileprivate func ships(_ sound: Sound) -> Bool {
+        guard let players = pool(for: sound) else { return false }
+        return !players.isEmpty
+    }
+
     /// The next voice of `sound`'s pool, round the pool in turn. The index
     /// is taken modulo THIS pool's size: the launch preload and a first
     /// play can each build a pool for the same sound, and an index advanced
@@ -498,5 +537,129 @@ final class AudioLibrary {
         if let existing = pools[sound] { return existing }
         pools[sound] = players
         return players
+    }
+}
+
+// MARK: - A skill's sounds
+
+/// A skill's sound, by what it is rather than by file (Docs/PLAN.md *Skills
+/// that look like themselves*, 2026-09-25): what `SkillFX` asks for, one
+/// line a piece, as it draws a cast — the swing before each melee blow, the
+/// element under it, a spell's release as its shot leaves the hand, an
+/// arrow's loose and its strike, an ultimate's gathering swell and its boom,
+/// a rite's release. Each is one of `AudioLibrary.Sound`'s files (`file`),
+/// built by `tools/sfx.py` `build_skills()`, and when the bundle has no such
+/// file the sound the fight made before it had its own (`fallback`), so a
+/// build without the files sounds as the fight did rather than silent.
+enum SkillSound: Hashable, Sendable {
+    /// A melee blow through the air, heard as it comes: a basic's and a
+    /// flurry's early strikes light, a heavy blow and a flurry's last heavy.
+    case swing(heavy: Bool)
+    /// The element under a melee blow, on its contact.
+    case hit(Element)
+    /// A spell's release in its element, as its shot leaves the hand.
+    case cast(Element)
+    /// An ultimate's gathering swell, from its wind-up.
+    case charge
+    /// A bowstring's loose, one an arrow.
+    case loose
+    /// An arrow striking.
+    case arrowHit
+    /// A rite's release on its caster (a heal, a buff, a shield): a bright
+    /// chord rising, in the key of the allies' heal and buff that follow.
+    case rite
+    /// An ultimate's big impact in its element, on its first hit.
+    case boom(Element)
+
+    /// How long before an ultimate's first blow its `charge` wants to start,
+    /// on the wall clock (a sound is never sped up with the fight): the
+    /// swell crests 0.9 s in and has let go by 1.0 s, so started this long
+    /// before, its crest comes a breath ahead of the blow and the blow lands
+    /// on quiet. `tools/sfx.py` `CHARGE_LEAD`, kept in step by hand.
+    static let chargeLead: TimeInterval = 1.0
+
+    /// The file this sound is.
+    var file: AudioLibrary.Sound {
+        switch self {
+        case .swing(let heavy): return heavy ? .swingHeavy : .swingLight
+        case .hit(let element):
+            switch element {
+            case .ember: return .impactEmber
+            case .tide: return .impactTide
+            case .gale: return .impactGale
+            case .radiance: return .impactRadiance
+            case .umbra: return .impactUmbra
+            }
+        case .cast(let element):
+            switch element {
+            case .ember: return .castEmber
+            case .tide: return .castTide
+            case .gale: return .castGale
+            case .radiance: return .castRadiance
+            case .umbra: return .castUmbra
+            }
+        case .charge: return .ultimateCharge
+        case .loose: return .bowLoose
+        case .arrowHit: return .arrowStrike
+        case .rite: return .riteRelease
+        case .boom(let element):
+            switch element {
+            case .ember: return .boomEmber
+            case .tide: return .boomTide
+            case .gale: return .boomGale
+            case .radiance: return .boomRadiance
+            case .umbra: return .boomUmbra
+            }
+        }
+    }
+
+    /// The nearest sound the fight had before this one, for a bundle
+    /// without `file`: the one swing (`whoosh`), the spell's hit for
+    /// the element under a blow, the element's own impact for a spell's
+    /// release, the summon's rising charge, a dodge's quick swish for the
+    /// loose, a blade's hit for an arrow's, the buff's rising chime for a
+    /// rite, and the killing blow for a boom.
+    var fallback: AudioLibrary.Sound {
+        switch self {
+        case .swing: return .whoosh
+        case .hit: return .hitMagic
+        case .cast(let element): return SkillSound.hit(element).file
+        case .charge: return .summonCharge
+        case .loose: return .dodge
+        case .arrowHit: return .hitBlade
+        case .rite: return .statusBuff
+        case .boom: return .hitLethal
+        }
+    }
+
+    /// The fallback's volume against this sound's: the two files' loudness
+    /// apart (`tools/sfx.py`, measured 2026-09-25), so a fallback is heard
+    /// at about the level the cast was mixed for — the summon's charge is
+    /// 7 dB louder than the ultimate's — and never louder than asked.
+    var fallbackGain: Float {
+        switch self {
+        case .swing, .cast, .rite: return 1
+        case .hit: return 0.5
+        case .charge: return 0.45
+        case .loose: return 0.7
+        case .arrowHit: return 0.65
+        case .boom: return 0.8
+        }
+    }
+}
+
+extension AudioLibrary {
+
+    /// Plays a skill's sound (`SkillSound`) at `volume`: its own file, or,
+    /// where the bundle has none, the nearest sound the fight had before it
+    /// (`SkillSound.fallback`) at its fallback's gain. Muting, the pools and
+    /// the voices are `play(_:volume:delay:)`'s, as for every other sound.
+    func play(_ sound: SkillSound, volume: Float = 1) {
+        let own: Sound = sound.file
+        if ships(own) {
+            play(own, volume: volume)
+        } else {
+            play(sound.fallback, volume: volume * sound.fallbackGain)
+        }
     }
 }

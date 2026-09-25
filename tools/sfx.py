@@ -2,10 +2,10 @@
 """
 Synthesises the game's sound effects into Pantheon/Resources/Audio/*.wav.
 
-The first five sections use no samples, no network and no dependencies:
-envelopes over filtered noise, falling pitches and decaying partials. Replace any file with a recorded sample of the
-same name and nothing else has to change — AudioLibrary looks them up by
-filename.
+The hits, the kinds, the defence and the rest use no samples, no network and
+no dependencies: envelopes over filtered noise, falling pitches and decaying
+partials. Replace any file with a recorded sample of the same name and
+nothing else has to change — AudioLibrary looks them up by filename.
 
 Every percussive sound is built from the same three layers, because that is
 what the ear reads as an impact. The first version of this file had only the
@@ -44,10 +44,19 @@ and the instrumental ones layer CC0 recordings from VSCO 2 Community Edition,
 which are fetched on demand and never committed; their header says how, and
 what each recording is for.
 
+A skill's own sounds (Docs/PLAN.md *Skills that look like themselves*,
+2026-09-25) are the last section, `build_skills`, with the five element
+impacts it plays under every blow (`build_elements`, rebuilt the same day in
+numpy): a swing through the air, a spell's release, an ultimate's gathering
+swell and its boom in each element, a bowstring's loose, an arrow striking
+and a rite's release. Synthesis only, so they build anywhere numpy and scipy
+do.
+
     python3 tools/sfx.py                     # write them all
     python3 tools/sfx.py status flow         # only the named sections
     python3 tools/sfx.py summon --vsco DIR   # the summon's (FEEL.md W2.7)
     python3 tools/sfx.py spoils --vsco DIR   # the reward box's (FEEL.md W2.2)
+    python3 tools/sfx.py elements skills     # the skills' (PLAN.md, 2026-09-25)
     python3 tools/sfx.py flow --out /tmp/x   # somewhere else, to audition
     python3 tools/sfx.py --check             # measure what is on disk
 """
@@ -345,66 +354,13 @@ def build_kinds():
     ), [(0.025, 0.30), (0.051, 0.20), (0.083, 0.12)], diffuse=0.0117), drive=1.4))
 
 # ==============================================================================
-# One impact per element, for `impact_<element>`, which BattleSceneController
-# already asks for by name whenever a skill has no effect of its own.
+# One impact per element, `impact_<element>`: BattleSceneController has asked
+# for it by name whenever a skill has no effect of its own, and since the
+# skills were given their own sounds (2026-09-25) it is also the element under
+# every melee blow. It was rebuilt that day in numpy with the skills
+# (`build_elements`, below `build_skills`): through a phone's speaker the dark
+# one measured -26.8 LUFS (it was all sub-bass) against the light one's -9.1.
 # ==============================================================================
-
-def build_elements():
-    r = random.Random("impact_ember")
-    # Ember: a low whoomp, then forty small pops thinning out over 450 ms. The
-    # crackle is the fire; the hiss underneath is the air it is eating.
-    write("impact_ember", finish(space(mix(
-        transient(r, dur=0.004, tau=0.0018, fc=8000, hp=900, g=0.55),
-        body(0.28, 300, 70, fall=0.030, tau=0.100, g=0.70),
-        gain(crackle(r, 0.50, count=55, lo=2000, hi=7000, tau=0.0025), 1.00),
-        tail(r, 0.45, fc=2500, tau=0.140, g=0.25, hp=400),
-    ), [(0.017, 0.22), (0.037, 0.13)], diffuse=0.0079), drive=1.8))
-
-    r = random.Random("impact_tide")
-    # Tide: the slap first (a short body), then spray above 3 kHz that is gone
-    # in 70 ms, then the gurgle — noise whose cutoff falls 4 kHz -> 400 Hz,
-    # which is water closing over the hole it made.
-    write("impact_tide", finish(space(mix(
-        transient(r, dur=0.004, tau=0.0016, fc=9000, hp=1500, g=0.60),
-        body(0.20, 520, 150, fall=0.025, tau=0.060, g=0.70),
-        gain(decay(highpass(noise(S(0.25), r), 3000), 0.070), 0.50),
-        tail(r, 0.45, fc=0, tau=0.200, g=0.35, hp=120, moving=[(0, 4000), (1, 400)]),
-    ), [(0.019, 0.25), (0.041, 0.15), (0.067, 0.08)], diffuse=0.0097), drive=1.7))
-
-    r = random.Random("impact_gale")
-    # Gale: no contact, all movement. The cutoff climbs 300 Hz -> 3.5 kHz and
-    # falls back to 600 over 600 ms; a fixed filter here is just a hiss. The
-    # quiet falling tone is the edge of the gust passing.
-    write("impact_gale", finish(space(mix(
-        transient(r, dur=0.004, tau=0.0020, fc=6000, hp=800, g=0.15),
-        tail(r, 0.60, fc=0, tau=0.220, g=1.00, hp=250, attack=0.080,
-             moving=[(0, 300), (0.35, 3500), (1, 600)]),
-        body(0.40, 1500, 700, fall=0.180, tau=0.220, g=0.22, attack=0.060),
-    ), [(0.023, 0.28), (0.049, 0.18)], diffuse=0.0107), drive=1.5))
-
-    r = random.Random("impact_radiance")
-    # Radiance: a bell. 1.2 kHz at the classic slightly-off ratios (2.97, 5.44
-    # are what a bell actually rings at), the longest decays in the file, and a
-    # shimmer of high noise over the top.
-    write("impact_radiance", finish(space(mix(
-        transient(r, dur=0.003, tau=0.0010, fc=13000, hp=3000, g=0.80),
-        gain(partials(0.65, 1200, (1.0, 2.0, 2.97, 5.44, 8.1),
-                      (0.55, 0.42, 0.30, 0.20, 0.12),
-                      (0.50, 0.35, 0.25, 0.15, 0.09)), 0.90),
-        body(0.12, 700, 300, fall=0.030, tau=0.040, g=0.35),
-        tail(r, 0.40, fc=12000, tau=0.180, g=0.15, hp=4000),
-    ), [(0.021, 0.30), (0.045, 0.20), (0.077, 0.13), (0.107, 0.08)], diffuse=0.0127), drive=1.4))
-
-    r = random.Random("impact_umbra")
-    # Umbra: the transient is muffled on purpose (3.5 kHz, a third of the
-    # level) and everything swells rather than strikes — 120 ms of attack, a
-    # sub at 55 -> 28 Hz, and a tail rolled off at 500 Hz for most of a second.
-    write("impact_umbra", finish(space(mix(
-        transient(r, dur=0.006, tau=0.0030, fc=4500, hp=200, g=0.50),
-        body(0.50, 165, 58, fall=0.100, tau=0.300, g=1.10, attack=0.100),
-        body(0.90, 78, 42, fall=0.200, tau=0.400, g=0.60, attack=0.120),
-        tail(r, 0.90, fc=700, tau=0.400, g=0.44, hp=60, attack=0.150),
-    ), [(0.029, 0.30), (0.059, 0.20), (0.097, 0.13)], diffuse=0.0139), drive=2.1))
 
 # ==============================================================================
 # Defence.
@@ -2142,6 +2098,693 @@ def summon_mix_check():
     print(f"  the loudest sum {worst:.3f} of full scale" + ("" if worst <= 0.95 else "   ! the reveal would clip"))
 
 # ==============================================================================
+# build_skills: a skill's own sounds (Docs/PLAN.md *Skills that look like
+# themselves*, 2026-09-25; the owner: "Theres no magic animations, only your
+# generic sphere looking hits. I want more custom, high end, REAL GAME FEEL").
+# A cast was heard as one swoosh and its hits' weights, whatever it was; now
+# `SkillFX` sounds each piece of a cast as it draws it, one line a piece
+# (`SkillSound` in AudioLibrary.swift, which names these files):
+#
+#   swing_light, _heavy   a blow through the air, 0.14 s before its contact
+#                         (`SkillFX.swingLead`): a flurry's early strikes and a
+#                         basic light, a flurry's last and a heavy blow heavy
+#   impact_<element>      the element under a melee blow, on its contact
+#                         (`build_elements`, rebuilt with these)
+#   cast_<element>        a spell's release as its shot leaves the hand, 0.28 s
+#                         before the shot lands (`SkillFX.orbFlight`)
+#   charge                an ultimate's gathering swell, from its wind-up
+#   loose, arrow_hit      a bowstring's loose for each arrow, 0.2 s before it
+#                         lands (`SkillFX.arrowFlight`), and the arrow striking
+#   rite                  a rite's release on its caster (a heal, a buff, a
+#                         shield); each ally's cue stays its own event's
+#   boom_<element>        an ultimate's big impact, on its first hit
+#
+# Synthesis only: the recordings the summon and the fight's flow layer are
+# instruments, and these are air, fire, water and stone. Everything is built
+# from the primitives above (`travel`, `pops`, `modes`, `drop`, `room`) and a
+# handful of new ones below: `passing` (how a blade or a gust passes the ear),
+# `crunch` (a low sound's harmonics, for a phone), `dense` (noise with its
+# random peaks rounded off), `bubbles`, `pluck` (a string), `growl` (a throat).
+#
+# The files are LAYERED, and the numbers say how. A blow is already two sounds
+# from `Juice.impact`: its weight at 1.0, and what struck (a blade, a club or
+# the caster's element) at 0.55 and 20 ms later. Those two alone sum over full
+# scale: 1.08 for an ordinary cut and 1.35 for a lethal blow with a club
+# (measured 2026-09-25), and a phone's mixer has nothing after it to catch it.
+# So what these may not do is make that much worse, and `skills_mix_check`
+# plays a cast's sounds at SkillFX's own offsets and volumes over the blow's:
+# no sum more than 3 dB over the blow's own. That is why the colour has a
+# 12 ms onset (the blow's crack is heard first), why an early strike's sounds
+# are quieter, and why a boom is a felt sub under the blow and a body that
+# swells in over 0.2 s: the critical and lethal blows under an ultimate hold
+# near full scale for 150 to 300 ms, and the element rolls out after them.
+#
+# Levels by role (`loudness`), each within about 1 dB of its loudness through a
+# phone's speaker (`phone_loudness`: every one carries its weight in the band
+# a phone plays, which the dark impact of 2026-09-10 did not):
+#
+#   the impacts        -14    at 0.33 to 0.55, under the blow: the element, not
+#                             the blow (an ordinary blow is -16.6 at 1.0)
+#   the swings         -16 (light), -15.5 (heavy), at 0.5 and 0.8
+#   the casts          -13    at 0.45 and 0.7; the loose -16.5, the arrow -16
+#   the charge         -14    at 0.7
+#   the rite           -14.5  at 0.8, over each ally's heal or buff (-14.5)
+#   the booms          -12.5  at 0.9, over a critical or lethal blow (-10.2,
+#                             -10.4): the ultimate's moment is 2 dB louder
+# ==============================================================================
+
+def passing(n, crest, rise, leave):
+    """A pass: silent, swelling to 1 at `crest` seconds and falling away,
+    each side a half-Gaussian of its own width — how a blade or a gust passes
+    the ear, nearing slowly and leaving fast."""
+    t = T(n)
+    return np.exp(-((t - crest) / np.where(t < crest, rise, leave)) ** 2)
+
+def crunch(x, drive=3.0, lo=150, hi=1400):
+    """The harmonics of a low sound, for a phone. A phone's speaker plays
+    little under 250 Hz, so a blow's weight is lost there; driven through a
+    tanh its fundamental grows harmonics the speaker does play, and the ear
+    hears the missing fundamental through them. Band-limited, so it adds
+    weight and not fizz."""
+    y = np.tanh(drive * x / (np.max(np.abs(x)) + 1e-12))
+    return bp(y, lo, hi)
+
+def dense(x, drive=1.6):
+    """Noise made denser: its random peaks rounded off by a tanh before it is
+    mixed, so a noisy layer is as loud with 3-4 dB less peak and `level`'s
+    limiter has less to do. For noise, crackle, a growl and a blow; a bell or
+    a sung chord would wear it as grit, which is `limit`'s reason to exist."""
+    p = np.max(np.abs(x)) + 1e-12
+    return np.tanh(drive * x / p) / np.tanh(drive) * p
+
+def onset(x, sec):
+    """A raised-cosine fade-in over `sec` seconds: the colour of a blow comes
+    in under its crack rather than on top of it."""
+    x = np.array(x, float); k = min(len(x), N(sec))
+    if k: x[:k] *= 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, k))
+    return x
+
+def gust(r, n, points, q, env):
+    """Air: noise under a band-pass travelling through `points`, shaped by
+    `env`."""
+    return travel(r.standard_normal(n), points, q=q) * env
+
+def bubbles(r, dur, count, lo, hi, start=0.0, bias=1.0):
+    """Water: Minnaert bubbles, each a sine whose pitch rises a little as it
+    dies (van den Doel's model: damping 0.043 f + 0.0014 f^1.5 a second, the
+    rise a tenth of it), strewn through `dur` after `start`, thickest early
+    when `bias` > 1. A splash with none is only noise."""
+    n = N(dur); out = np.zeros(n)
+    for _ in range(count):
+        f0 = lo * (hi / lo) ** r.random()
+        d = 0.043 * f0 + 0.0014 * f0 ** 1.5
+        m = N(min(0.08, 5.0 / d)); t = T(m)
+        blip = np.sin(2 * np.pi * np.cumsum(f0 * (1 + 0.1 * d * t)) / SR) * np.exp(-d * t) * np.clip(t / 0.0015, 0, 1)
+        s = N(start) + int((n - N(start)) * r.random() ** bias)
+        e = min(n, s + m); out[s:e] += r.uniform(0.3, 1.0) * blip[:e - s]
+    return out
+
+def pings(r, dur, count, f0, f1, tau=0.05, spread=0.8):
+    """Sparkle: short sine pings travelling from f0 to f1 across `spread` of
+    `dur` (`glitter` above in numpy), each with a 1.5 ms attack so none
+    starts on a step."""
+    n = N(dur); out = np.zeros(n)
+    for k in range(count):
+        u = k / max(1, count - 1)
+        f = f0 * (f1 / f0) ** u * r.uniform(0.94, 1.07)
+        s = int(n * u * spread); m = min(n - s, N(6 * tau))
+        if m <= 0: continue
+        ping = tone(f, m, r.uniform(0, 6.28)) * np.exp(-T(m) / tau) * np.clip(T(m) / 0.0015, 0, 1)
+        out[s:s + m] += (1 - 0.4 * u) * r.uniform(0.6, 1.0) * ping
+    return out
+
+def pluck(r, f0, dur, decay, bright=0.5):
+    """A plucked string (Karplus-Strong): a burst of noise circulating in a
+    delay line one period long, averaged each pass, so the highs die first
+    as they do on a real string. `decay` is its seconds to -60 dB."""
+    n = N(dur); L = max(2, int(round(SR / f0)))
+    g = 10 ** (-3 / (f0 * decay))
+    y = np.zeros(n + L + 1)
+    y[:L] = lp(r.standard_normal(L), 2000 + 6000 * bright)
+    for i in range(L, n + L):
+        y[i] += g * 0.5 * (y[i - L] + y[i - L - 1])
+    return y[L:n + L]
+
+def growl(r, n, f0, jitter=0.05, rough=0.6, table=None):
+    """A throat: a band-limited sawtooth whose pitch wanders, amplitude-
+    modulated at half its own pitch (the period doubling that separates a
+    growl from a hum, as in the boss's roar) and roughened, with breath under
+    it, through formants (an "o" by default)."""
+    f = f0 * (1 + jitter * smooth_noise(r, n, 25))
+    sub = 1 + 0.5 * np.sin(np.pi * np.cumsum(f) / SR)
+    src = lp(saw(f, n), 2000, 1) * sub * (1 + rough * np.clip(smooth_noise(r, n, 40), -1, 1))
+    src = src + 0.35 * bp(r.standard_normal(n), 300, 3500)
+    return formants(src, table or [(480, 90, 0), (850, 110, -3), (2500, 200, -14)])
+
+def phone_loudness(x):
+    """`loudness` through a phone's speaker, which plays little under 250 Hz:
+    after a fourth-order high-pass there."""
+    return loudness(hp(np.asarray(x, float), 250, 4))
+
+# ------------------------------------------------------------------ the swings
+
+def _swing(name, dur, crest, rise, leave, air, whistle, whistle_q, whistle_g, mass, flutter, target):
+    """A blow through the air: a broad band of air and, on the same kind of
+    noise, a narrow one — the edge's whistle — both climbing to the pass and
+    falling after it (the Doppler of anything that passes the ear), and for a
+    heavy weapon the mass of the thing in a low band that flutters as it
+    turns."""
+    r = seeded(name)
+    n = N(dur); t = T(n); c = crest / dur
+    env = passing(n, crest, rise, leave)
+    b = Bus()
+    b.add(gust(r, n, [(0, air[0]), (c, air[1]), (1, air[2])], 1.1, env), 0.0, 1.0)
+    b.add(gust(r, n, [(0, whistle[0]), (c, whistle[1]), (1, whistle[2])], whistle_q, env), 0.0, whistle_g)
+    if mass:
+        heft = passing(n, crest, rise * 1.2, leave * 1.4)
+        turn = 1 + flutter * np.sin(2 * np.pi * np.cumsum(np.interp(t, [0, crest, dur], [16, 26, 20])) / SR)
+        b.add(gust(r, n, [(0, mass[0]), (c, mass[1]), (1, mass[2])], 0.9, heft) * turn, 0.0, 0.9)
+    save(name, room(b.x, rt60=0.5, wet=0.1, seed="small")[:N(dur + 0.06)], target, tail=0.06)
+
+def swing_light():
+    # A quick blade, a fist, a flurry's early strike: 0.25 s with the edge's
+    # pass at 80 ms, so the whoosh is past and falling as the blow lands
+    # 0.14 s after it starts. The air climbs 700 Hz -> 3.2 kHz to the pass,
+    # the whistle 1.7 -> 2.5 kHz at Q 22.
+    _swing("swing_light", 0.25, 0.08, 0.038, 0.045, (700, 3200, 1300), (1700, 2500, 1800), 22, 0.55,
+           None, 0.0, -16)
+
+def swing_heavy():
+    # A heavy blade, a club, a flurry's last strike: slower to arrive and
+    # lower (450 Hz -> 2.2 kHz), a whistle an octave under the light one's,
+    # and the mass of the weapon in air at 150 -> 450 Hz, fluttering 12% at
+    # 16-26 Hz. The pass at 92 ms, and by the blow at 0.14 s under half of it
+    # is left, so the swing leads into the crack instead of covering it.
+    _swing("swing_heavy", 0.33, 0.092, 0.05, 0.052, (450, 2200, 800), (900, 1350, 1000), 18, 0.45,
+           (150, 450, 220), 0.12, -15.5)
+
+# ------------------------------------------------- the impacts (build_elements)
+
+def impact_ember():
+    r = seeded("impact_ember")
+    # Ember: a whoomp — noise under a low-pass flung open to 2.6 kHz in 25 ms
+    # and closing, the air catching — over a falling body whose harmonics a
+    # phone can play, crackle from 30 ms (tanh-rounded, so the pops are fire
+    # and not clicks, and dying away with the flame) and a flickering hiss.
+    b = Bus()
+    n = N(0.45)
+    b.add(dense(travel(r.standard_normal(n), [(0, 250), (0.06, 2600), (0.35, 800), (1, 350)], q=0.7, kind="lp")
+                * fall(n, 0.11, 0.01)), 0.0, 1.0)
+    body = drop(0.3, 240, 70, 0.03, 0.08, attack=0.008)
+    b.add(body, 0.0, 0.35)
+    b.add(crunch(body, 3.0, 150, 1100) * shape(len(body), [(0, 0), (0.01, 1), (0.3, 1)]), 0.0, 0.6)
+    b.add(dense(pops(r, 0.42, 55, 1800, 7500, bias=1.5), 2.0) * fall(N(0.42), 0.15), 0.03, 1.0)
+    m = N(0.35)
+    b.add(lp(hp(r.standard_normal(m), 3500), 9000) * np.abs(smooth_noise(r, m, 40)) * fall(m, 0.1, 0.02), 0.02, 0.35)
+    save("impact_ember", room(onset(dense(b.x, 1.5), 0.012), rt60=0.7, wet=0.14, seed="small")[:N(0.55)], -14, tail=0.15)
+
+def impact_tide():
+    r = seeded("impact_tide")
+    # Tide: the slap (a short body falling 650 -> 190 Hz), spray over 3 kHz
+    # gone in 50 ms, the gurgle — noise under a band falling 2.6 kHz -> 380 Hz,
+    # water closing over the hole it made — and the bubbles it leaves.
+    b = Bus()
+    b.add(click(r, 0.004, 0.0016, 9000, 900), 0.0, 0.2)
+    b.add(drop(0.18, 650, 190, 0.02, 0.05, attack=0.004), 0.0, 0.45)
+    n = N(0.12)
+    b.add(dense(hp(r.standard_normal(n), 3000) * fall(n, 0.05, 0.004)), 0.0, 0.4)
+    n = N(0.45)
+    b.add(dense(fade_tail(travel(r.standard_normal(n), [(0, 2600), (1, 380)], q=1.4) * fall(n, 0.14, 0.012), 0.1)),
+          0.0, 1.0)
+    b.add(bubbles(r, 0.4, 16, 380, 1300, start=0.03, bias=1.3), 0.0, 0.7)
+    save("impact_tide", room(onset(dense(b.x, 1.3), 0.012), rt60=0.8, wet=0.16, seed="small")[:N(0.55)], -14, tail=0.15)
+
+def impact_gale():
+    r = seeded("impact_gale")
+    # Gale: no contact, all movement — a gust whose band climbs 450 Hz ->
+    # 3 kHz in 70 ms and falls back, its whistle at Q 18 on the same curve, a
+    # cut of air over 3.5 kHz at the front, and a quiet tone falling
+    # 500 -> 260 Hz, the edge of the gust passing.
+    b = Bus()
+    n = N(0.45)
+    env = shape(n, [(0, 0), (0.03, 1.0), (0.45, 0.0)]) ** 1.4
+    b.add(gust(r, n, [(0, 450), (0.15, 3000), (1, 800)], 1.3, env), 0.0, 1.0)
+    b.add(gust(r, n, [(0, 1900), (0.15, 2800), (1, 1900)], 18, env), 0.0, 0.35)
+    m = N(0.05)
+    b.add(hp(r.standard_normal(m), 3500) * fall(m, 0.012, 0.002), 0.0, 0.4)
+    b.add(drop(0.15, 500, 260, 0.02, 0.05, attack=0.002), 0.0, 0.25)
+    save("impact_gale", room(onset(b.x, 0.012), rt60=0.8, wet=0.16, seed="open")[:N(0.5)], -14, tail=0.15)
+
+def impact_radiance():
+    r = seeded("impact_radiance")
+    # Radiance: a bell struck, E6 with B6 a fifth over it 22 ms later (a
+    # bell's own ratios, 2.97 and 5.44, each mode split to beat), a bright
+    # tink under the strike, sparkle climbing 3 -> 8.5 kHz and a breath of
+    # air: E major, as the light cast and the light boom are.
+    b = Bus()
+    b.add(click(r, 0.003, 0.001, 13000, 3000), 0.0, 0.3)
+    b.add(drop(0.12, 1400, 820, 0.015, 0.03, wave="tri"), 0.0, 0.3)
+    b.add(modes(0.6, pitch("E6"), (1, 2.0, 2.97, 5.44), (0.3, 0.22, 0.15, 0.09), (1, 0.4, 0.28, 0.14), split=2.4, rng=r),
+          0.0, 0.8)
+    b.add(modes(0.5, pitch("B6"), (1, 2.0, 2.97), (0.22, 0.16, 0.1), (1, 0.35, 0.2), split=3.0, rng=r), 0.022, 0.45)
+    b.add(pings(r, 0.4, 12, 3000, 8500, tau=0.03), 0.02, 0.25)
+    n = N(0.3)
+    b.add(travel(r.standard_normal(n), [(0, 4000), (1, 9000)], q=1.0) * fall(n, 0.07, 0.004), 0.0, 0.15)
+    save("impact_radiance", room(onset(b.x, 0.012), rt60=0.9, wet=0.18, seed="glass")[:N(0.6)], -14, tail=0.2)
+
+def impact_umbra():
+    r = seeded("impact_umbra")
+    # Umbra: a dark thud (170 -> 55 Hz) heard on a phone through its
+    # harmonics, a void drawing in — noise under a band SINKING 1.5 kHz ->
+    # 320 Hz — and a throat's rasp at 72 Hz under it. It was a swell of sub
+    # alone, which a phone does not play at all.
+    b = Bus()
+    b.add(click(r, 0.005, 0.0025, 4000, 250), 0.0, 0.15)
+    body = drop(0.4, 170, 55, 0.035, 0.12, attack=0.012)
+    b.add(fade_tail(body, 0.1), 0.0, 0.4)
+    b.add(fade_tail(crunch(body, 3.5, 150, 900) * shape(len(body), [(0, 0), (0.015, 1), (0.4, 1)]), 0.1), 0.0, 0.8)
+    n = N(0.45)
+    b.add(dense(gust(r, n, [(0, 1500), (1, 320)], 1.2, shape(n, [(0, 0), (0.025, 1), (0.45, 0)]) ** 1.3)), 0.0, 1.0)
+    m = N(0.32)
+    b.add(growl(r, m, 72) * shape(m, [(0, 0), (0.02, 1), (0.14, 0.6), (0.32, 0)]), 0.0, 0.8)
+    k = N(0.5)
+    b.add(lp(r.standard_normal(k), 600) * fall(k, 0.14, 0.01), 0.0, 0.3)
+    save("impact_umbra", room(onset(dense(b.x, 1.5), 0.012), rt60=0.9, wet=0.18, seed="small")[:N(0.58)], -14, tail=0.18)
+
+def build_elements():
+    _need()
+    impact_ember(); impact_tide(); impact_gale(); impact_radiance(); impact_umbra()
+
+# -------------------------------------------------------------------- the casts
+#
+# A spell's release, played as its shot leaves the hand: the release is its
+# first 40 ms, and what follows recedes with the shot, to a fifth of its level
+# by the 0.28 s the shot takes to land, so the element's impact is heard on
+# its own.
+
+def cast_ember():
+    r = seeded("cast_ember")
+    # Fire: a whump (the low-pass flung open to 3.2 kHz in 40 ms), the body
+    # under it, the flame's roar flying off — a band falling 1.3 kHz -> 450 Hz
+    # that flickers at about 22 Hz — and its crackle thinning out.
+    b = Bus()
+    n = N(0.6)
+    b.add(dense(travel(r.standard_normal(n), [(0, 150), (0.07, 3200), (0.35, 900), (1, 400)], q=0.8, kind="lp")
+                * fall(n, 0.13, 0.012)), 0.0, 1.0)
+    body = drop(0.35, 170, 60, 0.04, 0.1, attack=0.006)
+    b.add(fade_tail(body, 0.08), 0.0, 0.3)
+    b.add(fade_tail(crunch(body, 3.0, 150, 1000), 0.08), 0.0, 0.55)
+    roar = travel(r.standard_normal(n), [(0, 1300), (1, 450)], q=0.9) * (1 + 0.6 * np.clip(smooth_noise(r, n, 22), -1, 1))
+    b.add(dense(roar * shape(n, [(0, 0), (0.03, 1), (0.15, 0.5), (0.3, 0.2), (0.6, 0)])), 0.0, 0.7)
+    b.add(pops(r, 0.5, 45, 1800, 7000, bias=1.7) * fall(N(0.5), 0.2), 0.01, 0.7)
+    save("cast_ember", room(dense(b.x, 1.4), rt60=0.8, wet=0.14, seed="small")[:N(0.68)], -13, tail=0.18)
+
+def cast_tide():
+    r = seeded("cast_tide")
+    # Water: a splash as it leaves (1.5-9 kHz, gone in 35 ms), then a rush —
+    # noise under a band falling 2.3 kHz -> 650 Hz, churned at about 30 Hz —
+    # with bubbles through it and a soft swell of weight under it.
+    b = Bus()
+    m = N(0.12)
+    b.add(bp(r.standard_normal(m), 1500, 9000) * fall(m, 0.035, 0.002), 0.0, 0.6)
+    n = N(0.6)
+    rush = travel(r.standard_normal(n), [(0, 2300), (0.3, 1400), (1, 650)], q=1.1)
+    rush *= (1 + 0.5 * np.clip(smooth_noise(r, n, 30), -1, 1))
+    b.add(rush * shape(n, [(0, 0), (0.035, 1), (0.15, 0.5), (0.3, 0.2), (0.6, 0)]), 0.0, 1.0)
+    b.add(bubbles(r, 0.5, 22, 320, 1500, start=0.03, bias=1.2), 0.0, 0.45)
+    b.add(fade_tail(drop(0.3, 280, 120, 0.05, 0.1, attack=0.01), 0.08), 0.0, 0.3)
+    save("cast_tide", room(b.x, rt60=0.8, wet=0.16, seed="small")[:N(0.68)], -13, tail=0.18)
+
+def cast_gale():
+    r = seeded("cast_gale")
+    # Wind: a gust that surges in 50 ms — its band 500 Hz -> 3.4 kHz and its
+    # whistle at Q 22 on it — and flies off fluttering at 13 Hz, with the
+    # weight of the air moved in a low band under it.
+    b = Bus()
+    n = N(0.58); t = T(n)
+    env = shape(n, [(0, 0), (0.05, 1), (0.16, 0.5), (0.3, 0.22), (0.58, 0)]) ** 1.2
+    flutter = 1 + 0.2 * np.sin(2 * np.pi * 13 * t)
+    b.add(gust(r, n, [(0, 500), (0.1, 3400), (1, 1100)], 1.3, env) * flutter, 0.0, 1.0)
+    b.add(gust(r, n, [(0, 2300), (0.1, 2900), (1, 1700)], 22, env), 0.0, 0.45)
+    b.add(gust(r, n, [(0, 200), (0.1, 600), (1, 250)], 0.8, env), 0.0, 0.35)
+    save("cast_gale", room(b.x, rt60=0.8, wet=0.15, seed="open")[:N(0.66)], -13, tail=0.18)
+
+def cast_radiance():
+    r = seeded("cast_radiance")
+    # Light: a shimmer — E major struck high (E6 G#6 B6 E7, each a beating
+    # pair), sparkle climbing 2.2 -> 7.5 kHz, a breath of bright air and a
+    # soft body, so it has somewhere to come from.
+    b = Bus()
+    n = N(0.6)
+    chord = sum(g * modes(0.6, pitch(note), (1, 2.0), (0.26, 0.14), (1, 0.25), split=3.5, rng=r)
+                for note, g in (("E6", 1.0), ("G#6", 0.8), ("B6", 0.75), ("E7", 0.5)))
+    b.add(chord * shape(n, [(0, 0), (0.008, 1), (0.6, 1)]), 0.0, 0.7)
+    b.add(pings(r, 0.45, 16, 2200, 7500, tau=0.035, spread=0.7), 0.0, 0.35)
+    b.add(travel(r.standard_normal(n), [(0, 3000), (0.2, 9000), (1, 5000)], q=0.9)
+          * shape(n, [(0, 0), (0.05, 1), (0.6, 0)]) ** 1.5, 0.0, 0.3)
+    b.add(drop(0.25, 600, 300, 0.03, 0.08, attack=0.004), 0.0, 0.3)
+    save("cast_radiance", room(b.x, rt60=1.0, wet=0.2, seed="glass")[:N(0.7)], -13, tail=0.22)
+
+def cast_umbra():
+    r = seeded("cast_umbra")
+    # Darkness: a rasp — a throat at 64 Hz through an open "ah" — over a void
+    # drawing in (a band sinking 1.8 kHz -> 300 Hz) and a low thrum heard
+    # through its harmonics.
+    b = Bus()
+    n = N(0.6)
+    b.add(dense(gust(r, n, [(0, 1800), (1, 300)], 1.4, shape(n, [(0, 0), (0.02, 1), (0.6, 0)]) ** 1.4)), 0.0, 0.9)
+    m = N(0.45)
+    rasp = growl(r, m, 64, table=[(560, 100, 0), (1000, 130, -4), (2600, 220, -12)])
+    b.add(rasp * shape(m, [(0, 0), (0.02, 1), (0.2, 0.55), (0.45, 0)]), 0.0, 1.0)
+    body = drop(0.45, 110, 48, 0.05, 0.16, attack=0.015)
+    b.add(fade_tail(body, 0.12), 0.0, 0.3)
+    b.add(fade_tail(crunch(body, 3.5, 140, 800), 0.12), 0.0, 0.6)
+    save("cast_umbra", room(b.x, rt60=0.9, wet=0.18, seed="small")[:N(0.7)], -13, tail=0.2)
+
+# --------------------------------------------------- the charge, the bow, the rite
+
+# How far into `charge.wav` its swell crests, and how long before an
+# ultimate's first blow the charge wants to start (`SkillSound.chargeLead` in
+# AudioLibrary.swift, kept in step by hand): the crest a tenth of a second
+# before the blow and the swell let go as it lands — the breath before a hit,
+# which makes the hit, and which keeps the crest off the blow's own peak.
+CHARGE_CREST = 0.9
+CHARGE_LEAD = 1.0
+
+def ultimate_charge():
+    r = seeded("charge")
+    # An ultimate gathering, in every element: air drawn in through a band
+    # climbing 250 Hz -> 4.2 kHz, a cluster of three dark voices (G, D, G,
+    # each a detuned pair) sliding up an octave under a tremolo that quickens
+    # 5 -> 16 Hz, a sub climbing with them (and its harmonics, for a phone),
+    # and motes of sparkle thickening into the crest at 0.9 s; then it lets
+    # go by 1.1 s, so the blow after it lands on quiet.
+    b = Bus()
+    n = N(1.25); t = T(n)
+    crest = [(0, 0.0), (CHARGE_CREST, 1.0), (1.0, 0.45), (1.12, 0.12), (1.25, 0.0)]
+    rising = np.clip(t / CHARGE_CREST, 0, 1)
+    b.add(travel(r.standard_normal(n), [(0, 250), (0.72, 4200), (1, 2600)], q=1.1) * swell(n, crest, 2.2), 0.0, 1.0)
+    b.add(lp(hp(r.standard_normal(n), 4500), 9000) * swell(n, [(0, 0), (CHARGE_CREST, 1), (0.98, 0.3), (1.25, 0)], 3.0),
+          0.0, 0.2)
+    glide = 2 ** (rising ** 1.6)
+    trem = 1 - 0.35 * (0.5 + 0.5 * np.sin(2 * np.pi * np.cumsum(5 + 11 * rising) / SR))
+    voices = sum(saw(98 * k * glide * 2 ** (c / 1200), n) for k in (1, 1.5, 2.0) for c in (-8, 7))
+    voices = travel(voices, [(0, 400), (0.72, 3000), (1, 1800)], q=0.7, kind="lp")
+    b.add(voices / (np.max(np.abs(voices)) + 1e-12) * trem * swell(n, crest, 1.8), 0.0, 0.45)
+    sub = tone(45 * glide, n) * swell(n, crest, 1.6)
+    b.add(sub, 0.0, 0.2)
+    b.add(crunch(sub, 2.5, 140, 700), 0.0, 0.25)
+    b.add(pops(r, 1.2, 90, 2500, 9000, bias=0.6) * swell(N(1.2), crest, 2.5), 0.0, 0.5)
+    save("charge", room(b.x, rt60=1.0, wet=0.16, seed="hall")[:N(1.25)], -14, tail=0.12)
+
+def bow_loose():
+    r = seeded("loose")
+    # A bowstring let go: the string's slap on the bow (a click and a short
+    # knock), the string itself (a plucked 165 Hz, damped by the hand inside a
+    # tenth of a second) and the arrow leaving, a fwip falling 5.5 -> 1.8 kHz.
+    b = Bus()
+    b.add(click(r, 0.003, 0.0012, 8000, 900), 0.0, 0.8)
+    b.add(drop(0.06, 380, 160, 0.008, 0.02), 0.0, 0.45)
+    string = pluck(r, 165, 0.28, 0.18)
+    string = bp(string, 120, 4500) * np.exp(-T(len(string)) / 0.07)
+    b.add(string / (np.max(np.abs(string)) + 1e-12), 0.001, 0.9)
+    m = N(0.12)
+    b.add(gust(r, m, [(0, 5500), (1, 1800)], 1.6, shape(m, [(0, 0), (0.012, 1), (0.12, 0)])), 0.004, 0.6)
+    save("loose", room(dense(b.x, 1.4), rt60=0.5, wet=0.1, seed="small")[:N(0.3)], -16.5, tail=0.08)
+
+def arrow_hit():
+    r = seeded("arrow_hit")
+    # An arrow striking: the point's tick and a splinter of bright noise, the
+    # head's knock (820 Hz at a small bar's ratios), a short thud, and the
+    # shaft quivering after it — 290 Hz and two harmonics wobbling at 24 Hz,
+    # with a rattle in the band a phone plays.
+    b = Bus()
+    b.add(click(r, 0.002, 0.0008, 11000, 2500), 0.0, 0.45)
+    m = N(0.03)
+    b.add(dense(bp(r.standard_normal(m), 1500, 7000) * fall(m, 0.008, 0.0008)), 0.0, 0.5)
+    b.add(modes(0.1, 820, (1, 2.4, 3.9), (0.03, 0.02, 0.012), (1, 0.5, 0.3), rng=r), 0.0, 0.6)
+    b.add(drop(0.15, 200, 85, 0.015, 0.045, attack=0.001), 0.0, 0.4)
+    n = N(0.35); t = T(n)
+    wob = np.sin(2 * np.pi * 24 * t)
+    quiver = sum(g * tone(f * (1 + 0.02 * wob), n) for f, g in ((290, 1.0), (580, 0.6), (870, 0.3)))
+    b.add(dense(quiver * (0.55 + 0.45 * wob) * fall(n, 0.11, 0.004), 1.4), 0.008, 0.5)
+    rattle = dense(bp(r.standard_normal(n), 500, 2200) * (0.4 + 0.6 * np.abs(wob)) * fall(n, 0.09, 0.003))
+    b.add(rattle, 0.008, 0.6)
+    save("arrow_hit", room(dense(b.x, 1.6), rt60=0.6, wet=0.12, seed="small")[:N(0.4)], -16, tail=0.1)
+
+def rite_release():
+    r = seeded("rite")
+    # A rite's release — a heal, a buff, a shield lifting off its caster: a
+    # bright chord rising, C major because the heal's harp and the buff's
+    # glockenspiel that follow on each ally are in C. Bells arpeggiated up
+    # E5 G5 C6 E6 G6 (45 ms apart, a celesta's near-harmonic modes), a choir
+    # on "ah" (E4 G4 C5) swelling in 120 ms under them, air lifting through
+    # a band climbing 700 Hz -> 6.5 kHz and sparkle over it all. Nothing
+    # struck: a rite has no blow.
+    b = Bus()
+    n = N(0.8)
+    b.add(travel(r.standard_normal(n), [(0, 700), (0.6, 6500), (1, 4500)], q=1.0)
+          * swell(n, [(0, 0), (0.25, 1), (0.8, 0)], 1.2), 0.0, 0.35)
+    for i, note in enumerate(["E5", "G5", "C6", "E6", "G6"]):
+        b.add(modes(0.7, pitch(note), (1, 2.0, 3.0, 4.16), (0.45, 0.25, 0.15, 0.08), (1, 0.35, 0.16, 0.08),
+                    split=1.8, rng=r), 0.045 * i, 0.5 + 0.08 * i)
+    choir = Bus()
+    for part, note, g in (("tenor", "E4", 0.8), ("alto", "G4", 0.85), ("soprano", "C5", 0.9)):
+        choir.add(choir_part(r, part, [(0, pitch(note))], n), 0.0, g)
+    voices = choir.x[:n] / (np.max(np.abs(choir.x)) + 1e-12)
+    b.add(voices * shape(n, [(0, 0), (0.12, 1.0), (0.4, 0.8), (0.8, 0)]), 0.0, 0.4)
+    b.add(pings(r, 0.5, 16, 3000, 8500, tau=0.045), 0.08, 0.35)
+    save("rite", room(b.x, rt60=1.2, wet=0.22, seed="hall")[:N(0.8)], -14.5, tail=0.25)
+
+# -------------------------------------------------------------------- the booms
+
+def _boom_core(r):
+    """The blast every boom shares, in two parts. What is FELT at once — a
+    blast falling 140 -> 36 Hz and a sub under it, low and modest, since the
+    blow's own crack holds the first 20-30 ms and a phone plays neither —
+    and what is HEARD as it swells in over 0.2 s: the blast's harmonics, a
+    rumble in the band a phone plays whose low-pass closes 1.4 kHz -> 250 Hz,
+    a burst of mid noise and debris falling from 0.12 s."""
+    b = Bus()
+    blast = drop(0.9, 140, 36, 0.05, 0.3, attack=0.01)
+    b.add(fade_tail(blast, 0.2), 0.0, 0.4)
+    b.add(fade_tail(drop(1.4, 60, 27, 0.2, 0.55, attack=0.02), 0.3), 0.0, 0.25)
+    b.add(fade_tail(crunch(blast, 4.0, 150, 1200) * fall(len(blast), 0.35, 0.22), 0.2), 0.0, 0.9)
+    n = N(1.5)
+    rumble = bp(travel(r.standard_normal(n), [(0, 1400), (0.3, 500), (1, 250)], q=0.7, kind="lp"), 120, 2000)
+    b.add(dense(fade_tail(rumble * fall(n, 0.5, 0.25), 0.3)), 0.0, 0.9)
+    m = N(0.6)
+    b.add(dense(fade_tail(bp(r.standard_normal(m), 200, 2500) * fall(m, 0.15, 0.2), 0.15)), 0.0, 0.7)
+    b.add(lp(pops(r, 1.0, 40, 250, 2500, bias=1.2, tau=0.004), 3000), 0.12, 0.6)
+    return b
+
+def boom_ember():
+    r = seeded("boom_ember")
+    # Fire: the fireball's roar — a band climbing to 1.4 kHz and settling at
+    # 600 Hz, flickering at about 20 Hz — swelling in over the blast, a
+    # hundred and ten crackles from 0.12 s and a sizzle of hiss.
+    b = _boom_core(r)
+    n = N(1.4)
+    fire = travel(r.standard_normal(n), [(0, 400), (0.15, 1400), (1, 600)], q=0.8)
+    fire *= (1 + 0.6 * np.clip(smooth_noise(r, n, 20), -1, 1))
+    b.add(dense(fade_tail(fire * fall(n, 0.45, 0.25), 0.3)), 0.0, 0.9)
+    b.add(pops(r, 1.1, 110, 2000, 8000, bias=1.3) * fall(N(1.1), 0.45, 0.05), 0.12, 0.8)
+    m = N(1.2)
+    b.add(fade_tail(lp(hp(r.standard_normal(m), 3500), 9000) * np.abs(smooth_noise(r, m, 30)) * fall(m, 0.35, 0.1), 0.3),
+          0.12, 0.3)
+    save("boom_ember", room(dense(b.x, 1.4), rt60=1.8, wet=0.24, seed="hall")[:N(1.7)], -12.5, tail=0.4)
+
+def boom_tide():
+    r = seeded("boom_tide")
+    # Water: a wave breaking — surf under a low-pass that closes 7 kHz ->
+    # 500 Hz as it collapses, churned at about 12 Hz and cresting at 0.25 s —
+    # spray over 4 kHz, and sixty bubbles as it draws back.
+    b = _boom_core(r)
+    n = N(1.5)
+    surf = travel(r.standard_normal(n), [(0, 7000), (0.5, 1400), (1, 500)], q=0.7, kind="lp")
+    surf *= (1 + 0.4 * np.clip(smooth_noise(r, n, 12), -1, 1))
+    b.add(dense(surf * shape(n, [(0, 0), (0.25, 1), (0.6, 0.55), (1.5, 0)]) ** 1.5), 0.0, 1.0)
+    k = N(0.6)
+    b.add(fade_tail(hp(r.standard_normal(k), 4000) * fall(k, 0.2, 0.08), 0.15), 0.12, 0.35)
+    b.add(bubbles(r, 1.2, 60, 300, 1400, start=0.3, bias=1.1), 0.0, 0.4)
+    save("boom_tide", room(b.x, rt60=1.8, wet=0.24, seed="hall")[:N(1.7)], -12.5, tail=0.4)
+
+def boom_gale():
+    r = seeded("boom_gale")
+    # Wind: a vortex — a gust climbing to 2.6 kHz, circling at 6 Hz — and two
+    # whistles at Q 25 sliding past each other, the storm's shriek.
+    b = _boom_core(r)
+    n = N(1.4); t = T(n)
+    swirl = 1 + 0.25 * np.sin(2 * np.pi * 6 * t)
+    env = shape(n, [(0, 0), (0.25, 1), (0.6, 0.5), (1.4, 0)]) ** 1.5
+    b.add(dense(gust(r, n, [(0, 250), (0.15, 2600), (1, 700)], 1.2, env) * swirl), 0.0, 1.0)
+    b.add(gust(r, n, [(0, 1500), (0.3, 2400), (1, 1800)], 25, env), 0.0, 0.35)
+    b.add(gust(r, n, [(0, 2600), (0.3, 1700), (1, 2100)], 25, env), 0.0, 0.3)
+    save("boom_gale", room(b.x, rt60=1.8, wet=0.24, seed="open")[:N(1.7)], -12.5, tail=0.4)
+
+def boom_radiance():
+    r = seeded("boom_radiance")
+    # Light: a holy strike — E major rung on three great bells (E5 B5 G#6,
+    # struck 0.15 s in, once the blow's crack has passed) with a choir on the
+    # chord swelling under them and sparkle falling 7.5 -> 2 kHz like light
+    # coming down.
+    b = _boom_core(r)
+    strike = 0.15
+    for note, g, at in (("E5", 1.0, 0.0), ("B5", 0.8, 0.015), ("G#6", 0.6, 0.03)):
+        b.add(modes(1.4, pitch(note), (1, 2.0, 2.97, 5.44), (0.9, 0.6, 0.4, 0.2), (1, 0.45, 0.3, 0.15), split=2.2, rng=r),
+              strike + at, 0.55 * g)
+    b.add(click(r, 0.004, 0.0012, 13000, 3000), strike, 0.25)
+    n = N(1.4)
+    choir = Bus()
+    for part, note, g in (("tenor", "E4", 0.8), ("alto", "B4", 0.8), ("soprano", "G#5", 0.7), ("soprano", "E5", 0.8)):
+        choir.add(choir_part(r, part, [(0, pitch(note))], n), 0.0, g)
+    voices = choir.x[:n] / (np.max(np.abs(choir.x)) + 1e-12)
+    b.add(voices * shape(n, [(0, 0), (0.25, 1.0), (0.6, 0.6), (1.4, 0)]) ** 1.5, 0.0, 0.4)
+    b.add(pings(r, 1.1, 26, 7500, 2000, tau=0.06, spread=0.85), strike, 0.3)
+    save("boom_radiance", room(b.x, rt60=2.0, wet=0.26, seed="hall")[:N(1.75)], -12.5, tail=0.45)
+
+def boom_umbra():
+    r = seeded("boom_umbra")
+    # Darkness: the void sucked shut (a band plunging 3 kHz -> 400 Hz in
+    # 0.1 s), then something vast growling at 55 Hz through an "o", a tritone
+    # (D2 and G#2) driven and heard through its harmonics, and a low wind
+    # sinking into the dark.
+    b = _boom_core(r)
+    m = N(0.12)
+    b.add(travel(r.standard_normal(m), [(0, 3000), (1, 400)], q=1.2) * shape(m, [(0, 0.1), (0.1, 1), (0.12, 0)]),
+          0.0, 0.35)
+    n = N(1.2)
+    throat = growl(r, n, 55, jitter=0.07, rough=0.8, table=[(420, 90, 0), (780, 110, -4), (2400, 200, -14)])
+    b.add(dense(throat * shape(n, [(0, 0), (0.25, 1), (0.6, 0.6), (1.2, 0)]) ** 1.5), 0.0, 1.3)
+    k = N(1.5)
+    drone = np.tanh(2.5 * (tone(pitch("D2"), k) + 0.8 * tone(pitch("G#2"), k)))
+    b.add(bp(drone, 180, 1200) * shape(k, [(0, 0), (0.25, 1), (1.5, 0)]) ** 1.5, 0.0, 0.5)
+    b.add(dense(fade_tail(gust(r, k, [(0, 1100), (1, 300)], 1.0, fall(k, 0.4, 0.22)), 0.3)), 0.0, 0.7)
+    save("boom_umbra", room(dense(b.x, 1.6), rt60=2.0, wet=0.26, seed="hall")[:N(1.7)], -12.5, tail=0.45)
+
+# ------------------------------------------------------------- the mix, measured
+
+# SkillFX's clock and volumes (SkillFX.swift) and the blow's own (Juice.swift,
+# BattleSceneController.present), kept in step with them by hand. A pair is an
+# early strike's and the last's.
+SWING_LEAD = 0.14            # `SkillFX.swingLead`
+IMPACT_LEAD = 0.03           # `SkillFX.impactLead`: a hit's sounds, before the number
+ARROW_FLIGHT = 0.2           # `SkillFX.arrowFlight`
+ORB_FLIGHT = 0.28            # `SkillFX.orbFlight`
+SWING_VOLUMES = (0.5, 0.8)
+HIT_VOLUMES = (0.33, 0.54)   # the element under a melee blow: 0.6 of 0.55 and 0.9
+ARROW_VOLUMES = (0.44, 0.72)
+LOOSE_VOLUMES = (0.5, 0.8)
+CAST_VOLUMES = (0.45, 0.7)
+CHARGE_VOLUME = 0.7
+BOOM_VOLUME = 0.9
+RITE_VOLUME = 0.8
+COLOUR_VOLUME = 0.55         # `Juice.impact`'s colour, 20 ms after the weight
+COLOUR_DELAY = 0.02
+HEAL_VOLUME = 0.7            # each ally's heal, and a buff, on its own event,
+BUFF_VOLUME = 0.8            # 40 ms after the one before on the same hit
+ALLY_STAGGER = 0.04
+MOST_OVER = 3.0              # dB a skill's sounds may add to the peak of the blow's own
+
+ELEMENT_NAMES = ["ember", "tide", "gale", "radiance", "umbra"]
+SKILL_NAMES = (["swing_light", "swing_heavy"] + [f"impact_{e}" for e in ELEMENT_NAMES]
+               + [f"cast_{e}" for e in ELEMENT_NAMES] + ["charge", "loose", "arrow_hit", "rite"]
+               + [f"boom_{e}" for e in ELEMENT_NAMES])
+
+def _skill_casts(e):
+    """What the check plays in element `e`, as [(title, layers)] with each
+    layer (file, seconds from the hit's number, volume, whether it is the
+    skill's own): a melee blow is its swing, the element under it, the
+    blow's weight and what struck; a flurry's early strikes are the quiet
+    ones; an arrow is its loose and its strike over the blow; an ultimate is
+    its charge — started `CHARGE_LEAD` before the blow, and still rising as
+    it is at x3 — and its boom over a critical or a lethal blow."""
+    def blow(t, weight, struck, last):
+        k = 1 if last else 0
+        return [("swing_heavy" if last and weight != "hit_normal" else "swing_light", t - SWING_LEAD,
+                 SWING_VOLUMES[k], True),
+                (f"impact_{e}", t - IMPACT_LEAD, HIT_VOLUMES[k], True),
+                (weight, t, 1.0, False), (struck, t + COLOUR_DELAY, COLOUR_VOLUME, False)]
+    def arrow(t, last):
+        k = 1 if last else 0
+        return [("loose", t - ARROW_FLIGHT, LOOSE_VOLUMES[k], True), ("arrow_hit", t - IMPACT_LEAD, ARROW_VOLUMES[k], True),
+                ("hit_normal", t, 1.0, False), (f"impact_{e}", t + COLOUR_DELAY, COLOUR_VOLUME, False)]
+    def ultimate(charged, weight, melee):
+        layers = [("charge", -charged, CHARGE_VOLUME, True), (f"boom_{e}", -IMPACT_LEAD, BOOM_VOLUME, True),
+                  (weight, 0.0, 1.0, False), (f"impact_{e}", COLOUR_DELAY, COLOUR_VOLUME, False)]
+        if melee:
+            layers += [("swing_heavy", -SWING_LEAD, SWING_VOLUMES[1], True),
+                       (f"impact_{e}", -IMPACT_LEAD, HIT_VOLUMES[1], True)]
+        return layers
+    flurry = sum((blow(0.13 * k, "hit_heavy" if k == 3 else "hit_normal", "hit_blade", k == 3) for k in range(4)), [])
+    return [
+        ("a basic cut", blow(0.0, "hit_normal", "hit_blade", True)),
+        ("a heavy blow", blow(0.0, "hit_heavy", "hit_blunt", True)),
+        ("four strikes 0.13 s apart", flurry),
+        ("a spell", [(f"cast_{e}", -ORB_FLIGHT, CAST_VOLUMES[1], True), ("hit_normal", 0.0, 1.0, False),
+                     (f"impact_{e}", COLOUR_DELAY, COLOUR_VOLUME, False)]),
+        ("five arrows 0.13 s apart", sum((arrow(0.13 * k, k == 4) for k in range(5)), [])),
+        ("an ultimate's critical blow", ultimate(CHARGE_LEAD, "hit_crit", True)),
+        ("the same at x3, the charge rising", ultimate(0.6, "hit_crit", True)),
+        ("a caster's lethal ultimate", ultimate(1.2, "hit_lethal", False)),
+    ]
+
+def _heard(name):
+    """A file as the check hears it: the one just written, or the shipped one
+    when this run wrote elsewhere (`--out`) and did not write it."""
+    if os.path.exists(os.path.join(OUT, f"{name}.wav")):
+        return _read(name)
+    shipped = os.path.join(os.path.dirname(__file__), "..", "Pantheon", "Resources", "Audio", f"{name}.wav")
+    with wave.open(shipped, "rb") as w:
+        return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(float) / 32767.0
+
+def skills_mix_check():
+    """A cast is heard as several of these at once over the blow's own two
+    sounds (the section's header). Prints every file's length, peak, loudness
+    and loudness through a phone, then each cast's sum in each element — its
+    peak, and how many dB the skill's sounds add to the peak of the blow's own
+    layers — and a rite's release over four allies' heals and buffs."""
+    print("  file              dur   peak    LUFS   phone")
+    for name in SKILL_NAMES:
+        x = _heard(name)
+        print(f"  {name:16s} {len(x) / SR:5.2f}  {np.max(np.abs(x)):5.3f}  {loudness(x):6.1f}  {phone_loudness(x):6.1f}")
+    def mixed(layers):
+        start = min(at for _, at, _, _ in layers)
+        whole, own = Bus(), Bus()
+        for name, at, g, skill in layers:
+            whole.add(_heard(name), at - start, g)
+            if not skill: own.add(_heard(name), at - start, g)
+        return whole.x, own.x
+    worst = -99.0
+    casts = {e: _skill_casts(e) for e in ELEMENT_NAMES}
+    print(f"  {'peak, and dB over the blow alone':36s}" + "".join(f"{e:>15s}" for e in ELEMENT_NAMES))
+    for row, (title, _) in enumerate(casts["ember"]):
+        cells = []
+        for e in ELEMENT_NAMES:
+            whole, own = mixed(casts[e][row][1])
+            over = 20 * math.log10(np.max(np.abs(whole)) / np.max(np.abs(own)))
+            worst = max(worst, over)
+            cells.append(f"{np.max(np.abs(whole)):10.2f} {over:+4.1f}")
+        print(f"  {title:36s}" + "".join(cells))
+    for cue, g in (("heal", HEAL_VOLUME), ("status_buff", BUFF_VOLUME)):
+        layers = [("rite", 0.0, RITE_VOLUME, True)] + [(cue, ALLY_STAGGER * k, g, False) for k in range(4)]
+        whole, own = mixed(layers)
+        over = 20 * math.log10(np.max(np.abs(whole)) / np.max(np.abs(own)))
+        worst = max(worst, over)
+        print(f"  the rite over four {cue:22s} peak {np.max(np.abs(whole)):.2f}  {over:+.1f} dB  "
+              f"{loudness(whole):6.1f} LUFS")
+    print(f"  a skill's sounds add at most {worst:+.1f} dB to a sum's peak"
+          + ("" if worst <= MOST_OVER else f"   ! over the {MOST_OVER:g} dB they may add"))
+
+def build_skills():
+    _need()
+    swing_light(); swing_heavy()
+    cast_ember(); cast_tide(); cast_gale(); cast_radiance(); cast_umbra()
+    ultimate_charge(); bow_loose(); arrow_hit(); rite_release()
+    boom_ember(); boom_tide(); boom_gale(); boom_radiance(); boom_umbra()
+    skills_mix_check()
+
+# ==============================================================================
 # Measurement. There is no listening in this environment, so the only check on
 # any of the above is the numbers: `python3 tools/sfx.py --check`.
 # ==============================================================================
@@ -2224,7 +2867,7 @@ def main():
     sections = {"hits": build_hits, "kinds": build_kinds, "elements": build_elements,
                 "defence": build_defence, "rest": build_rest,
                 "status": build_status, "flow": build_flow, "summon": build_summon,
-                "spoils": build_spoils}
+                "spoils": build_spoils, "skills": build_skills}
     for name in args or list(sections):
         if name not in sections:
             sys.exit(f"no section {name!r}; the sections are {', '.join(sections)}")

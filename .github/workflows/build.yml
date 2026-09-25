@@ -64,6 +64,11 @@ jobs:
     # five-second sleep) and -tour-fidget (a cue of at most 20 s, then a
     # second) — about half a minute, and a minute if both cues run out; and
     # its step 6 two -tour-gaze relaunches, a six- and a five-second sleep.
+    # The skill reel (step 54, 2026-09-25, the last step) adds about three
+    # minutes: its first build under the card, about a minute and a quarter
+    # of casts recorded, and the video turned and encoded after the tour; at
+    # most eight when every wait runs out (the ready cue's 180 s, the
+    # recorder's 10, the done cue's 150 and the recorder's 30 to finish).
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
@@ -255,7 +260,7 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
-          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken island_decor events regalia allies sign_in codex draft shrines treasury stress)
+          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken island_decor events regalia allies sign_in codex draft shrines treasury stress skill_reel)
           # Each launch also writes what the app prints — the [ModelLibrary]
           # block, SceneKit's own errors — to shots/<step>-console.txt, so a
           # frame that came out wrong can be read as well as looked at.
@@ -263,7 +268,7 @@ jobs:
           # the way Xcode's console does.
           TOUR_START="$(date +'%Y-%m-%d %H:%M:%S')"
           touch /tmp/tour-start
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54; do
             SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
               --stdout="$PWD/shots/$step-${names[$step]}-out.txt" \
               --stderr="$PWD/shots/$step-${names[$step]}-err.txt" \
@@ -750,6 +755,76 @@ jobs:
               events)
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-events-week plain; sleep 5; shoot "$step-${names[$step]}-plain" ;;
+              # The skill reel (2026-09-25, Docs/PLAN.md "Skills that look
+              # like themselves"), the last step, so every step before it
+              # keeps its number: Horus, Thor, Artemis, Isis and Poseidon
+              # (TourView's SkillReelCast) each casting its basic, its second
+              # skill and its third on the real engine, at x1 under the home
+              # camera, one family after another — about a minute and a
+              # quarter, RECORDED, because a still cannot show a body
+              # striking as many times as its numbers land. The app prints
+              # [TourCue] reel-ready once its card has lifted and the first
+              # family's turn is up, then waits for this job's word — a file
+              # in its own tmp folder, touched once the recorder says it is
+              # recording; 15 s at most — before its first cast, so the video
+              # opens on the field and misses nothing; and [TourCue] reel-done
+              # when the last kit is spent. Three stills at fixed seconds from
+              # the word, as usual frames. The recorder is stopped with
+              # SIGINT, its own way to finish the file, and the video is
+              # turned and made small after the tour (below).
+              skill_reel)
+                out="shots/$step-${names[$step]}-out.txt"
+                cue reel-ready 180
+                if grep -q "\[TourCue\] reel-ready" "$out" 2>/dev/null; then
+                  rm -f shots/skill_reel.mov shots/skill_reel.mp4
+                  xcrun simctl io "$UDID" recordVideo --codec=h264 --force shots/skill_reel.mov > shots/skill_reel-recorder.txt 2>&1 &
+                  recorder=$!
+                  ticks=0
+                  until grep -q -i "recording started" shots/skill_reel-recorder.txt 2>/dev/null || [ -s shots/skill_reel.mov ]; do
+                    ticks=$((ticks + 1))
+                    if [ $ticks -gt 100 ] || ! kill -0 $recorder 2>/dev/null; then
+                      echo "$(date -u +%T) the recorder never said it was recording: $(tr '\n' ' ' < shots/skill_reel-recorder.txt)" \
+                        | tee -a shots/skill_reel.txt
+                      break
+                    fi
+                    sleep 0.1
+                  done
+                  container=$(xcrun simctl get_app_container "$UDID" com.pantheon.game data 2>/dev/null || true)
+                  if [ -n "$container" ]; then
+                    mkdir -p "$container/tmp" && touch "$container/tmp/skill-reel-go" || true
+                  fi
+                  go=$(date +%s)
+                  echo "$(date -u +%T) skill reel: recording, and the app told to begin" | tee -a shots/skill_reel.txt
+                  for still in a:12 b:32 c:52; do
+                    left=$(( go + ${still#*:} - $(date +%s) ))
+                    if [ $left -gt 0 ]; then sleep $left; fi
+                    shoot_timed "$step-${names[$step]}-${still%%:*}"
+                  done
+                  cue reel-done 150
+                  sleep 1.5
+                  # SIGINT is the recorder's own way to finish its file (its
+                  # Control-C); once more by name at ten seconds, in case
+                  # xcrun ran simctl as a child rather than in its own place,
+                  # and at thirty the file is given up.
+                  kill -INT $recorder 2>/dev/null || true
+                  ticks=0
+                  while kill -0 $recorder 2>/dev/null; do
+                    ticks=$((ticks + 1))
+                    if [ $ticks -eq 100 ]; then pkill -INT -f "simctl io .*recordVideo" 2>/dev/null || true; fi
+                    if [ $ticks -gt 300 ]; then
+                      echo "$(date -u +%T) the recorder did not finish its file in 30 s" | tee -a shots/skill_reel.txt
+                      kill -9 $recorder 2>/dev/null || true
+                      break
+                    fi
+                    sleep 0.1
+                  done
+                  wait $recorder 2>/dev/null || true
+                  echo "$(date -u +%T) skill reel: $(grep -c '\[Tour\] reel +[0-9.]* s: cast ' "$out" 2>/dev/null || true) casts," \
+                       "$(stat -f%z shots/skill_reel.mov 2>/dev/null || echo 0) bytes recorded" | tee -a shots/skill_reel.txt
+                else
+                  echo "$(date -u +%T) skill reel: no reel-ready in 180 s, so nothing recorded" | tee -a shots/skill_reel.txt
+                  shoot_lit "$step-${names[$step]}"
+                fi ;;
               *)      sleep 5; shoot_lit "$step-${names[$step]}" ;;
             esac
             echo "$(date -u +%T) ${names[$step]}"
@@ -757,6 +832,150 @@ jobs:
           rm -f shots/warmup.png
           echo "$(date -u +%T) $(ls shots | wc -l | tr -d ' ') frames"
           xcrun simctl terminate "$UDID" com.pantheon.game || true
+          # The skill reel's video (step 54), stood up and made small enough
+          # to publish. The simulator records the landscape-only app in its
+          # portrait framebuffer, as it photographs it, so the frames are
+          # turned a quarter to the left (ciframes.py's rotate(90)) and
+          # scaled to 1280 across by a few lines of AVFoundation compiled
+          # here with the runner's own Swift — an AVAssetReader through a
+          # video composition into an AVAssetWriter, H.264 at 3 Mbit/s,
+          # about 30 MB for the reel. avconvert's Preset1280x720 is the
+          # fallback: it neither turns a video nor sizes a portrait one to
+          # 720 lines. The recording as it stands is the last resort; the
+          # publish step takes the first of the two under GitHub's limit.
+          cat > /tmp/reel_convert.swift <<'SWIFT'
+          import AVFoundation
+          import CoreGraphics
+          import CoreMedia
+          import CoreVideo
+          import Foundation
+
+          func fail(_ message: String) -> Never {
+              FileHandle.standardError.write(Data(("reel_convert: " + message + "\n").utf8))
+              exit(1)
+          }
+
+          func make<T>(_ what: String, _ build: () throws -> T) -> T {
+              do { return try build() } catch { fail("\(what): \(error)") }
+          }
+
+          let arguments = CommandLine.arguments
+          if arguments.count < 3 { fail("usage: reel_convert <source> <output.mp4> [width] [bits per second]") }
+          let source = URL(fileURLWithPath: arguments[1])
+          let output = URL(fileURLWithPath: arguments[2])
+          let width: Double = arguments.count > 3 ? (Double(arguments[3]) ?? 1280) : 1280
+          let bitRate: Int = arguments.count > 4 ? (Int(arguments[4]) ?? 3_000_000) : 3_000_000
+          try? FileManager.default.removeItem(at: output)
+
+          let asset = AVURLAsset(url: source)
+          guard let track = asset.tracks(withMediaType: .video).first else { fail("no video track in \(source.path)") }
+          let shown = track.naturalSize.applying(track.preferredTransform)
+          let across = Double(abs(shown.width))
+          let down = Double(abs(shown.height))
+          if across < 2 || down < 2 { fail("an empty frame, \(across) x \(down)") }
+          // Portrait is the landscape app lying on its side: turned a quarter
+          // to the left, its height becomes the width.
+          let turned = down > across
+          let scale = width / (turned ? down : across)
+          func even(_ value: Double) -> Int { max(2, Int((value / 2).rounded()) * 2) }
+          let outWidth = even((turned ? down : across) * scale)
+          let outHeight = even((turned ? across : down) * scale)
+          var transform = track.preferredTransform
+          if turned {
+              // (x, y) to (y, across - x), y downward: the top edge goes left.
+              transform = transform.concatenating(CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: CGFloat(across)))
+          }
+          transform = transform.concatenating(CGAffineTransform(scaleX: CGFloat(scale), y: CGFloat(scale)))
+
+          let composition = AVMutableVideoComposition()
+          composition.renderSize = CGSize(width: outWidth, height: outHeight)
+          composition.frameDuration = CMTime(value: 1, timescale: 30)
+          let instruction = AVMutableVideoCompositionInstruction()
+          instruction.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+          let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
+          layer.setTransform(transform, at: .zero)
+          instruction.layerInstructions = [layer]
+          composition.instructions = [instruction]
+
+          let reader = make("reader") { try AVAssetReader(asset: asset) }
+          let frames = AVAssetReaderVideoCompositionOutput(
+              videoTracks: [track],
+              videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+          )
+          frames.videoComposition = composition
+          frames.alwaysCopiesSampleData = false
+          if !reader.canAdd(frames) { fail("the reader will not take the composition") }
+          reader.add(frames)
+
+          let writer = make("writer") { try AVAssetWriter(outputURL: output, fileType: .mp4) }
+          let compression: [String: Any] = [
+              AVVideoAverageBitRateKey: bitRate,
+              AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+              AVVideoMaxKeyFrameIntervalKey: 60,
+          ]
+          let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+              AVVideoCodecKey: AVVideoCodecType.h264,
+              AVVideoWidthKey: outWidth,
+              AVVideoHeightKey: outHeight,
+              AVVideoCompressionPropertiesKey: compression,
+          ])
+          input.expectsMediaDataInRealTime = false
+          if !writer.canAdd(input) { fail("the writer will not take H.264 at \(outWidth) x \(outHeight)") }
+          writer.add(input)
+          writer.shouldOptimizeForNetworkUse = true
+
+          if !reader.startReading() { fail("reading: \(String(describing: reader.error))") }
+          if !writer.startWriting() { fail("writing: \(String(describing: writer.error))") }
+          var started = false
+          var written = 0
+          while let sample = frames.copyNextSampleBuffer() {
+              if !started {
+                  writer.startSession(atSourceTime: CMSampleBufferGetPresentationTimeStamp(sample))
+                  started = true
+              }
+              while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.005) }
+              if !input.append(sample) { fail("frame \(written): \(String(describing: writer.error))") }
+              written += 1
+          }
+          if reader.status == .failed { fail("read: \(String(describing: reader.error))") }
+          if !started { fail("no frames in \(source.path)") }
+          input.markAsFinished()
+          let finished = DispatchSemaphore(value: 0)
+          writer.finishWriting { finished.signal() }
+          finished.wait()
+          if writer.status != .completed { fail("finishing: \(String(describing: writer.error))") }
+          let seconds = String(format: "%.1f", asset.duration.seconds)
+          print("reel_convert: \(written) frames at \(outWidth) x \(outHeight),"
+                + " \(turned ? "turned a quarter to the left" : "as recorded"), \(seconds) s")
+          SWIFT
+          if [ -s shots/skill_reel.mov ]; then
+            echo "$(date -u +%T) skill reel: converting" | tee -a shots/skill_reel.txt
+            # The compiler's own words (deprecations and all) in a file of
+            # their own; the converter's one line, or its error, in the notes.
+            if xcrun --sdk macosx swiftc -O /tmp/reel_convert.swift -o /tmp/reel_convert > shots/skill_reel-convert.txt 2>&1; then
+              /tmp/reel_convert shots/skill_reel.mov shots/skill_reel.mp4 1280 3000000 >> shots/skill_reel.txt 2>&1 \
+                || rm -f shots/skill_reel.mp4
+            else
+              { echo "skill reel: the converter did not compile (skill_reel-convert.txt):"
+                grep -m 5 "error:" shots/skill_reel-convert.txt || true; } >> shots/skill_reel.txt
+            fi
+            if [ -s shots/skill_reel.mp4 ]; then
+              echo "skill reel: skill_reel.mp4 is the recording turned and scaled to 1280 across" >> shots/skill_reel.txt
+            else
+              rm -f shots/skill_reel.mp4
+              avconvert --preset Preset1280x720 --source shots/skill_reel.mov --output shots/skill_reel.mp4 \
+                >> shots/skill_reel.txt 2>&1 || rm -f shots/skill_reel.mp4
+              if [ -s shots/skill_reel.mp4 ]; then
+                echo "skill reel: skill_reel.mp4 is avconvert's Preset1280x720 of the recording, NOT turned" >> shots/skill_reel.txt
+              else
+                echo "skill reel: no MP4; the recording is skill_reel.mov as the simulator wrote it" >> shots/skill_reel.txt
+              fi
+            fi
+            # The artifact keeps the MP4 alone when there is one.
+            if [ -s shots/skill_reel.mp4 ]; then rm -f shots/skill_reel.mov; fi
+            echo "$(date -u +%T) skill reel: $(stat -f '%N %z bytes' shots/skill_reel.mp4 shots/skill_reel.mov 2>/dev/null | tr '\n' ' ')" \
+              | tee -a shots/skill_reel.txt
+          fi
           # The unified log for the process over the WHOLE tour (--last 12m
           # missed a crash in its sixth minute), in case something never
           # reached stderr (a Metal compiler message, the OS killing the app).
@@ -780,7 +999,7 @@ jobs:
               -exec sh -c 'cp "$1" "shots/crash-$(basename "$1").txt"' _ {} \;
           done
           echo "crash reports: $(ls shots/crash-*.txt 2>/dev/null | wc -l | tr -d ' ')"
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54; do
             base="shots/$step-${names[$step]}"
             # The memory curve (2026-09-24): every [Mem] and [Crash] line of
             # every launch, the stress's own lines and any memory warning,
@@ -882,6 +1101,21 @@ jobs:
           fi
           cp small/*.jpg /tmp/screens/ 2>/dev/null || cp shots/*.png /tmp/screens/ 2>/dev/null || true
           cp shots/*.txt /tmp/screens/ 2>/dev/null || true
+          # The skill reel's video (step 54) beside its frames: the MP4, or
+          # the recording itself when no MP4 could be made, whichever comes
+          # first under the 100 MB GitHub takes a file at (95, for margin).
+          # skill_reel.txt says what was published and why; ciframes.py
+          # prints it and makes a contact sheet of the video.
+          for reel in shots/skill_reel.mp4 shots/skill_reel.mov; do
+            if [ ! -s "$reel" ]; then continue; fi
+            bytes=$(stat -f%z "$reel" 2>/dev/null || echo 0)
+            if [ "$bytes" -lt 95000000 ]; then
+              cp "$reel" /tmp/screens/
+              echo "published $(basename "$reel"), $bytes bytes" >> /tmp/screens/skill_reel.txt
+              break
+            fi
+            echo "$(basename "$reel") is $bytes bytes, too big for the branch" >> /tmp/screens/skill_reel.txt
+          done
           printf '%s\n' "commit ${GITHUB_SHA}" "branch ${GITHUB_REF_NAME}" "run ${GITHUB_RUN_ID}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/screens/SOURCE.txt
           cd /tmp/screens
           git init -q

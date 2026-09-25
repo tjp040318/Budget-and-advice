@@ -25,6 +25,8 @@ struct TourView: View {
     @State private var dungeonModel: BattleViewModel?
     /// The victory step's real fight (`-tour-victory field`).
     @State private var victoryModel: BattleViewModel?
+    /// The skill reel's fight (`skill_reel`, the last step).
+    @State private var reelModel: BattleViewModel?
     /// The demo victory's still (Docs/FEEL.md W2.2): the Duat's painting
     /// softened as `BattleStill` softens a fight's, so the chest and the box
     /// stand over a place, as a real win's do, rather than over black.
@@ -61,6 +63,10 @@ struct TourView: View {
         ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("demigods", 2),
         ("sign_in", 2), ("codex", 2), ("draft", 3), ("shrines", 2),
         ("treasury", 2), ("stress", 2),
+        // Last, so every step before it keeps its number: about a minute and
+        // a quarter of casts after the card, and fifteen seconds' wait for a
+        // recorder that a timer-driven tour never runs.
+        ("skill_reel", 26),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -347,6 +353,20 @@ struct TourView: View {
     /// instead of MORE.
     static var pinnedRelicFilter: String? { argument(after: "-tour-relic-filter") }
 
+    /// `-tour-skill-reel horus,thor,artemis,isis,poseidon` (2026-09-25,
+    /// Docs/PLAN.md *Skills that look like themselves*): the families the
+    /// skill reel (the last step) plays, in the order they step up. A name
+    /// is a family (`horus`, in the form `SkillReelCast.showcase` picks) or
+    /// one form (`horus_tide`), either with `_awakened` after it for the
+    /// awakened form. The plain step plays `SkillReelCast.defaultFamilies`.
+    static var pinnedSkillReel: [String] {
+        let named: [String] = (argument(after: "-tour-skill-reel") ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .filter { !$0.isEmpty }
+        return named.isEmpty ? SkillReelCast.defaultFamilies : named
+    }
+
     /// Seconds per tick. The runner screenshots on the same period, so every
     /// step is caught at least once.
     static let tickSeconds: TimeInterval = 4
@@ -398,6 +418,7 @@ struct TourView: View {
             if current == "realm_battle" { startRealmBattle() }
             if current == "victory", Self.pinnedVictoryField { startVictoryField() }
             if current == "island", Self.pinnedIslandRebuild { rebuildIslandTeam() }
+            if current == "skill_reel" { startSkillReel() }
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
@@ -644,6 +665,21 @@ struct TourView: View {
             // at the top speed — each printing `[Mem]` after every pull or
             // fight and `[TourCue] stress-done` at the end (`TourStressView`).
             TourStressView(mode: Self.argument(after: "-tour-stress"))
+        case "skill_reel":
+            // The skill reel (2026-09-25, Docs/PLAN.md *Skills that look like
+            // themselves*): the families `-tour-skill-reel` names — Horus,
+            // Thor, Artemis, Isis and Poseidon by default — each casting its
+            // basic, its second skill and its third on the real engine, at
+            // ×1, under the home camera, on the Duat's set against three
+            // dummies, one family after another (`SkillReel`). The CI job
+            // records the simulator through it (`[TourCue] reel-ready` to
+            // `reel-done`) and publishes the video beside the frames.
+            if let reelModel {
+                BattleView(model: reelModel)
+            } else {
+                Theme.surface.ignoresSafeArea()
+                    .onAppear { startSkillReel() }
+            }
         case "draft":
             // The Draft Arena's board mid-draft on the tour's roster (a fixed
             // seed, the player first): the ban phase by default, `-tour-draft
@@ -1109,6 +1145,7 @@ struct TourView: View {
             if current == "arena_battle" { startArenaBattle() }
             if current == "dungeon_battle" { startDungeonBattle() }
             if current == "realm_battle" { startRealmBattle() }
+            if current == "skill_reel" { startSkillReel() }
         }
     }
 
@@ -1265,6 +1302,21 @@ struct TourView: View {
         let model = BattleViewModel(engine: engine, context: .arena(opponent), store: store)
         model.autoBattle = false
         arenaModel = model
+    }
+
+    /// The skill reel's fight (the last step): built from the families
+    /// `-tour-skill-reel` names, never from the save — its units are made
+    /// for the reel at one grade and level, bare of relics, so a run's reel
+    /// is the same whatever the tour's save has become — and never through
+    /// the store's gate: no energy is spent and nothing is recorded.
+    private func startSkillReel() {
+        guard reelModel == nil else { return }
+        let names: [String] = Self.pinnedSkillReel
+        guard let reel = SkillReelCast.reel(families: names), let stage = SkillReelCast.stage else {
+            print("[Tour] reel: nothing to play for \(names.joined(separator: ","))")
+            return
+        }
+        reelModel = BattleViewModel.playing(reel, stage: stage, store: store)
     }
 
     /// A 5★ reveal without spending a scroll, so the stage is caught with a
@@ -1855,6 +1907,183 @@ private final class TourStressDriver: ObservableObject {
             cover = nil
             await pause(Self.dismissal)
             MemoryProbe.log("stress battle \(plan.stage) closed")
+        }
+    }
+}
+
+// MARK: - The skill reel (Docs/PLAN.md *Skills that look like themselves*)
+
+/// Who the skill reel fields and against what (the last step,
+/// `-tour-skill-reel`): the named families, one form each, made for the
+/// reel at one grade and level and bare of relics, boons and regalia, so
+/// each casts its kit as the kit reads; and three clay Shabtis of the Duat
+/// as the dummies — Umbra, so every element but Radiance meets them evenly
+/// and no blow glances — that never act (speed 1) and are built for each
+/// family to outlast its whole kit. The reel itself is `SkillReel`, played
+/// by `BattleViewModel`.
+private enum SkillReelCast {
+    /// The default families: between them their second skills take every
+    /// shape the new clips have but three strikes — two, four and five
+    /// strikes, a sweep of the line and a rite — and their thirds a single
+    /// blow, a sweep, a volley and a rite, from five kits and four elements.
+    static let defaultFamilies: [String] = ["horus", "thor", "artemis", "isis", "poseidon"]
+
+    /// The form a family named bare plays in, for what its second skill
+    /// shows; a family not here plays its first form in the elements'
+    /// order.
+    static let showcase: [String: Element] = [
+        // Fourfold Stoop: four cuts (skill_x4); then a sure critical.
+        "horus": .gale,
+        // Twin Hammer Blows: two (skill_x2); Giant-Slayer sweeps the line.
+        "thor": .ember,
+        // Five from the Hills: five shots (skill_x5); a volley on the line.
+        "artemis": .gale,
+        // A heal with a shield for everyone (cast_release); then a heal
+        // with Immunity and Focus.
+        "isis": .radiance,
+        // Tidal Roar on the whole line (skill_area); then a blow off his own
+        // health that heals him.
+        "poseidon": .tide,
+    ]
+
+    static let grade = 6
+    static let level = 40
+    /// The player's line holds five: a longer reel fields them five at a
+    /// time, each family among the four beside it in the list.
+    static let lineLimit = 5
+    static let dummyCount = 3
+    static let dummyID = "shabti"
+    /// So a run's rolls and crits are the same every run.
+    static let seed: UInt64 = 20_260_925
+
+    /// The Duat's first gate as the reel's stage: its set, the one the
+    /// battle step photographs, under a name of its own and an id nothing
+    /// else answers to, with none of its spawns — the fight is built from
+    /// the reel's teams — and no boss, waves or power.
+    static var stage: Stage? {
+        guard var gate = StageDatabase.stage("duat_1_1") else { return nil }
+        gate.id = "tour_skill_reel"
+        gate.name = "The Skill Reel"
+        gate.enemies = []
+        gate.laterWaves = []
+        gate.isBoss = false
+        gate.recommendedPower = 0
+        gate.energyCost = 0
+        return gate
+    }
+
+    /// The reel for `names`: one segment per family that resolves, in the
+    /// order named, on a line of up to five in which only it keeps its
+    /// speed.
+    static func reel(families names: [String]) -> SkillReel? {
+        var heroes: [ResolvedUnit] = []
+        for name in names {
+            guard let found = form(named: name) else {
+                print("[Tour] reel: no family or form called '\(name)'")
+                continue
+            }
+            heroes.append(hero(found.blueprint, awakened: found.awakened))
+        }
+        guard !heroes.isEmpty else { return nil }
+        var segments: [SkillReelSegment] = []
+        for (order, caster) in heroes.enumerated() {
+            let lineStart: Int = order / lineLimit * lineLimit
+            let lineEnd: Int = min(heroes.count, lineStart + lineLimit)
+            let place: Int = order - lineStart
+            let line: [ResolvedUnit] = Array(heroes[lineStart..<lineEnd]).enumerated().map { slot, hero -> ResolvedUnit in
+                guard slot != place else { return hero }
+                var still = hero
+                still.stats.spd = 1
+                return still
+            }
+            let casts: Int = caster.skills.filter { !$0.isPassive }.count
+            segments.append(SkillReelSegment(
+                caster: place,
+                banner: "\(caster.name) · \(caster.element.displayName)",
+                castCount: casts,
+                playerTeam: line,
+                opponentTeam: dummies(against: caster)
+            ))
+        }
+        // The card's detail line holds about forty-four capitals.
+        let called: String = heroes.map { $0.name.uppercased() }.joined(separator: " · ")
+        let planned: Int = segments.reduce(0) { $0 + $1.castCount }
+        let roll: String = called.count <= 44 ? called : "\(heroes.count) FAMILIES · \(planned) SKILLS"
+        return SkillReel(segments: segments, roll: roll, seed: seed)
+    }
+
+    /// A family's form from a name: a form's own id (`horus_tide`), or a
+    /// family's key or asset (`horus`) in its showcase form; `_awakened`
+    /// after either asks for the awakened form, where the family has one.
+    static func form(named name: String) -> (blueprint: UnitBlueprint, awakened: Bool)? {
+        let awakenedSuffix = "_awakened"
+        let awakened: Bool = name.hasSuffix(awakenedSuffix)
+        let key: String = awakened ? String(name.dropLast(awakenedSuffix.count)) : name
+        if let exact = UnitDatabase.blueprint(key) {
+            return (exact, awakened && exact.awakening != nil)
+        }
+        var forms: [UnitBlueprint] = Element.allCases.compactMap { UnitDatabase.blueprint("\(key)_\($0.rawValue)") }
+        if forms.isEmpty {
+            forms = Element.allCases.compactMap { element in
+                UnitDatabase.roster.first { $0.model.assetName == key && $0.element == element }
+            }
+        }
+        let wanted: Element? = showcase[key]
+        guard let chosen = forms.first(where: { $0.element == wanted }) ?? forms.first else { return nil }
+        return (chosen, awakened && chosen.awakening != nil)
+    }
+
+    /// One named family as the reel fields it.
+    static func hero(_ blueprint: UnitBlueprint, awakened: Bool) -> ResolvedUnit {
+        let unit = Unit(blueprint: blueprint, level: level, stars: max(grade, blueprint.naturalStars), awakened: awakened)
+        return ProgressionService.resolve(unit, blueprint: blueprint, equipped: [])
+    }
+
+    /// The dummies one family casts at: the Shabti's figure and card, the
+    /// caster's own defence, speed 1 so they never act, and the health
+    /// `dummyHealth` gives them.
+    static func dummies(against caster: ResolvedUnit) -> [ResolvedUnit] {
+        guard let blueprint = UnitDatabase.blueprint(dummyID) else { return [] }
+        let defense: Double = caster.stats.def
+        let health: Double = dummyHealth(against: caster, defense: defense)
+        return (0..<dummyCount).map { _ -> ResolvedUnit in
+            let unit = Unit(blueprint: blueprint, level: level, stars: grade)
+            var dummy = ProgressionService.resolve(unit, blueprint: blueprint, equipped: [])
+            var stats: Stats = dummy.stats
+            stats.hp = health
+            stats.atk = 1
+            stats.def = defense
+            stats.spd = 1
+            dummy.stats = stats.clamped()
+            return dummy
+        }
+    }
+
+    /// A dummy's health against one family: its whole kit on one dummy,
+    /// every blow a critical, half as much again for an element's advantage
+    /// and a quarter for the kits' conditional bonuses, twice over — so a
+    /// bar shows every hit and none empties before the kit is spent. A
+    /// fallen dummy would end the fight, and a campaign fight that ends is
+    /// settled into the save.
+    static func dummyHealth(against caster: ResolvedUnit, defense: Double) -> Double {
+        var kit: Double = 0
+        for skill in caster.skills where !skill.isPassive {
+            guard let spec = skill.damage else { continue }
+            let stat: Double = scalingStat(spec.scaling, of: caster.stats)
+            kit += DamageCalculator.previewDamage(attackStat: stat, spec: spec, againstDefense: defense)
+        }
+        let critical: Double = 1 + caster.stats.critDamage
+        let worst: Double = kit * critical * 1.5 * 1.25
+        return max(10_000, worst * 2)
+    }
+
+    /// The stat a blow scales with, as `Combatant.scalingValue` reads it.
+    static func scalingStat(_ scaling: DamageScaling, of stats: Stats) -> Double {
+        switch scaling {
+        case .attack: return stats.atk
+        case .maxHealth: return stats.hp
+        case .defense: return stats.def
+        case .speed: return stats.spd
         }
     }
 }

@@ -420,6 +420,16 @@ final class BattleViewModel: ObservableObject {
     private func makeStageCard() -> StageCardInfo {
         let place: String = context.environment.displayName.uppercased()
         let painting: String = context.environment.backdropName
+        #if DEBUG
+        // The skill reel's card names the families it plays, in the order
+        // they cast, and carries no powers: it is a showing, not a fight.
+        if let reel = skillReel {
+            return StageCardInfo(
+                eyebrow: "SKILL REEL · \(place)", title: context.title, detail: reel.roll,
+                theirLabel: "", theirPower: nil, ourPower: nil, painting: painting
+            )
+        }
+        #endif
         let team: Int = engine.combatants.filter { $0.side == .player }.reduce(0) { total, fighter in
             guard let id = fighter.sourceUnitID, let unit = store.resolved(id) else { return total }
             return total + unit.power
@@ -718,6 +728,11 @@ final class BattleViewModel: ObservableObject {
     /// chosen, so its card must be decoded before then. Read off the
     /// engine, which is already at the turn these events end on; a later
     /// wave's arrival is there too, before the scene has placed it.
+    ///
+    /// The waiting unit's ultimate is found by the clip its cast will carry
+    /// (`Skill.presentedClip`, 2026-09-25), which is what the scene keys the
+    /// splash on — not by the kit's stored `animation`, which the engine no
+    /// longer puts on a cast.
     private func splashCasters(in events: [BattleEvent]) -> [Combatant] {
         var ids: [UUID] = []
         for event in events {
@@ -728,7 +743,7 @@ final class BattleViewModel: ObservableObject {
         }
         if let waiting = engine.awaitingActor, !ids.contains(waiting),
            let actor = engine.combatants.first(where: { $0.id == waiting }),
-           let slot = actor.skills.firstIndex(where: { $0.animation == .ultimate && !$0.isPassive }),
+           let slot = actor.skills.firstIndex(where: { $0.presentedClip == .ultimate && !$0.isPassive }),
            actor.isSkillReady(slot) {
             ids.append(waiting)
         }
@@ -792,6 +807,7 @@ final class BattleViewModel: ObservableObject {
             } else {
                 #if DEBUG
                 if castTourUltimate(for: actor) { return }
+                if takeReelTurn(actor) { return }
                 #endif
                 // One soft chime: the player's turn, heard (FEEL.md W1.4).
                 AudioLibrary.shared.play(.turnChime, volume: 0.35)
@@ -813,13 +829,277 @@ final class BattleViewModel: ObservableObject {
         guard Self.touringCutIn, !tourUltimateCast,
               let slot = actor.skills.indices.first(where: { index in
                   let skill = actor.skills[index]
-                  return !skill.isPassive && skill.animation == .ultimate && actor.isSkillReady(index)
+                  return !skill.isPassive && skill.presentedClip == .ultimate && actor.isSkillReady(index)
               }),
               let skill = actor.skill(at: slot) else { return false }
         tourUltimateCast = true
         let target = Self.needsTarget(skill) ? defaultTarget(for: skill, actor: actor) : nil
         submit(slot: slot, target: target)
         return true
+    }
+
+    // MARK: The skill reel (TourView's `skill_reel` step)
+
+    /// The reel this fight plays (`playing(_:stage:store:)`), or nil for
+    /// every other fight.
+    private(set) var skillReel: SkillReel?
+    /// Where the reel stands: which family is at the front, the slots it
+    /// has cast, how many casts the reel has made, and when it began.
+    private var reelPhase: ReelPhase = .waiting
+    private var reelSegment = 0
+    private var reelSlotsCast: [Int] = []
+    private var reelCasts = 0
+    private var reelBegan = Date()
+    /// The next turn waits `reelSegmentLead` first: a family has just
+    /// stepped up, under its banner.
+    private var reelLeadOwed = false
+
+    /// The reel's clock. It waits for the stage to be seen and the job's
+    /// recorder to be running (`holdReelForRecorder`), then plays its
+    /// families one after another, and is done when the last one's kit is
+    /// spent: the fight then waits on a turn nobody takes.
+    private enum ReelPhase {
+        case waiting, holding, running, done
+    }
+
+    /// The file the CI job touches in the app's own tmp folder once its
+    /// recorder is running (`xcrun simctl get_app_container … data`), and
+    /// the longest the reel waits for it: without it the first cast would
+    /// be spent before the video began, or the reel would open on seconds
+    /// of an idle field.
+    private static let reelGoFile = "skill-reel-go"
+    private static let reelGoLimit: TimeInterval = 15
+    /// From the go to the first family's banner, the banner to its first
+    /// cast, a family's banner (put up as its field is built, over the
+    /// fight's own 1.2-s opening) to its first cast, a square armed to its
+    /// cast, and a spent kit to the next family's field: together about
+    /// eight seconds of a reel of five families, and the four new fields'
+    /// openings five more. The rest of its minute and a quarter is casts.
+    private static let reelAfterGo: TimeInterval = 0.8
+    private static let reelFirstLead: TimeInterval = 1.0
+    private static let reelSegmentLead: TimeInterval = 0.3
+    private static let reelCastGap: TimeInterval = 0.25
+    private static let reelSegmentGap: TimeInterval = 0.3
+
+    private static var reelGoPath: String {
+        FileManager.default.temporaryDirectory.appendingPathComponent(reelGoFile).path
+    }
+
+    /// The skill reel's fight (Docs/PLAN.md *Skills that look like
+    /// themselves*): the first family's field on the real engine, at ×1,
+    /// fought by hand with the reel's hand on every turn (`takeReelTurn`).
+    /// A campaign fight in form, for the stage's set and card, that never
+    /// ends: the dummies outlast every kit and never act, so nothing is
+    /// ever settled into the save.
+    static func playing(_ reel: SkillReel, stage: Stage, store: GameStore) -> BattleViewModel? {
+        guard let first = reel.segments.first else { return nil }
+        let engine = BattleEngine(
+            playerTeam: first.playerTeam,
+            opponentTeam: first.opponentTeam,
+            mode: .campaign,
+            seed: reel.seed
+        )
+        let model = BattleViewModel(engine: engine, context: .campaign(stage), store: store)
+        model.skillReel = reel
+        model.autoBattle = false
+        model.speed = 1
+        // Every figure and every clip the reel will play, parsed off the
+        // main thread while the card stands, as the briefing warms a fight
+        // it launches (`CampaignView.warmModels`): a clip first parsed at
+        // its cast is a hitch in the middle of the video.
+        let fielded: [ResolvedUnit] = reel.segments.flatMap { $0.playerTeam } + first.opponentTeam
+        let forms = fielded.map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) }
+        let crowded: Bool = ModelLibrary.detail(forCombatantCount: engine.combatants.count) == .low
+        ModelLibrary.shared.warm(forms: forms, crowded: crowded)
+        // A go left by an earlier launch of this install would start the
+        // reel before this launch's recorder.
+        try? FileManager.default.removeItem(atPath: reelGoPath)
+        let casts: Int = reel.segments.reduce(0) { $0 + $1.castCount }
+        print("[Tour] reel: \(reel.segments.count) families, \(casts) casts planned: "
+              + reel.segments.map(\.banner).joined(separator: ", "))
+        return model
+    }
+
+    /// The reel's hand on a player's turn, or false to leave the turn to the
+    /// player (no reel, or the reel done). The family at the front casts
+    /// the next skill of its kit in slot order — basic, second, third —
+    /// each a breath after its square is armed; a family whose kit is spent
+    /// hands the field to the next (`stepUpReel`); and a unit the reel is
+    /// not showing that gets a turn anyway (a bar push) takes its basic, so
+    /// the fight moves on and the console says so.
+    private func takeReelTurn(_ actor: Combatant) -> Bool {
+        guard let reel = skillReel else { return false }
+        switch reelPhase {
+        case .done:
+            return false
+        case .holding:
+            return true
+        case .waiting:
+            reelPhase = .holding
+            print("[TourCue] reel-ready")
+            holdReelForRecorder(since: Date())
+            return true
+        case .running:
+            break
+        }
+        if reelLeadOwed {
+            reelLeadOwed = false
+            resumeReel(after: Self.reelSegmentLead)
+            return true
+        }
+        guard reel.segments.indices.contains(reelSegment) else { return false }
+        let segment = reel.segments[reelSegment]
+        guard actor.side == .player, actor.slot == segment.caster else {
+            castForReel(actor, slot: 0, outOfTurn: true)
+            return true
+        }
+        if let slot = nextReelSlot(for: actor) {
+            reelSlotsCast.append(slot)
+            castForReel(actor, slot: slot, outOfTurn: false)
+            return true
+        }
+        if reelSegment + 1 < reel.segments.count {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.reelSegmentGap) { [weak self] in
+                self?.stepUpReel()
+            }
+            return true
+        }
+        reelPhase = .done
+        let clock: String = String(format: "%.1f", Date().timeIntervalSince(reelBegan))
+        print("[Tour] reel: done, \(reelCasts) casts in \(clock) s")
+        print("[TourCue] reel-done")
+        return false
+    }
+
+    /// The first turn is up and the stage has been seen (the card has
+    /// lifted: its hold keeps the queue until then), and `[TourCue]
+    /// reel-ready` has told the CI job to start its recorder: the reel waits
+    /// for the job's word that it is running — its file in the app's tmp
+    /// folder — or `reelGoLimit`, whichever comes first, looking ten times
+    /// a second. Then `[TourCue] reel-go`, the first family's banner, and
+    /// its first cast.
+    private func holdReelForRecorder(since asked: Date) {
+        let heard: Bool = FileManager.default.fileExists(atPath: Self.reelGoPath)
+        let waited: Double = Date().timeIntervalSince(asked)
+        guard heard || waited >= Self.reelGoLimit else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.holdReelForRecorder(since: asked)
+            }
+            return
+        }
+        try? FileManager.default.removeItem(atPath: Self.reelGoPath)
+        guard reelPhase == .holding, let reel = skillReel, let first = reel.segments.first else { return }
+        reelPhase = .running
+        reelBegan = Date()
+        let after: String = String(format: "%.1f", waited)
+        let why: String = heard ? "the recorder is running, \(after) s after ready" : "no word from a recorder in \(after) s"
+        print("[TourCue] reel-go (\(why))")
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.reelAfterGo) { [weak self] in
+            guard let self, self.reelPhase == .running else { return }
+            self.repeatBanner = first.banner
+            self.resumeReel(after: Self.reelFirstLead)
+        }
+    }
+
+    /// Takes the turn still waiting on the reel, `delay` from now.
+    private func resumeReel(after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, let actor = self.awaitingActor else { return }
+            if !self.takeReelTurn(actor) {
+                // The reel ended on this turn: it is the player's, as any
+                // other fight's would be.
+                self.armBasicAttack(for: actor)
+            }
+        }
+    }
+
+    /// The caster's next skill in slot order that it has not cast in this
+    /// segment: ready, not a passive, and with a target when it needs one
+    /// (a revive with nobody fallen is passed over).
+    private func nextReelSlot(for actor: Combatant) -> Int? {
+        actor.skills.indices.first { slot in
+            guard !reelSlotsCast.contains(slot), actor.isSkillReady(slot), let skill = actor.skill(at: slot) else {
+                return false
+            }
+            return !Self.needsTarget(skill) || reelTarget(slot: slot, actor: actor) != nil
+        }
+    }
+
+    /// Who a reel cast is aimed at: a blow at one enemy lands on the middle
+    /// of the enemy line, where the home camera looks; a skill for one ally
+    /// on the caster's nearest neighbour, so its effect crosses the line.
+    private func reelTarget(slot: Int, actor: Combatant) -> UUID? {
+        guard let skill = actor.skill(at: slot) else { return nil }
+        let legal: [UUID] = engine.validTargets(for: actor.id, skillSlot: slot)
+        let candidates: [Combatant] = engine.combatants.filter { legal.contains($0.id) }
+        if skill.target.hitsEnemies {
+            let line: [Combatant] = candidates.sorted { $0.slot < $1.slot }
+            return line.isEmpty ? nil : line[line.count / 2].id
+        }
+        let others: [Combatant] = candidates.filter { $0.id != actor.id }
+        let nearest: Combatant? = others.min { abs($0.slot - actor.slot) < abs($1.slot - actor.slot) }
+        return nearest?.id ?? candidates.first?.id
+    }
+
+    /// Arms the square (the HUD shows it lit, its target marked), says in
+    /// the console what the cast is and which clip it asks for — and which
+    /// clip will really play, when the family ships no file for it
+    /// (`ModelLibrary.resolvedClip`) — and casts it `reelCastGap` later.
+    private func castForReel(_ actor: Combatant, slot: Int, outOfTurn: Bool) {
+        guard let skill = actor.skill(at: slot) else { return }
+        let target: UUID? = Self.needsTarget(skill) ? reelTarget(slot: slot, actor: actor) : nil
+        selectedSkillSlot = slot
+        highlightedTarget = target
+        reelCasts += 1
+        let asked: AnimationClip = skill.presentedClip
+        let asset: String = ModelLibrary.shared.clipAsset(for: actor.model, awakened: actor.isAwakened)
+        let plays: AnimationClip = ModelLibrary.shared.resolvedClip(asked, for: asset)
+        let clip: String = plays == asked ? asked.rawValue : "\(asked.rawValue), playing \(plays.rawValue)"
+        let hits: Int = skill.damage?.hits ?? 0
+        let verb: String = outOfTurn ? "takes a turn out of the reel's order with" : "casts"
+        let clock: String = String(format: "%.1f", Date().timeIntervalSince(reelBegan))
+        print("[Tour] reel +\(clock) s: cast \(reelCasts), \(actor.name) \(verb) \(skill.name) "
+              + "(slot \(slot + 1), \(clip), \(hits) hit(s), \(skill.vfx))")
+        let id = actor.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.reelCastGap) { [weak self] in
+            guard let self, self.awaitingActor?.id == id else { return }
+            self.submit(slot: slot, target: target)
+        }
+    }
+
+    /// The next family steps up: its field on a fresh engine (the same line,
+    /// only it at speed), built in place the way an auto-repeat's next run
+    /// is (`restart`), under its banner — never the stage card, which is
+    /// the fight's first build's alone.
+    private func stepUpReel() {
+        guard let reel = skillReel, reelPhase == .running, reelSegment + 1 < reel.segments.count else { return }
+        reelSegment += 1
+        reelSlotsCast = []
+        let segment = reel.segments[reelSegment]
+        let seed: UInt64 = reel.seed &+ UInt64(reelSegment)
+        engine = BattleEngine(
+            playerTeam: segment.playerTeam,
+            opponentTeam: segment.opponentTeam,
+            mode: .campaign,
+            seed: seed
+        )
+        snapshotTeam()
+        outcome = nil
+        awaitingActor = nil
+        selectedSkillSlot = nil
+        highlightedTarget = nil
+        pendingEvents = []
+        waveIndex = 1
+        tallies = [:]
+        lastHitter = [:]
+        log.append("— \(segment.banner)")
+        displayedCombatants = engine.combatants
+        repeatBanner = segment.banner
+        reelLeadOwed = true
+        hasBegun = false
+        let clock: String = String(format: "%.1f", Date().timeIntervalSince(reelBegan))
+        print("[Tour] reel +\(clock) s: \(segment.banner) steps up")
+        begin()
     }
     #endif
 
@@ -1460,3 +1740,44 @@ extension Stage {
         return (fielding.last ?? 0) + 1
     }
 }
+
+// MARK: - The skill reel
+
+#if DEBUG
+/// The CI tour's skill reel (TourView's `skill_reel` step, `-tour-skill-reel`;
+/// Docs/PLAN.md *Skills that look like themselves*): named families each
+/// cast the whole of their kit — the basic, the second skill, the third — on
+/// the real engine, the real scene and the home camera, at ×1, one family
+/// after another, while the CI job records the simulator.
+///
+/// The engine hands turns out by speed and takes no orders, and no set of
+/// speeds lets one unit act three times and then another three times in one
+/// fight (for A's three to come before B's first, A must be over three times
+/// B's speed; for B's three to come before A's fourth, under four thirds of
+/// it). So each family is a fight of its own, built in place as an
+/// auto-repeat's next run is: the whole line stands in every one — a rite
+/// lands on all of it — but only the family at the front keeps its speed,
+/// and everyone else on the field stands at 1, so it takes every turn until
+/// its kit is spent and nobody else takes one. TourView builds the reel;
+/// `BattleViewModel` plays it (`takeReelTurn`).
+struct SkillReel {
+    let segments: [SkillReelSegment]
+    /// The stage card's detail: the families in the order they cast.
+    let roll: String
+    /// The first family's fight's seed; each after it takes the next, so
+    /// a run's crits and rolls are the same every run.
+    let seed: UInt64
+}
+
+/// One family at the front of the skill reel, and the field it casts on.
+struct SkillReelSegment {
+    /// Its slot in the player's line, which is the same in every segment.
+    let caster: Int
+    /// The HUD's banner as it steps up: its name and its element.
+    let banner: String
+    /// The skills it will cast: every one of its kit that is not a passive.
+    let castCount: Int
+    let playerTeam: [ResolvedUnit]
+    let opponentTeam: [ResolvedUnit]
+}
+#endif

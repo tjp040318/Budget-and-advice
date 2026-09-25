@@ -179,6 +179,52 @@ struct Skill: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+// MARK: - The clip a skill plays
+
+extension Skill {
+    /// The clip the battle plays for this skill, read off what it does
+    /// (`AnimationClip.forSkill`). `BattleEngine` puts this on every
+    /// `.skillCast`, never `animation`: the table families set `animation`
+    /// from the slot alone, so a three-cut skill and a sweep of the whole
+    /// line each played the one heavy blow. The kits keep the stored field,
+    /// and nothing in the data changes.
+    var presentedClip: AnimationClip {
+        AnimationClip.forSkill(slot: slot, hits: damage?.hits ?? 0, target: target, isRite: damage == nil)
+    }
+}
+
+extension AnimationClip {
+    /// The clip a skill plays, from what it does (Docs/PLAN.md *Skills that
+    /// look like themselves*): the basic its own, the third skill the
+    /// ultimate, the second by its shape.
+    ///
+    /// - slot 0: `attackBasic`, the family's signature strike, however many
+    ///   times it lands (a duelist's two cuts are in the clip's contacts).
+    /// - slot 2 and beyond: `ultimate`, the family's signature, a rite or a
+    ///   blow alike.
+    /// - slot 1: a rite (no damage — a heal, a shield, a buff, a debuff on
+    ///   the line) is `castRelease`; a blow on every enemy is `skillArea`,
+    ///   however many times it strikes; two to five strikes are `skillX2`
+    ///   to `skillX5`, random targets included, and more than five are
+    ///   `skillX5`; one strike is `attackHeavy`.
+    ///
+    /// A passive is never cast, so it never asks. A counter is cast with the
+    /// basic, so it plays the basic, as it always did.
+    static func forSkill(slot: Int, hits: Int, target: TargetSelector, isRite: Bool) -> AnimationClip {
+        if slot < 1 { return .attackBasic }
+        if slot > 1 { return .ultimate }
+        if isRite { return .castRelease }
+        if target == .allEnemies { return .skillArea }
+        switch hits {
+        case 2: return .skillX2
+        case 3: return .skillX3
+        case 4: return .skillX4
+        case 5...: return .skillX5
+        default: return .attackHeavy
+        }
+    }
+}
+
 /// A single skill-up. Kept as data so the collection UI can render the ladder
 /// ("Lv.2 Damage +5%") straight from the blueprint.
 struct SkillUpgrade: Codable, Equatable, Sendable {

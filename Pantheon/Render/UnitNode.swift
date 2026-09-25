@@ -19,8 +19,10 @@ final class UnitNode: SCNNode {
     let side: BattleSide
     private(set) var isDefeated = false
     /// The asset whose clips this unit plays: the awakened mesh's own when
-    /// one has shipped, otherwise the base's.
-    private let clipAsset: String
+    /// one has shipped, otherwise the base's. The battle reads it to time a
+    /// cast by the clip that will really play (`ModelLibrary.resolvedClip`,
+    /// `ClipTimings`), the same asset `play` asks for.
+    let clipAsset: String
 
     private let modelContainer: SCNNode
     private let healthBarRoot: SCNNode
@@ -657,10 +659,18 @@ final class UnitNode: SCNNode {
 
     // MARK: - Animation
 
-    /// Plays a clip. Falls back to a procedural motion when the export has no
-    /// animation for it, so the battle never freezes waiting on missing art.
-    func play(_ clip: AnimationClip, completion: (() -> Void)? = nil) {
-        guard !isDefeated || clip == .death else { completion?(); return }
+    /// Plays a clip. A clip the family did not ship plays the one the chain
+    /// puts in its place (`ModelLibrary.resolvedClip`: a second skill's
+    /// shape falls back to the family's heavy blow), and procedural motion
+    /// plays when the export has neither, so the battle never freezes
+    /// waiting on missing art.
+    func play(_ asked: AnimationClip, completion: (() -> Void)? = nil) {
+        guard !isDefeated || asked == .death else { completion?(); return }
+        // The clip that really plays, from the one function the battle also
+        // asks when it times the cast's hits, so the numbers it presents land
+        // on the clip on screen. Everything below is about this clip: its
+        // key, its contract, the ending that hands back to the idle.
+        let clip: AnimationClip = ModelLibrary.shared.resolvedClip(asked, for: clipAsset)
         // Restarting a looping clip every frame would reset its phase, so an
         // idle that is already running is left alone.
         guard clip != currentClip || !clip.loops else { completion?(); return }
@@ -728,15 +738,22 @@ final class UnitNode: SCNNode {
             var phase: Double = 0
             if !clip.loops, clip != .death, clip != .victory, animation.duration > 0.05 {
                 // EVERY one-shot is retimed to its contract now, not only the
-                // ones that run long. The fight is timed to `fallbackDuration`
-                // — `BattleSceneController` presents the damage at a fraction
-                // of it, the frame the blade lands — so a 1.0 s Meshy sword
+                // ones that run long. The fight is timed to the contract —
+                // `BattleSceneController` presents each hit at a fraction of
+                // it, the frame the blade lands — so a 1.0 s Meshy sword
                 // slash left at its authored length put its contact frame
                 // 0.3 s before the damage, and the hit-stop then froze a frame
                 // with the attacker already relaxed back into its idle. The
-                // clamp is because past 2x a swing is a flicker and below
-                // 0.6x it is a mime.
-                rate *= max(0.6, min(2.0, animation.duration / clip.fallbackDuration))
+                // contract is `ClipTimings`' (2026-09-25): a measured clip
+                // plays at its own length, sped up to its kind's ceiling when
+                // longer and never slowed, so its contacts stay where they
+                // were measured; a clip with no entry keeps its
+                // `fallbackDuration` as before. The clamp is because past 2x
+                // a swing is a flicker and below 0.6x it is a mime; a
+                // measured clip's contract already stops at 2x, so its hits
+                // still land where they were measured.
+                let contract: TimeInterval = ClipTimings.contract(asset: clipAsset, clip: clip)
+                rate *= max(ClipTimings.slowest, min(ClipTimings.fastest, animation.duration / contract))
             }
             if clip.loops {
                 // One cached animation, copied for everybody, started in the
@@ -768,7 +785,7 @@ final class UnitNode: SCNNode {
                 let length: TimeInterval = window.map { max(0.1, $0.end - $0.start) } ?? animation.duration
                 let played = length > 0
                     ? length / Double(max(0.05, animation.speed))
-                    : beat(clip.fallbackDuration)
+                    : beat(ClipTimings.contract(asset: clipAsset, clip: clip))
                 // Off the battle's field the body stays, faded to 0.6; on it,
                 // it leaves once the clip has played (`onFallen`, W2.8), and
                 // stands whole until it does.
@@ -964,16 +981,21 @@ final class UnitNode: SCNNode {
             action = .sequence([gather, lunge, .wait(duration: beat(0.10)), recover])
 
         case .attackHeavy, .castRelease:
-            let wind = SCNAction.rotateBy(x: -0.22, y: 0, z: 0, duration: beat(0.28))
-            wind.timingMode = .easeOut
-            let strike = SCNAction.rotateBy(x: 0.34, y: 0, z: 0, duration: beat(0.1))
-            strike.timingMode = .easeIn
-            let lunge = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(facing) * 0.6, duration: beat(0.12))
-            lunge.timingMode = .easeIn
-            action = .sequence([
-                wind, .group([strike, lunge]), .wait(duration: beat(0.2)),
-                .group([.rotateBy(x: -0.12, y: 0, z: 0, duration: beat(0.2)), lunge.reversed()])
-            ])
+            action = heavyBlow(after: 0)
+
+        case .skillArea:
+            // The line's blow with no clip of its own and no heavy to stand
+            // in (an unrigged boss, a placeholder): the heavy blow, begun
+            // late enough that its strike lands on the contact the battle
+            // presents the blow on — the same `ClipTimings` numbers, so the
+            // numbers over the line arrive with the lunge.
+            let length: TimeInterval = ClipTimings.contract(asset: clipAsset, clip: clip)
+            let share: Double = ClipTimings.hitFractions(asset: clipAsset, clip: clip, hits: 1).first ?? 0.55
+            let contact: TimeInterval = share * length
+            action = heavyBlow(after: max(0, contact - Self.heavyBlowContact))
+
+        case .skillX2, .skillX3, .skillX4, .skillX5:
+            action = flurry(clip)
 
         case .ultimate:
             let rise = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.35, z: 0, duration: beat(0.6))
@@ -1038,6 +1060,71 @@ final class UnitNode: SCNNode {
                 self.playProcedural(.idleCombat, completion: nil)
             }
         }
+    }
+
+    /// Authored seconds from the start of `heavyBlow` to its strike: the
+    /// wind back, then the strike itself.
+    private static let heavyBlowContact: TimeInterval = 0.28 + 0.1
+
+    /// The heavy blow's stand-in, `delay` authored seconds late: a wind
+    /// back, a strike and a lunge together, a beat, and a recovery that
+    /// undoes both. Forward is local +Z (`playProcedural` says why).
+    private func heavyBlow(after delay: TimeInterval) -> SCNAction {
+        let wind = SCNAction.rotateBy(x: -0.22, y: 0, z: 0, duration: beat(0.28))
+        wind.timingMode = .easeOut
+        let strike = SCNAction.rotateBy(x: 0.34, y: 0, z: 0, duration: beat(0.1))
+        strike.timingMode = .easeIn
+        let lunge = SCNAction.moveBy(x: 0, y: 0, z: 0.6, duration: beat(0.12))
+        lunge.timingMode = .easeIn
+        let blow = SCNAction.sequence([
+            wind, .group([strike, lunge]), .wait(duration: beat(0.2)),
+            .group([.rotateBy(x: -0.12, y: 0, z: 0, duration: beat(0.2)), lunge.reversed()])
+        ])
+        guard delay > 0.01 else { return blow }
+        return .sequence([.wait(duration: beat(delay)), blow])
+    }
+
+    /// A multi-strike shape played with no clip of its own and no heavy
+    /// blow to stand in for it (an unrigged boss, a placeholder): a gather,
+    /// then a short lunge landing on each contact the battle presents a hit
+    /// on (`ClipTimings.hitFractions` of the same clip, over the same
+    /// contract), a pull back between them, and a recovery that undoes the
+    /// gather. The single blow it replaces put three numbers on one lunge.
+    /// Only the container's depth moves, as in the basic's lunge.
+    private func flurry(_ clip: AnimationClip) -> SCNAction {
+        let length: TimeInterval = ClipTimings.contract(asset: clipAsset, clip: clip)
+        let shares: [Double] = ClipTimings.hitFractions(asset: clipAsset, clip: clip, hits: clip.strikeCount)
+        let contacts: [TimeInterval] = shares.map { $0 * length }
+        let lungeTime: TimeInterval = 0.12
+        let reach: CGFloat = 0.36
+        let gather: CGFloat = 0.12
+        // The gather fills the time before the first lunge.
+        let firstLunge: TimeInterval = max(0.02, (contacts.first ?? lungeTime) - lungeTime)
+        let back = SCNAction.moveBy(x: 0, y: 0, z: -gather, duration: beat(firstLunge))
+        back.timingMode = .easeOut
+        var steps: [SCNAction] = [back]
+        var clock: TimeInterval = firstLunge
+        for (index, contact) in contacts.enumerated() {
+            let start: TimeInterval = max(clock, contact - lungeTime)
+            if start - clock > 0.005 {
+                steps.append(.wait(duration: beat(start - clock)))
+            }
+            let strikeTime: TimeInterval = max(0.04, contact - start)
+            let strike = SCNAction.moveBy(x: 0, y: 0, z: reach, duration: beat(strikeTime))
+            strike.timingMode = .easeIn
+            steps.append(strike)
+            clock = start + strikeTime
+            // Back off before the next lunge; after the last, back to the
+            // mark, the gather undone with it.
+            let isLast: Bool = index == contacts.count - 1
+            let nextLunge: TimeInterval = isLast ? length : contacts[index + 1] - lungeTime
+            let pullTime: TimeInterval = max(0.04, min(0.26, nextLunge - clock))
+            let pull = SCNAction.moveBy(x: 0, y: 0, z: isLast ? gather - reach : -reach, duration: beat(pullTime))
+            pull.timingMode = .easeInEaseOut
+            steps.append(pull)
+            clock += pullTime
+        }
+        return .sequence(steps)
     }
 
     // MARK: - Movement

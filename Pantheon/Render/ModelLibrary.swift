@@ -214,6 +214,19 @@ final class ModelLibrary {
     private var animationCache: [String: [AnimationClip: CAAnimation]] = [:]
     /// The tick each asset's clips were last asked for (`animationLimit`).
     private var animationUse: [String: UInt64] = [:]
+    /// Clips each asset is KNOWN not to have (2026-09-25): no file of its
+    /// own, and — for a clip that may live in the mesh — a search of the
+    /// mesh that found none. A figure asks for its clip on every play, and
+    /// a miss was never remembered, so a family without a clip paid the
+    /// search again at every ask: every rite cast opened its caster's mesh
+    /// on the main thread (no family shipped `cast_release`), and every hit
+    /// on an unrigged boss (Apep, the Hydra, the two dragons) opened the
+    /// boss's mesh to find no flinch. The second skill's shapes are asked
+    /// for on every cast and most families will never ship most of them. A
+    /// file that exists and will not read is NOT remembered, so a clip that
+    /// failed once is tried again. Kept through `purge` and `purgeClips`:
+    /// the bundle never changes under a running app. Under `cacheLock`.
+    private var missingClips: [String: Set<AnimationClip>] = [:]
     private let queue = DispatchQueue(label: "com.pantheon.modellibrary", attributes: .concurrent)
     /// The caches' lock. `node(for:)` and `animation(_:for:)` run on the main
     /// thread as a stage is built; `warm(_:)` fills the same caches from a
@@ -549,6 +562,8 @@ final class ModelLibrary {
     ///
     /// Two layouts are supported: all clips inside one file (animation players
     /// keyed by clip name), or one file per clip named `<unit>_<clip>.usdz`.
+    /// A clip the asset certainly does not have is remembered
+    /// (`missingClips`) and answered nil at once from then on.
     func animation(_ clip: AnimationClip, for assetName: String) -> CAAnimation? {
         cacheLock.lock()
         let hit = animationCache[assetName]?[clip]
@@ -556,31 +571,49 @@ final class ModelLibrary {
             useClock &+= 1
             animationUse[assetName] = useClock
         }
+        let knownMissing: Bool = hit == nil && (missingClips[assetName]?.contains(clip) ?? false)
         cacheLock.unlock()
         if let hit { return hit }
+        if knownMissing { return nil }
 
         var found: CAAnimation?
+        // Whether a miss is the bundle's own answer, and so worth
+        // remembering, rather than a file that would not read.
+        var certain = true
 
         // Layout A: separate file per clip. Parsed with the importer to
         // itself (`importerLock`): read while a warm pass parsed meshes on
         // another thread, a clip came back as a group that moved nothing.
-        if let url = bundleURL(for: "\(assetName)_\(clip.rawValue)"),
-           let scene = try? Self.parseScene(at: url, options: [.animationImportPolicy: SCNSceneSource.AnimationImportPolicy.playRepeatedly]) {
-            found = firstAnimation(in: scene.rootNode)
+        if let url = bundleURL(for: "\(assetName)_\(clip.rawValue)") {
+            if let scene = try? Self.parseScene(at: url, options: [.animationImportPolicy: SCNSceneSource.AnimationImportPolicy.playRepeatedly]) {
+                found = firstAnimation(in: scene.rootNode)
+            }
+            if found == nil { certain = false }
         }
 
         // Layout B: one file, many animation players. Never for a clip that
-        // only ships as its own file (`AnimationClip.shipsAsItsOwnFile`): a
-        // family without one would open its whole mesh to find nothing, on
-        // every ask, since a miss is not cached.
-        if found == nil, !clip.shipsAsItsOwnFile, let url = bundleURL(for: assetName) {
-            found = Self.withImporter { () -> CAAnimation? in
-                guard let source = SCNSceneSource(url: url, options: nil) else { return nil }
+        // only ever ships as its own file (`AnimationClip.onlyInOwnFile`: the
+        // stages' idle variant and break, the rite and the second skill's
+        // shapes): a family without one would open its whole mesh under the
+        // importer's lock to find nothing.
+        if found == nil, !clip.onlyInOwnFile, let url = bundleURL(for: assetName) {
+            // `absent`: the mesh opened and holds no such clip — the one
+            // answer that is certain.
+            let search = Self.withImporter { () -> (animation: CAAnimation?, absent: Bool) in
+                guard let source = SCNSceneSource(url: url, options: nil) else { return (nil, false) }
                 let identifiers = source.identifiersOfEntries(withClass: CAAnimation.self)
                 let match = identifiers.first { $0.lowercased().contains(clip.rawValue) }
-                guard let match else { return nil }
-                return source.entryWithIdentifier(match, withClass: CAAnimation.self)
+                guard let match else { return (nil, true) }
+                return (source.entryWithIdentifier(match, withClass: CAAnimation.self), false)
             }
+            found = search.animation
+            if found == nil, !search.absent { certain = false }
+        }
+
+        if found == nil, certain {
+            cacheLock.lock()
+            missingClips[assetName, default: []].insert(clip)
+            cacheLock.unlock()
         }
 
         if let found {
@@ -629,6 +662,25 @@ final class ModelLibrary {
     /// idle, the break — so a missing one costs no parse and no miss.
     func hasClipFile(_ clip: AnimationClip, for assetName: String) -> Bool {
         bundleURL(for: "\(assetName)_\(clip.rawValue)") != nil
+    }
+
+    /// The clip that will really play for `clip` on this asset: itself when
+    /// the family ships it, else its fallback (`AnimationClip.fallbackClip`:
+    /// the heavy blow for the second skill's shapes) when the family ships
+    /// that, else itself, which `UnitNode.play` plays as procedural motion.
+    /// The ONE place the chain is decided: `UnitNode.play` plays what this
+    /// answers, and the battle times the cast's hits by the same answer
+    /// (`ClipTimings.contract`, `hitFractions`), so the numbers land on the
+    /// clip that is on screen. A clip with no fallback — the basic, the
+    /// heavy, the rite, the ultimate — is itself with nothing asked. Both
+    /// asks are the clip cache's, a miss included (`missingClips`), so this
+    /// costs a lookup once a clip has been asked for once; the warm pass
+    /// asks for every clip of a fight before it starts.
+    func resolvedClip(_ clip: AnimationClip, for assetName: String) -> AnimationClip {
+        guard let fallback = clip.fallbackClip else { return clip }
+        if animation(clip, for: assetName) != nil { return clip }
+        if animation(fallback, for: assetName) != nil { return fallback }
+        return clip
     }
 
     /// The asset whose CLIPS a figure plays: the awakened export when it
@@ -723,6 +775,14 @@ final class ModelLibrary {
                 // a stage that does parses its own off the main thread once
                 // its figure stands (`PoseLayer`), so a warm pass never holds
                 // the importer for them.
+                //
+                // The rite and the second skill's shapes ARE warmed
+                // (2026-09-25): a cast parses nothing on the main thread when
+                // its family ships the clip, and when it does not the miss is
+                // learnt here, from a lookup of the bundle alone — those
+                // clips are never searched for inside the mesh
+                // (`onlyInOwnFile`), so a family with none of them costs no
+                // parse at all.
                 for name in clipAssets {
                     for clip in AnimationClip.allCases where !clip.shipsAsItsOwnFile { _ = animation(clip, for: name) }
                 }

@@ -1,65 +1,50 @@
 {
  "attack_basic": {
-  "preset": "224",
-  "frames": 66,
-  "seconds": 2.2,
-  "blow_source": 0.723,
-  "blow": 0.446,
-  "target": 0.42,
-  "windup_speed": 1.62,
-  "follow_speed": 0.5,
-  "rate": 1.69,
+  "preset": "Art/Motions/aimed/preset_224_basic.motion.npz",
+  "frames": 91,
+  "seconds": 3.03,
+  "rate": 1.51,
   "mirrored": {
    "mode": "delta, on the donor",
    "weapon_hand": "R",
-   "round_trip": 8e-08
+   "round_trip": 6.9e-08
   },
   "bow_wrist": {
    "hand": "RightHand",
    "degrees": 76,
-   "frame": 29
+   "frame": 45
   }
  },
  "attack_heavy": {
-  "preset": "224",
+  "preset": "Art/Motions/aimed/preset_224_heavy.motion.npz",
   "frames": 91,
   "seconds": 3.03,
-  "blow_source": 0.744,
-  "blow": 0.55,
-  "target": 0.55,
-  "windup_speed": 1.35,
-  "follow_speed": 0.57,
-  "rate": 1.78,
+  "rate": 1.51,
   "mirrored": {
    "mode": "delta, on the donor",
    "weapon_hand": "R",
-   "round_trip": 8e-08
+   "round_trip": 7.7e-08
   },
   "bow_wrist": {
    "hand": "RightHand",
-   "degrees": 76,
-   "frame": 50
+   "degrees": 71,
+   "frame": 45
   }
  },
  "ultimate": {
-  "preset": "222",
+  "preset": "Art/Motions/aimed/preset_222_ultimate.motion.npz",
   "frames": 121,
   "seconds": 4.03,
-  "blow_source": 0.792,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 1.28,
-  "follow_speed": 0.55,
-  "rate": 1.68,
+  "rate": 1.19,
   "mirrored": {
    "mode": "delta, on the donor",
    "weapon_hand": "R",
-   "round_trip": 8e-08
+   "round_trip": 6.8e-08
   },
   "bow_wrist": {
    "hand": "RightHand",
-   "degrees": 65,
-   "frame": 74
+   "degrees": 75,
+   "frame": 60
   }
  },
  "idle_combat": {
@@ -113,5 +98,53 @@
    38.0
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/aimed/style_archer_x2.motion.npz",
+  "frames": 73,
+  "seconds": 2.43,
+  "rate": 1.01,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 6.7e-08
+  },
+  "bow_wrist": {
+   "hand": "RightHand",
+   "degrees": 62,
+   "frame": 36
+  }
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/aimed/style_archer_x3.motion.npz",
+  "frames": 88,
+  "seconds": 2.93,
+  "rate": 1.05,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 6.3e-08
+  },
+  "bow_wrist": {
+   "hand": "RightHand",
+   "degrees": 65,
+   "frame": 44
+  }
+ },
+ "skill_x5": {
+  "preset": "Art/Motions/aimed/style_archer_x5.motion.npz",
+  "frames": 119,
+  "seconds": 3.97,
+  "rate": 1.1,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 6.7e-08
+  },
+  "bow_wrist": {
+   "hand": "RightHand",
+   "degrees": 65,
+   "frame": 59
+  }
  }
 }

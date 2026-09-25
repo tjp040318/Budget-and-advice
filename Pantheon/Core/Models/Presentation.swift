@@ -272,10 +272,12 @@ enum BundleArt {
     }
 }
 
-/// Animation clips every character rig must export. `ModelLibrary` looks for a
+/// Animation clips a character rig exports. `ModelLibrary` looks for a
 /// SceneKit animation player with exactly these keys inside the unit's `.usdz`
 /// (or a sibling `<unit>_<clip>.usdz`), so the names here are a contract with
-/// the art pipeline. See `Docs/ART_PIPELINE.md`.
+/// the art pipeline. See `Docs/ART_PIPELINE.md`. Some are only ever siblings
+/// (`onlyInOwnFile`), and some a family ships only when its kit uses them:
+/// the second skill's shapes, the rite, the stages' idle variant and break.
 enum AnimationClip: String, Codable, CaseIterable, Sendable {
     case idle
     case idleCombat = "idle_combat"
@@ -307,6 +309,28 @@ enum AnimationClip: String, Codable, CaseIterable, Sendable {
     /// never fidgets. The battle never plays either.
     case idleBreak = "break"
 
+    // The second skill by its SHAPE (Docs/PLAN.md *Skills that look like
+    // themselves*, 2026-09-25). The second skill played the one heavy blow
+    // whatever it did: 72 second skills strike two to five times and 84 hit
+    // the whole enemy line, and each of them was one swing at one victim
+    // under all its numbers (the owner: "If a skill attacks 3 times, the
+    // character might hit once, but 3 hits occur"). Each shape is a file of
+    // its own, `<asset>_<rawValue>.usdz`, shipped only by a family whose
+    // kit uses that shape; a family without one plays its heavy blow
+    // (`fallbackClip`). `forSkill` (Skill.swift) picks one from what the
+    // skill does.
+
+    /// The second skill's two strikes.
+    case skillX2 = "skill_x2"
+    /// Three strikes.
+    case skillX3 = "skill_x3"
+    /// Four strikes.
+    case skillX4 = "skill_x4"
+    /// Five strikes: a flurry, or five shots.
+    case skillX5 = "skill_x5"
+    /// One blow or cast that strikes the whole enemy line.
+    case skillArea = "skill_area"
+
     /// Clips that must loop rather than play once.
     var loops: Bool {
         switch self {
@@ -317,10 +341,9 @@ enum AnimationClip: String, Codable, CaseIterable, Sendable {
 
     /// Clips that only ever ship as a file of their own
     /// (`<asset>_<clip>.usdz`), and only the stages play: the idle's second
-    /// variant and the break. `ModelLibrary.animation` does not go looking
-    /// for one inside the family's MESH file when that file is missing (the
-    /// search opens the whole model under the importer's lock), and the warm
-    /// pass leaves them out (`PoseLayer` parses its own off the main thread).
+    /// variant and the break. The warm pass leaves them out (`PoseLayer`
+    /// parses its own off the main thread). Every one of them is also
+    /// `onlyInOwnFile`.
     var shipsAsItsOwnFile: Bool {
         switch self {
         case .idleAlt, .idleBreak: return true
@@ -328,13 +351,68 @@ enum AnimationClip: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// Seconds the engine holds the battle before resuming, when a real clip is
-    /// missing. Keeps pacing sane with placeholder art.
+    /// Clips the loader looks for ONLY as a file of their own, never inside
+    /// the family's MESH file (`ModelLibrary.animation`'s layout B): the
+    /// search opens the whole model under the importer's lock, so a family
+    /// without the clip would pay a mesh parse on every ask. These are the
+    /// clips no pipeline has ever packed into a mesh: the stage-only ones
+    /// above, the second skill's shapes, and the rite, which no family
+    /// shipped at all until 2026-09-25 (0 files of 1,502) and which every
+    /// heal, shield and buff asked for — each rite cast opened its caster's
+    /// mesh on the main thread to find nothing. The warm pass still warms
+    /// the battle's (a lookup of the bundle, nothing parsed when the file is
+    /// absent).
+    var onlyInOwnFile: Bool {
+        switch self {
+        case .idleAlt, .idleBreak, .castRelease, .skillX2, .skillX3, .skillX4, .skillX5, .skillArea: return true
+        default: return false
+        }
+    }
+
+    /// The clip a family WITHOUT this one's file plays in its place
+    /// (`ModelLibrary.resolvedClip`): the heavy blow for the second skill's
+    /// shapes — its extra hits then land after the blow's contact
+    /// (`ClipTimings.hitFractions`) — and nil for everything else. Never a
+    /// blow for the rite: a heal cast as a sword swing is what the rite clip
+    /// exists to end, so a family without `cast_release` keeps the procedural
+    /// motion.
+    var fallbackClip: AnimationClip? {
+        switch self {
+        case .skillX2, .skillX3, .skillX4, .skillX5, .skillArea: return .attackHeavy
+        default: return nil
+        }
+    }
+
+    /// The strikes the clip is made to land: two to five for the second
+    /// skill's multi-strike shapes, one for every other clip. The procedural
+    /// stand-in lunges this many times (`UnitNode.playProcedural`).
+    var strikeCount: Int {
+        switch self {
+        case .skillX2: return 2
+        case .skillX3: return 3
+        case .skillX4: return 4
+        case .skillX5: return 5
+        default: return 1
+        }
+    }
+
+    /// The seconds a clip is timed for when nothing better is known: the
+    /// battle's contract for a clip with no entry in `clip_timings.json`
+    /// (`ClipTimings.contract`), and a cast's hold in
+    /// `BattleEvent.presentationDuration`. The rite is 2.2 now that it is a
+    /// clip of its own (it shared the heavy blow's 1.7 while it had none); a
+    /// shape gets 0.4 s more for every strike it adds.
     var fallbackDuration: TimeInterval {
         switch self {
         case .ultimate: return 2.4
-        case .attackHeavy, .castRelease: return 1.7
+        case .attackHeavy: return 1.7
+        case .castRelease: return 2.2
         case .attackBasic: return 1.3
+        case .skillX2: return 2.0
+        case .skillX3: return 2.4
+        case .skillX4: return 2.8
+        case .skillX5: return 3.2
+        case .skillArea: return 2.2
         case .hitReact: return 0.5
         case .death: return 1.2
         case .victory: return 2.0

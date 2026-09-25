@@ -674,13 +674,16 @@ final class BattleEngine {
         let primaryTargets = resolveTargets(skill.target, actorIndex: actorIndex, explicit: target)
         guard !primaryTargets.isEmpty else { return events }
 
+        // The clip is the skill's SHAPE (`Skill.presentedClip`): a three-cut
+        // skill plays three strikes and a sweep of the line an area blow,
+        // where the stored `animation` gave both the one heavy swing.
         events.append(.skillCast(
             actor: actorID,
             skillID: skill.id,
             skillName: skill.name,
             targets: primaryTargets.map { combatants[$0].id },
             shot: skill.cameraShot,
-            animation: skill.animation,
+            animation: skill.presentedClip,
             vfx: skill.vfx
         ))
 

@@ -797,15 +797,22 @@ final class CameraDirector {
     /// zoomed onto the empty floor it had just left while it fought four
     /// metres away (the owner, 2026-09-15, with Sekhmet's Seven Arrows:
     /// "the camera zooms really close to nothing").
+    ///
+    /// `holdUntil` is an ultimate's (2026-09-25, Summoners War's skill
+    /// camera): seconds of scene time from now to its first contact. The
+    /// push on the caster holds until then and dollies home over its 0.3 s
+    /// as the blow lands, so the big effect is seen in the home frame; the
+    /// shot's own hold, when nil. The cinematic moves are as they were.
     func perform(
         _ shot: CameraShot,
         on caster: UnitNode,
         target: UnitNode?,
         focus: SCNVector3? = nil,
+        holdUntil: TimeInterval? = nil,
         completion: (() -> Void)? = nil
     ) {
         guard Self.isCinematic else {
-            zoom(shot, on: caster, target: target, focus: focus, completion: completion)
+            zoom(shot, on: caster, target: target, focus: focus, holdUntil: holdUntil, completion: completion)
             return
         }
 
@@ -908,12 +915,15 @@ final class CameraDirector {
     /// OUT past home, so a boss framed from 25 m is left where it is), and
     /// the move is eased in over 0.22 s and out over 0.30 s rather than cut,
     /// because there is nothing a parallel move can leave half way — every
-    /// frame of it is the home framing at a different distance.
+    /// frame of it is the home framing at a different distance. An
+    /// ultimate's push (`holdUntil`) is held until its first contact and
+    /// eases out as the blow lands, whatever the shot's own hold.
     private func zoom(
         _ shot: CameraShot,
         on caster: UnitNode,
         target: UnitNode?,
         focus: SCNVector3?,
+        holdUntil: TimeInterval?,
         completion: (() -> Void)?
     ) {
         // A basic attack never moves the camera. That is the owner's rule and
@@ -982,6 +992,9 @@ final class CameraDirector {
         let destination = gentle ? lerp(homePosition, full, MotionComfort.zoomReach) : full
         let easeIn: TimeInterval = gentle ? 0.22 * MotionComfort.zoomEase : 0.22
         let easeOut: TimeInterval = gentle ? 0.30 * MotionComfort.zoomEase : 0.30
+        // An ultimate's push stays on its caster through the wind-up and
+        // leaves as the blow lands: the ease out begins on the contact.
+        let held: TimeInterval = holdUntil.map { max(0.05, $0 - easeIn) } ?? hold
 
         shotGeneration += 1
         let generation = shotGeneration
@@ -1004,7 +1017,7 @@ final class CameraDirector {
                 home.z + (destination.z - home.z) * t
             )
         }
-        let settle = SCNAction.wait(duration: hold)
+        let settle = SCNAction.wait(duration: held)
         let dollyOut = SCNAction.customAction(duration: easeOut) { node, elapsed in
             let raw = Float(min(1, elapsed / CGFloat(easeOut)))
             let t = raw * raw * (3 - 2 * raw)

@@ -101,21 +101,6 @@ final class BattleSceneController: NSObject {
     private static let dashReach: Float = 6
     private static let dashStretchCap: Double = 1.6
 
-    /// Where in a clip the blow actually lands, as a fraction of the clip's
-    /// contract duration.
-    ///
-    /// Nothing in the pipeline has ever known this: `AnimationClip` carries a
-    /// duration and no contact frame, so the impact was spawned on a detached
-    /// timer at a flat 45% of the clip while the damage event — the flash, the
-    /// number, the sound, the haptic and the freeze — waited for the WHOLE
-    /// clip to finish. Every basic attack therefore played as a slash arc, six
-    /// tenths of a second of nothing, and then a victim flinching at something
-    /// that had already happened; on an ultimate the gap was over a second.
-    /// Two half-hits are why the fight read as numbers changing rather than as
-    /// something being struck. This table is the one place the moment of
-    /// contact is written down, and `UnitNode.play` retimes every one-shot to
-    /// its contract so the fraction means the same thing whatever length Meshy
-    /// happened to author the clip at.
     /// The size an effect is drawn at on a unit: its height over a hero's
     /// 1.9 m, no taller than 2.6 m. Unclamped, a hit on the 8 m Colossus drew
     /// at 4.2 times — a basic's fireburst ten metres across, Keraunos's
@@ -125,31 +110,83 @@ final class BattleSceneController: NSObject {
         min(node.spec.height, 2.6) / 1.9
     }
 
-    /// Where in a clip the blow lands, as a fraction of its length. The stock
-    /// clips' values first; a bespoke clip's blow lands where its sentence
-    /// put it, read off the clip's frames when it shipped (2026-09-15: the
-    /// five gods' fourteen clips, `preview.py --frame`), so the freeze, the
-    /// flash and the damage number meet the claw as it closes. `castRelease`
-    /// plays the heavy clip, so it reads the heavy's row.
-    private static func contactFraction(of clip: AnimationClip, for asset: String = "") -> Double {
-        let bespoke: [String: [AnimationClip: Double]] = [
-            "anubis":  [.attackBasic: 0.38, .attackHeavy: 0.50, .ultimate: 0.55],
-            "sekhmet": [.attackBasic: 0.45, .attackHeavy: 0.42, .ultimate: 0.45],
-            // Zeus's ultimate is the 2026-09-17 take (the first one's motion
-            // task had expired at Meshy before the meshy-7 rig could use it):
-            // arms overhead to 0.3, a crouched lunge, the hurl at 0.78.
-            "zeus":    [.attackBasic: 0.47, .attackHeavy: 0.40, .ultimate: 0.78],
-            "ares":    [.attackBasic: 0.47, .attackHeavy: 0.50, .ultimate: 0.45],
-            "thoth":   [.attackBasic: 0.55, .attackHeavy: 0.60, .ultimate: 0.65],
-        ]
-        let row = clip == .castRelease ? AnimationClip.attackHeavy : clip
-        if let value = bespoke[asset]?[row] { return value }
+    /// Where in a clip each of a cast's `hits` lands, as fractions of the
+    /// clip's contract duration.
+    ///
+    /// Nothing in the pipeline had ever known this: `AnimationClip` carries a
+    /// duration and no contact frame, so the impact was spawned on a detached
+    /// timer at a flat 45% of the clip while the damage event — the flash, the
+    /// number, the sound, the haptic and the freeze — waited for the WHOLE
+    /// clip to finish. Every basic attack therefore played as a slash arc, six
+    /// tenths of a second of nothing, and then a victim flinching at something
+    /// that had already happened; on an ultimate the gap was over a second.
+    /// Two half-hits are why the fight read as numbers changing rather than as
+    /// something being struck. `UnitNode.play` retimes every one-shot to its
+    /// contract so a fraction means the same thing whatever length Meshy
+    /// happened to author the clip at.
+    ///
+    /// And then it was ONE number per clip (Docs/PLAN.md *Skills that look
+    /// like themselves*, 2026-09-25), and every later hit of a multi-hit
+    /// skill landed 0.30–0.55 s after the one before whatever the body was
+    /// doing: a three-hit skill was one swing and three numbers. The
+    /// contacts are data now, measured per clip file (`ClipTimings`): the
+    /// clip's own strikes, a flurry the clip does not show spread past its
+    /// last, and for a clip with no entry the old defaults and the five
+    /// gods' bespoke rows (2026-09-15, read off their frames), which live in
+    /// `ClipTimings.standInContacts` beside the numbers they replaced — keyed
+    /// by the asset whose clips PLAY, so a stand-in fighting in a god's mesh
+    /// strikes where the god's clip does. `clipAsset` is that asset
+    /// (`UnitNode.clipAsset`) and `clip` the clip it really plays
+    /// (`ModelLibrary.resolvedClip`), so a flurry a family has no clip for is
+    /// timed on the heavy blow it falls back to.
+    private static func hitFractions(of clip: AnimationClip, clipAsset: String, hits: Int) -> [Double] {
+        ClipTimings.hitFractions(asset: clipAsset, clip: clip, hits: hits)
+    }
+
+    /// Whether a blow of `clip` lands heavy — its freeze, its shake, its
+    /// number and its dwell: the heavy blow, a rite's release, an
+    /// ultimate's hits and a strike on the whole line; of a flurry
+    /// (`skillX2…X5`) its last strike alone, the finisher, so the strikes
+    /// before it keep the quick cadence a flurry reads by. Read off the clip
+    /// the skill ASKED for (the engine's), not the one a family falls back
+    /// to: a flurry played over the heavy blow is still a flurry.
+    static func landsHeavy(_ clip: AnimationClip, hitIndex: Int, hitCount: Int) -> Bool {
         switch clip {
-        case .attackBasic: return 0.42
-        case .attackHeavy: return 0.55
-        case .castRelease: return 0.60
-        case .ultimate: return 0.62
-        default: return 0.50
+        case .ultimate, .attackHeavy, .castRelease, .skillArea:
+            return true
+        case .skillX2, .skillX3, .skillX4, .skillX5:
+            return hitIndex >= hitCount - 1
+        default:
+            return false
+        }
+    }
+
+    /// Whether a melee caster leaps at its one victim for this clip: a
+    /// basic, a heavy blow and a flurry, which strike at arm's length; a
+    /// blow on the whole line, a rite and an ultimate are cast from where it
+    /// stands.
+    static func closesToStrike(_ clip: AnimationClip) -> Bool {
+        switch clip {
+        case .attackBasic, .attackHeavy, .skillX2, .skillX3, .skillX4, .skillX5:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Whether a cast strikes its whole line at once: an area skill's own
+    /// clip, or a basic, a heavy blow or an ultimate whose first hit fell on
+    /// each of its two or more targets once. Never a flurry, whose random
+    /// victims only happen to be the line.
+    static func strikesTheLine(_ clip: AnimationClip, targets: [UUID], firstVictims: [UUID]) -> Bool {
+        switch clip {
+        case .skillArea:
+            return true
+        case .skillX2, .skillX3, .skillX4, .skillX5:
+            return false
+        default:
+            let line = Set(targets)
+            return line.count >= 2 && firstVictims.count == line.count && Set(firstVictims) == line
         }
     }
 
@@ -244,6 +281,24 @@ final class BattleSceneController: NSObject {
     /// swing and its walk back to its mark.
     private var castRecovery: TimeInterval = 0
 
+    /// The cast being presented, hit by hit (Docs/PLAN.md *Skills that look
+    /// like themselves*, 2026-09-25): its timeline (`CastTimeline`), its own
+    /// slice of the queue as it was read ahead, cast first, which event of
+    /// that slice is on screen, and the authored seconds since the cast
+    /// began (a freeze's time left out, as the clip it is timed against
+    /// stood still through it). `playNext` holds each event of the slice
+    /// until the next is due, so every hit lands on its own contact; a
+    /// counter, a new cast, a turn, a wave, the end, a skip, a forfeit or a
+    /// new run ends it. Main thread.
+    private var castTimeline: CastTimeline?
+    private var castEvents: [BattleEvent] = []
+    private var castCursor = 0
+    private var castElapsed: TimeInterval = 0
+    /// Set by the final blow's own hold (`afterTheFinalBlow`, with its slow
+    /// motion handed back as frozen time), which no timeline overrides.
+    /// Cleared before every event.
+    private var holdIsFinalBlow = false
+
     /// The multi-hit runs still open, for the gold TOTAL each earns after its
     /// last hit (Docs/FEEL.md W1.2, `MultiHitLedger`).
     private var hitLedger = MultiHitLedger()
@@ -334,7 +389,9 @@ final class BattleSceneController: NSObject {
 
     func build(combatants: [Combatant], environment: BattleEnvironment) {
         self.environment = environment
-        scene.rootNode.removeAction(forKey: "cast_impact")
+        // The last run's cast draws nothing more into this one.
+        SkillFX.cancel(in: scene)
+        endCastTimeline()
         // A new run of an auto-repeat is built in the same scene: whatever
         // the last one's end changed goes back. The slow motion stops and the
         // pace returns to the player's; a freeze or a tremble still pending
@@ -1194,10 +1251,12 @@ final class BattleSceneController: NSObject {
         isPlaying = false
         holdOverride = nil
         castRecovery = 0
-        // A cast's impact is a scene action waiting for its contact frame; a
-        // skip must take it with the rest of the queue rather than let it
-        // burst over a field that has already jumped to the end state.
-        scene.rootNode.removeAction(forKey: "cast_impact")
+        endCastTimeline()
+        // A cast's hits are scene actions waiting for their contacts
+        // (`SkillFX`); a skip must take them with the rest of the queue
+        // rather than let them burst over a field that has already jumped
+        // to the end state.
+        SkillFX.cancel(in: scene)
         // And the same for a swing still waiting out its dash: the queue it
         // belonged to is gone, so it would otherwise land a lone attack over
         // a battle that has already been resolved.
@@ -1230,8 +1289,8 @@ final class BattleSceneController: NSObject {
         isPlaying = false
         holdOverride = nil
         castRecovery = 0
-        scene.rootNode.removeAction(forKey: "cast_impact")
-        scene.rootNode.removeAction(forKey: "cast_projectile")
+        endCastTimeline()
+        SkillFX.cancel(in: scene)
         for node in unitNodes.values { node.cancelPendingClip() }
         endSlowMotion()
         cancelBeats()
@@ -1264,6 +1323,7 @@ final class BattleSceneController: NSObject {
     private func playNext() {
         guard !queue.isEmpty else {
             isPlaying = false
+            endCastTimeline()
             // The units first (2026-09-24): a melee attacker still standing
             // where its dash landed has its walk back running by the time the
             // camera re-measures the field, so it is skipped rather than
@@ -1278,14 +1338,20 @@ final class BattleSceneController: NSObject {
         let event = queue.removeFirst()
         delegate?.battleScene(self, willPresent: event)
         holdOverride = nil
+        holdIsFinalBlow = false
+        followCastTimeline(to: event)
         let frozen = present(event)
 
         // A cast holds only until the blade lands — `holdOverride` — so the damage
         // event that carries the flash, the flinch, the shove, the number and
         // the freeze is presented ON the contact frame with the rest of the
         // swing still playing underneath it. Everything else keeps the
-        // duration the event itself declares.
-        var span = holdOverride ?? event.presentationDuration
+        // duration the event itself declares. While a cast's timeline runs
+        // (2026-09-25) each of its events holds until the next is due
+        // instead — every hit on its own contact, a line's victims 40 ms
+        // apart, whatever the kit puts between two hits sharing the gap —
+        // and its last hit keeps the dwell its blows earn.
+        var span = timelineHold() ?? holdOverride ?? event.presentationDuration
         switch event {
         case .turnBegan, .waveStarted, .battleEnded:
             // Repay whatever is left of the follow-through the cast did not
@@ -1310,7 +1376,9 @@ final class BattleSceneController: NSObject {
 
         // A freeze-frame steals time from the event's hold; give it back so the
         // cadence between hits stays what the event durations say it is.
-        let hold = max(0.02, beat(span)) + frozen
+        let running = max(0.02, beat(span))
+        let hold = running + frozen
+        advanceCastClock(by: running)
         let generation = playbackGeneration
         queueDueAt = CACurrentMediaTime() + hold
         DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
@@ -1341,6 +1409,58 @@ final class BattleSceneController: NSObject {
 
     /// How often a held queue looks again.
     private static let queuePoll: TimeInterval = 0.1
+
+    // MARK: - A cast's hits, each on its own contact (2026-09-25)
+
+    /// A cast's timeline takes over the holds of its own events from here
+    /// (`present`, `.skillCast`): `events` is its slice of the queue as it
+    /// was read ahead, the cast first.
+    private func beginCastTimeline(_ timeline: CastTimeline, events: [BattleEvent]) {
+        castTimeline = timeline
+        castEvents = events
+        castCursor = 0
+        castElapsed = 0
+    }
+
+    /// The cast's timeline ends: every hold is the event's own again.
+    private func endCastTimeline() {
+        castTimeline = nil
+        castEvents = []
+        castCursor = 0
+        castElapsed = 0
+    }
+
+    /// Main thread, as each event is taken off the queue: while a timeline
+    /// runs, the cast's own next event moves it on and anything else ends
+    /// it — a counter, a new cast (which begins its own), a turn, a wave,
+    /// the end. The slice was copied off this queue in order, so its next
+    /// event is the one taken now unless the queue was cut.
+    private func followCastTimeline(to event: BattleEvent) {
+        guard castTimeline != nil else { return }
+        let next = castCursor + 1
+        if next < castEvents.count, castEvents[next].id == event.id {
+            castCursor = next
+        } else {
+            endCastTimeline()
+        }
+    }
+
+    /// The hold the running timeline gives the event on screen, in authored
+    /// seconds; nil with no timeline, past its last hit, and under the final
+    /// blow's own hold.
+    private func timelineHold() -> TimeInterval? {
+        guard let timeline = castTimeline, !holdIsFinalBlow else { return nil }
+        return timeline.hold(after: castCursor, in: castEvents, elapsed: castElapsed)
+    }
+
+    /// The timeline's clock after an event's hold of `running` wall seconds
+    /// (a freeze's time is not in it): the authored seconds it stood for at
+    /// the pace it ran at, so a hold the queue had to floor is made up by
+    /// the next one and no hit drifts off its contact.
+    private func advanceCastClock(by running: TimeInterval) {
+        guard castTimeline != nil else { return }
+        castElapsed += running * max(0.25, pace)
+    }
 
     /// Every beat drawn over the field ends where it stands — a skip, a
     /// forfeit, a new run (Docs/FEEL.md W2.1–W2.11): a boss still rising or
@@ -1436,10 +1556,6 @@ final class BattleSceneController: NSObject {
         case .skillCast(let actor, let skillID, let name, let targets, let shot, let animation, let vfx):
             guard let casterNode = unitNodes[actor] else { return 0 }
             let targetNode = targets.first.flatMap { unitNodes[$0] }
-            // Stamped, so a console that ends mid-fight says which cast it
-            // ended in (the arena crash of 2026-09-15 was read off the last
-            // clip loaded, which is a poorer clock).
-            Perf.note("cast \(name) by \(casterNode.spec.assetName) as \(animation) on \(targets.count) target(s)")
             lastCastClip = animation
             lastCasterElement = casterNode.element
             lastCastWasUltimate = animation == .ultimate
@@ -1447,20 +1563,21 @@ final class BattleSceneController: NSObject {
             impactFrameSpent = false
             // A melee unit swinging is steel or stone; anything else is its
             // element. `castRelease` and the ultimate are always the element,
-            // because that is what the effect on screen already shows.
+            // because that is what the effect on screen already shows. A blow
+            // on the whole line lands as the heavy blow does.
             if animation == .castRelease || animation == .ultimate || !casterNode.spec.melee {
                 lastCastColour = .element(casterNode.element)
             } else {
-                lastCastColour = animation == .attackHeavy ? .blunt : .blade
+                lastCastColour = animation == .attackHeavy || animation == .skillArea ? .blunt : .blade
             }
             // A melee unit closes on its one victim before the swing and stays
-            // there through the hits; casters, archers and line-wide skills
-            // strike from where they stand. A boss has no floor to cross: it
-            // strikes from where it towers.
+            // there through the hits — a flurry's as well as a single blow's
+            // (`closesToStrike`); casters, archers and line-wide skills strike
+            // from where they stand. A boss has no floor to cross: it strikes
+            // from where it towers.
             let closes = targetNode.map { victim in
                 casterNode.spec.melee && !casterNode.isBoss && targets.count == 1
-                    && victim.side != casterNode.side
-                    && (animation == .attackBasic || animation == .attackHeavy)
+                    && victim.side != casterNode.side && Self.closesToStrike(animation)
             } ?? false
             // The camera is told where the leap will land before it begins:
             // a push-in aimed at the caster's mark held on empty floor while
@@ -1487,18 +1604,66 @@ final class BattleSceneController: NSObject {
                     * (UnitNode.dashGather + UnitNode.dashFlight) - 0.08)
             }
 
-            // The frame the blade lands, measured from the start of the CLIP
-            // rather than of the turn, and held by the queue so the damage
-            // event arrives on it. What is left of the clip is repaid to the
-            // next turn as recovery.
-            let blowAt = Self.contactFraction(of: animation, for: casterNode.spec.assetName)
-            let contact = walkUp + animation.fallbackDuration * blowAt
-            holdOverride = contact
-            castRecovery = animation.fallbackDuration * (1 - blowAt)
+            // EVERY HIT ON ITS OWN CONTACT (2026-09-25; Docs/PLAN.md *Skills
+            // that look like themselves*). The queue is read ahead to the next
+            // turn, cast, wave, end or counter: the cast's own events, and
+            // among them its hits, each with its victims. The clip that will
+            // really play for the skill (a family without the flurry's own
+            // file swings its heavy blow, `ModelLibrary.resolvedClip`) says
+            // how long it plays (`ClipTimings.contract`) and where each hit
+            // lands in it, measured from the start of the CLIP rather than of
+            // the turn: hit k at the leap plus the contract times its
+            // fraction. The queue holds each event of the cast until the next
+            // is due (`CastTimeline`, `playNext`), so each hit's damage — the
+            // flash, the flinch, the number, the freeze — is presented on its
+            // own contact with the swing still playing underneath it. A rite
+            // deals no damage: its release is its one contact.
+            let reading = CastReading.ahead(in: queue, caster: actor)
+            let clipAsset = casterNode.clipAsset
+            let resolved = ModelLibrary.shared.resolvedClip(animation, for: clipAsset)
+            let contract = ClipTimings.contract(asset: clipAsset, clip: resolved)
+            let hitCount = max(1, reading.hitCount)
+            let fractions = Self.hitFractions(of: resolved, clipAsset: clipAsset, hits: hitCount)
+            let firstVictims: [UUID] = reading.hits.first?.victims ?? []
+            let isArea = Self.strikesTheLine(animation, targets: targets, firstVictims: firstVictims)
+            // A ranged cast's contact is its RELEASE — the hand thrown out,
+            // the string let go — and the shot it throws lands a flight
+            // later: each hit is presented that much after its contact, so
+            // the orb or the arrow leaves the hand instead of before it.
+            let flight: TimeInterval = reading.hitCount == 0 ? 0
+                : SkillFX.flight(family: casterNode.spec.assetName, ranged: !casterNode.spec.melee,
+                                 isBoss: casterNode.isBoss, isArea: isArea, isUltimate: animation == .ultimate)
+            let timeline = CastTimeline.planned(walkUp: walkUp + flight, contract: contract, fractions: fractions,
+                                                heavy: Self.landsHeavy(animation, hitIndex: hitCount - 1, hitCount: hitCount))
+            let slice: [BattleEvent] = [event] + reading.events
+            let contact: TimeInterval = timeline.times.first ?? walkUp + contract * 0.5
+            let castHold: TimeInterval = timeline.hold(after: 0, in: slice, elapsed: 0) ?? contact
+            holdOverride = castHold
+            // What is left of the clip once the cast has held: every later
+            // event's hold comes off it, the hits' included, and the next
+            // turn repays the rest.
+            castRecovery = max(0, walkUp + contract - castHold)
+            if !timeline.times.isEmpty { beginCastTimeline(timeline, events: slice) }
+            // Stamped, so a console that ends mid-fight says which cast it
+            // ended in (the arena crash of 2026-09-15 was read off the last
+            // clip loaded, which is a poorer clock).
+            let played = String(format: "%.2f", contract)
+            Perf.note("cast \(name) by \(casterNode.spec.assetName) as \(animation) (plays \(resolved), \(played) s), \(reading.hits.count) hit(s) on \(targets.count) target(s)")
 
+            // Each hit's time and victims, for what the cast draws (`SkillFX`);
+            // a rite's release, on the cast's own targets.
+            var hits: [(time: TimeInterval, victims: [UUID])] = []
+            if reading.hitCount == 0 {
+                hits.append((time: contact, victims: targets))
+            } else {
+                for struck in reading.hits {
+                    hits.append((time: timeline.time(ofHit: struck.hit), victims: struck.victims))
+                }
+            }
             let plan = CastPlan(actor: actor, skillID: skillID, name: name, targets: targets, shot: shot,
-                                animation: animation, vfx: vfx, closes: closes, landing: landing, leap: leap,
-                                walkUp: walkUp, contact: contact)
+                                animation: animation, resolved: resolved, vfx: vfx, closes: closes, landing: landing,
+                                leap: leap, walkUp: walkUp, contact: contact, clipEnd: walkUp + contract, hits: hits,
+                                isRite: reading.hitCount == 0, isArea: isArea)
             // AN ULTIMATE OWNS THE SCREEN FIRST (Docs/FEEL.md W2.1): the
             // world held under the caster's card and the skill's name, and
             // only then the cast. The splash's length is handed back as
@@ -1526,7 +1691,7 @@ final class BattleSceneController: NSObject {
                 weight = .lethal
             } else if isCritical {
                 weight = .critical
-            } else if lastCastClip == .ultimate || lastCastClip == .attackHeavy || lastCastClip == .castRelease {
+            } else if Self.landsHeavy(lastCastClip, hitIndex: hitIndex, hitCount: hitCount) {
                 weight = .heavy
             } else if isGlancing {
                 weight = .light
@@ -1609,10 +1774,12 @@ final class BattleSceneController: NSObject {
             // the shove and the shake are seen finishing before the next
             // number starts. An ordinary hit keeps the fast cadence a
             // multi-hit skill needs, and a glance is not worth a beat at all.
+            // A cast's timeline gives its hits their own holds, each on its
+            // contact, and keeps this dwell for its last (`CastTimeline`).
             switch weight {
-            case .lethal: holdOverride = 0.55
-            case .critical: holdOverride = 0.48
-            case .heavy: holdOverride = 0.42
+            case .lethal: holdOverride = CastTimeline.lethalDwell
+            case .critical: holdOverride = CastTimeline.criticalDwell
+            case .heavy: holdOverride = CastTimeline.heavyDwell
             case .normal, .light: break
             }
 
@@ -1631,13 +1798,22 @@ final class BattleSceneController: NSObject {
                          shakes: false, victim: node, scene: scene, director: director, speed: speedMultiplier)
             let slow = beginSlowMotion(on: node, after: freeze)
             holdOverride = Self.afterTheFinalBlow
+            holdIsFinalBlow = true
             return freeze + slow
 
         case .healed(_, let target, let amount, let remaining):
             guard let node = unitNodes[target] else { return 0 }
             node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
             floatText("+\(Int(amount.rounded()))", over: node, color: UIColor(hex: "#7FE8A0")!)
-            VFXLibrary.spawn("heal", at: node.position, in: scene, tint: UIColor(hex: "#7FE8A0")!)
+            // The rite's look lands on each ally with its own event
+            // (2026-09-25): the painted heal standing on the healed, with the
+            // green motes, once it ships; the lotus until then.
+            let healGreen = UIColor(hex: "#7FE8A0") ?? .green
+            if VFXLibrary.supportColumn("heal", feet: node.position, in: scene, height: node.spec.height) {
+                VFXLibrary.risingMotes(at: node.position, in: scene, tint: healGreen, count: 30, scale: 1)
+            } else {
+                VFXLibrary.spawn("heal", at: node.position, in: scene, tint: healGreen)
+            }
             // A drain heals once per hit, so the harp is quieter and skipped
             // at the top speed.
             if speedMultiplier < 3 { AudioLibrary.shared.play(.heal, volume: 0.7) }
@@ -1650,7 +1826,18 @@ final class BattleSceneController: NSObject {
         case .statusApplied(_, let target, let kind, let turns):
             guard let node = unitNodes[target] else { return 0 }
             node.applyStatus(kind, turns: turns)
-            VFXLibrary.spawn(kind.isBuff ? "buff" : "debuff", at: node.position, in: scene, tint: .white)
+            // The painted column of the status's kind once it ships — a
+            // shield's dome, a buff's rising light, a debuff's chains — and
+            // the motes until then (2026-09-25).
+            let column: String
+            if kind == .shield {
+                column = "shield"
+            } else {
+                column = kind.isBuff ? "buff" : "debuff"
+            }
+            if !VFXLibrary.supportColumn(column, feet: node.position, in: scene, height: node.spec.height) {
+                VFXLibrary.spawn(kind.isBuff ? "buff" : "debuff", at: node.position, in: scene, tint: .white)
+            }
             if speedMultiplier < 3 { AudioLibrary.shared.play(.status(kind), volume: 0.8) }
             floatText(kind.displayName, over: node,
                       color: kind.isBuff ? UIColor(hex: "#6BD8F2")! : UIColor(hex: "#F2726B")!, scale: 0.7)
@@ -1720,6 +1907,10 @@ final class BattleSceneController: NSObject {
 
         case .revived(let target, _):
             unitNodes[target]?.revive(healthFraction: 0.3)
+            // The painted resurrection standing on the risen, once it ships.
+            if let node = unitNodes[target] {
+                VFXLibrary.supportColumn("revive", feet: node.position, in: scene, height: node.spec.height)
+            }
             AudioLibrary.shared.play(.revive)
 
         case .defeated(let target):
@@ -1803,7 +1994,10 @@ final class BattleSceneController: NSObject {
         let name: String
         let targets: [UUID]
         let shot: CameraShot
+        /// The clip the skill asked for (the engine's), and the one that
+        /// really plays for it (`ModelLibrary.resolvedClip`).
         let animation: AnimationClip
+        let resolved: AnimationClip
         let vfx: String
         /// Whether a melee caster leaps at its victim first, where it lands,
         /// and the leap's authored length.
@@ -1811,58 +2005,55 @@ final class BattleSceneController: NSObject {
         let landing: SCNVector3?
         let leap: TimeInterval
         /// Authored seconds from the start of the cast to the clip's start,
-        /// and to the blow.
+        /// to its first blow, and to its end.
         let walkUp: TimeInterval
         let contact: TimeInterval
+        let clipEnd: TimeInterval
+        /// Each hit's authored time and victims (`CastReading`); a rite's
+        /// release on its targets.
+        let hits: [(time: TimeInterval, victims: [UUID])]
+        /// No damage (a rite), and a strike on the whole line.
+        let isRite: Bool
+        let isArea: Bool
     }
 
-    /// Draws a cast: the camera's move, the leap, the clip, what the swing
-    /// leaves behind and what the spell stands on, the banner, and the
-    /// burst and the projectile timed to the contact frame. An ultimate's
-    /// also dims the set round its caster through the wind-up (W2.9).
+    /// Draws a cast: the camera's move, the leap, the clip, the banner, an
+    /// ultimate's spotlight round its caster through the wind-up (W2.9), and
+    /// everything the cast itself draws, hit by hit — the circle it stands
+    /// on, the blade's trail, the shots, the bursts, a line's pillars, an
+    /// ultimate's signature and every sound of it — which is `SkillFX`'s
+    /// (2026-09-25): the one burst on the first contact that stood here is
+    /// that file's fallback now.
     private func performCast(_ plan: CastPlan) {
         guard let casterNode = unitNodes[plan.actor] else { return }
         let targetNode = plan.targets.first.flatMap { unitNodes[$0] }
         let animation = plan.animation
-        let targets = plan.targets
-        let vfx = plan.vfx
-        let walkUp = plan.walkUp
-        let contact = plan.contact
         Juice.prepareHaptics()
-        AudioLibrary.shared.play(.whoosh, volume: animation == .ultimate ? 1.0 : 0.6)
-        director?.perform(plan.shot, on: casterNode, target: targetNode, focus: plan.landing)
+        // A leap is heard. Every other sound of the cast is its own, timed
+        // to its blows (`SkillFX`: a swing at each, a spell's release, a
+        // string's loose, an ultimate's gathering swell and its boom).
+        if plan.closes { AudioLibrary.shared.play(.whoosh, volume: 0.5) }
+        // THE ULTIMATE'S CAMERA (Summoners War's): the push on the caster
+        // holds until the first contact, then dollies home over 0.3 s as the
+        // blow lands, so the big effect is seen in the home frame. Every
+        // other shot is as it was.
+        let holdUntil: TimeInterval? = animation == .ultimate ? beat(plan.contact) : nil
+        director?.perform(plan.shot, on: casterNode, target: targetNode, focus: plan.landing, holdUntil: holdUntil)
         if let targetNode, plan.closes {
             casterNode.dash(toward: targetNode, duration: beat(plan.leap))
         }
-        casterNode.play(animation, after: beat(walkUp))
-        // What the swing leaves behind and what the spell stands on: a
-        // blade's trail through every melee clip, in steel for a strike
-        // and in the element for an ultimate; a rune ring under a caster
-        // for the length of the cast. The owner: "the effects of attacks
-        // ... summoners war quality — even animations of characters."
-        let elementTint = UIColor(hex: casterNode.element.accentHex) ?? .white
-        let clipLength = beat(animation.fallbackDuration)
-        if animation == .castRelease || animation == .ultimate {
-            casterNode.castRing(tint: elementTint, duration: clipLength, after: beat(walkUp))
-        }
-        // An ultimate gathers before it lands: motes drawn up round the
-        // caster and a swelling core through the wind-up (2026-09-15).
+        // The clip the skill asked for: the unit plays the one its family
+        // ships, down the fallback chain, through the same resolution the
+        // times above were read off.
+        casterNode.play(animation, after: beat(plan.walkUp))
         if animation == .ultimate {
-            VFXLibrary.charge(on: casterNode, tint: elementTint,
-                              duration: beat(walkUp + animation.fallbackDuration * Self.contactFraction(of: animation, for: casterNode.spec.assetName)),
-                              scale: Self.effectScale(for: casterNode))
             // THE SPOTLIGHT (Docs/FEEL.md W2.9): the set's lights fall to
             // 35% round the caster, the painting to 0.45 and the colour
             // 0.35, the figures keeping their light, until the blow lands
             // (`present`, the next event) and 0.4 s after it.
             beginSpotlight(.ultimate, attack: beat(Spotlight.attack), longest: Spotlight.longest + tourHoldAllowance())
             spotlightAwaitsBlow = true
-            holdSpotlightForTour(contact: contact)
-        }
-        if casterNode.spec.melee, animation != .castRelease, !casterNode.isBoss {
-            let steel = UIColor(hex: "#D9E4F2") ?? .white
-            casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
-                                  duration: clipLength, after: beat(walkUp), in: scene)
+            holdSpotlightForTour(contact: plan.contact)
         }
         // The skill's BANNER over its caster (Docs/FEEL.md W1.9, the
         // owner's Summoners War frame): its painted icon in a gold frame
@@ -1874,104 +2065,17 @@ final class BattleSceneController: NSObject {
         if animation != .ultimate {
             floatBanner(plan.name, iconKey: skillArt[plan.actor]?[plan.skillID], over: casterNode)
         }
-
-        // A ranged strike flies: the element's painted sprite leaves the
-        // caster's chest and lands on the victim's on the frame of
-        // contact, where the burst below is waiting for it.
-        scene.rootNode.removeAction(forKey: "cast_projectile")
-        if let targetNode, !casterNode.spec.melee, !casterNode.isBoss, targets.count == 1,
-           targetNode.side != casterNode.side,
-           animation == .attackBasic || animation == .attackHeavy || animation == .castRelease {
-            let flight = min(0.45, max(0.22, beat(contact) * 0.6))
-            let victimID = targets[0]
-            let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
-            scene.rootNode.runAction(.sequence([
-                .wait(duration: max(0, beat(contact) - flight)),
-                SCNAction.run { [weak self] _ in
-                    DispatchQueue.main.async {
-                        guard let self, let victim = self.unitNodes[victimID] else { return }
-                        VFXLibrary.projectile(
-                            casterNode.element, from: casterNode.chestWorldPosition, to: victim.chestWorldPosition,
-                            in: self.scene, tint: tint, duration: flight, scale: casterNode.spec.height / 1.9
-                        )
-                    }
-                }
-            ]), forKey: "cast_projectile")
-        }
-
-        // A skill with no effect of its own lands in its caster's element,
-        // and a closing strike draws its slash across the victim.
-        let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
-        let effect = vfx == "impact_generic" ? "impact_\(casterNode.element.rawValue)" : vfx
-        let slashes = casterNode.spec.melee && targets.count == 1
-            && (animation == .attackBasic || animation == .attackHeavy)
-        // The burst is a SCENE action, not a `DispatchQueue.asyncAfter`: a
-        // hit freezes the scene for up to 150 ms and a wall-clock timer
-        // keeps counting through a freeze that the animation it is timed
-        // against does not. The key means a second cast cancels the first
-        // one's pending burst instead of letting it fire into a field that
-        // has moved on, and the position is read when it fires, so an
-        // effect can no longer bloom where a victim used to stand.
-        scene.rootNode.removeAction(forKey: "cast_impact")
-        scene.rootNode.runAction(.sequence([
-            .wait(duration: beat(contact)),
-            SCNAction.run { [weak self] _ in
-                // SceneKit runs this on its rendering thread; everything
-                // below touches the scene graph, so it hops to main first.
-                DispatchQueue.main.async {
-                    guard let self else { return }
-                    // Lightning has its own sound; everything else lands on
-                    // the hit sound `Juice` picks from the damage that
-                    // arrives on this same frame.
-                    if vfx == "thunderbolt" || vfx == "thunderclap" || vfx == "keraunos" {
-                        AudioLibrary.shared.play(.thunder, volume: vfx == "keraunos" ? 1.0 : 0.7)
-                    }
-                    let victims = targets.compactMap { self.unitNodes[$0] }
-                    // A cast on several victims is drawn ONCE over the
-                    // row (`VFXLibrary.spawnArea`): drawn on each of
-                    // them, four white sheets 2.4 m apart added up to a
-                    // slab over the whole team (run 224, 8-b).
-                    if victims.count > 1 {
-                        let scale = victims.map { Self.effectScale(for: $0) }.reduce(0, +) / Float(victims.count)
-                        VFXLibrary.spawnArea(
-                            effect, over: victims.map { $0.chestWorldPosition }, in: self.scene,
-                            tint: tint, scale: scale
-                        )
-                        // A heavy blow on the row breaks the ground once,
-                        // under its middle.
-                        if animation == .attackHeavy, casterNode.spec.melee {
-                            let feet = victims.map { $0.position }
-                            let count = Float(feet.count)
-                            let middle = SCNVector3(
-                                feet.reduce(Float(0)) { $0 + $1.x } / count, 0,
-                                feet.reduce(Float(0)) { $0 + $1.z } / count
-                            )
-                            VFXLibrary.spawn("shockwave", at: middle, in: self.scene, tint: tint, scale: scale,
-                                             reach: .row(span: 0))
-                        }
-                        return
-                    }
-                    for node in victims {
-                        let scale = Self.effectScale(for: node)
-                        VFXLibrary.spawn(
-                            effect, at: node.chestWorldPosition, in: self.scene,
-                            tint: tint, scale: scale
-                        )
-                        if slashes {
-                            VFXLibrary.spawn(
-                                "slash", at: node.chestWorldPosition, in: self.scene,
-                                tint: tint, scale: scale * (animation == .attackHeavy ? 1.3 : 1.0)
-                            )
-                        }
-                        // A heavy blow breaks the ground under its victim.
-                        if animation == .attackHeavy, casterNode.spec.melee {
-                            VFXLibrary.spawn("shockwave", at: node.position, in: self.scene, tint: tint,
-                                             scale: scale)
-                        }
-                    }
-                }
-            }
-        ]), forKey: "cast_impact")
+        // Everything the cast draws, hit by hit, each piece timed as a scene
+        // action (a freeze holds it with the clip) and each victim found as
+        // its hit lands, never where it stood when the cast began.
+        let family = casterNode.spec.assetName
+        let cast = CastFX(caster: casterNode, element: casterNode.element, clip: plan.resolved, vfx: plan.vfx,
+                          family: family, isUltimate: animation == .ultimate, isRite: plan.isRite,
+                          isArea: plan.isArea, ranged: !casterNode.spec.melee,
+                          archer: SkillFX.archers.contains(family), walkUp: plan.walkUp, hits: plan.hits,
+                          clipEnd: plan.clipEnd)
+        SkillFX.play(cast, in: scene, node: { [weak self] id in self?.unitNodes[id] },
+                     beat: { [weak self] seconds in self?.beat(seconds) ?? seconds })
     }
 
     // MARK: - The ultimate's splash (Docs/FEEL.md W2.1)
@@ -4070,6 +4174,195 @@ struct MultiHitLedger {
 
     /// How many runs are open.
     var openRuns: Int { runs.count }
+}
+
+/// A cast's own events, read off the queue ahead of it as it is presented
+/// (Docs/PLAN.md *Skills that look like themselves*, 2026-09-25): everything
+/// up to the next turn, cast, wave, end or counter — each a beat of its own
+/// — and among them the caster's hits, each with its victims, in the order
+/// the engine struck them. A random volley's victims are rolled per hit, so
+/// they are read off the damage, never off the cast's own target list.
+struct CastReading {
+    /// The events after the cast, up to (not including) the boundary.
+    var events: [BattleEvent] = []
+    /// Each hit that landed, in order: its index in the skill and its
+    /// victims (a victim a random volley struck twice is named twice).
+    var hits: [(hit: Int, victims: [UUID])] = []
+    /// How many hits the skill strikes, from its damage; 0 for a rite,
+    /// which deals none.
+    var hitCount = 0
+
+    /// Reads a cast's events off `queue`, the events still to come after
+    /// the cast itself.
+    static func ahead(in queue: [BattleEvent], caster: UUID) -> CastReading {
+        var reading = CastReading()
+        for event in queue {
+            switch event {
+            case .turnBegan, .skillCast, .waveStarted, .battleEnded, .counterattack:
+                return reading
+            case .damage(let source, let target, _, _, _, _, _, let hit, let count):
+                reading.events.append(event)
+                guard source == caster else { continue }
+                reading.hitCount = max(reading.hitCount, count)
+                if let known = reading.hits.firstIndex(where: { $0.hit == hit }) {
+                    reading.hits[known].victims.append(target)
+                } else {
+                    reading.hits.append((hit: hit, victims: [target]))
+                }
+            default:
+                reading.events.append(event)
+            }
+        }
+        return reading
+    }
+}
+
+/// When each hit of a cast lands, and how long each of the cast's events
+/// holds so every hit is presented on its own contact (Docs/PLAN.md *Skills
+/// that look like themselves*, 2026-09-25). The engine hands a three-hit
+/// skill over as three damage events after its cast, and the queue used to
+/// hold each 0.30–0.55 s whatever the body was doing; the body strikes when
+/// its clip says (`ClipTimings`), and this puts the numbers there.
+///
+/// In authored seconds from the cast's start (the leap included), before
+/// the pace and with a freeze's time left out, as the clip it is timed
+/// against stood still through it: the controller converts (`beat`) and
+/// hands back what each hold really stood for (`elapsed`).
+struct CastTimeline: Equatable {
+    /// Each hit's contact, by the hit's index in the skill.
+    let times: [TimeInterval]
+    /// The clip's follow-through after its last contact.
+    let recovery: TimeInterval
+    /// Whether the skill's last hit lands heavy: it earns `heavyDwell`.
+    var heavy: Bool = false
+
+    /// Another victim of the same hit: a line struck at once reads as one
+    /// blow travelling along it.
+    static let victimStep: TimeInterval = 0.04
+    /// What lands before the first hit (a shield's or a barrier's soak on
+    /// its first victim) is pressed against the first contact this far
+    /// apart, rather than spread through the wind-up before the blow.
+    static let leadStep: TimeInterval = 0.02
+    /// The shortest hold the timeline gives: a hold running late is made up
+    /// by the next one, down to this.
+    static let shortestStep: TimeInterval = 0.02
+    /// The dwell after a blow worth dwelling on, by what it earned: the
+    /// frame just after contact held so the shove and the shake are seen
+    /// finishing before the next number (`present`'s own, the same values).
+    static let heavyDwell: TimeInterval = 0.42
+    static let criticalDwell: TimeInterval = 0.48
+    static let lethalDwell: TimeInterval = 0.55
+
+    /// A clip's hits at `fractions` of its `contract`, after a leap of
+    /// `walkUp`: hit k at `walkUp + contract × fractions[k]`, and the clip's
+    /// follow-through after its last contact.
+    static func planned(walkUp: TimeInterval, contract: TimeInterval, fractions: [Double], heavy: Bool) -> CastTimeline {
+        let times: [TimeInterval] = fractions.map { walkUp + contract * $0 }
+        let last: Double = fractions.last ?? 0
+        let recovery: TimeInterval = max(0, contract * (1 - last))
+        return CastTimeline(times: times, recovery: recovery, heavy: heavy)
+    }
+
+    /// The contact of the hit with index `hit`, the last one for an index
+    /// past the clip's.
+    func time(ofHit hit: Int) -> TimeInterval {
+        guard !times.isEmpty else { return 0 }
+        return times[min(max(0, hit), times.count - 1)]
+    }
+
+    /// The hold after presenting event `index` of `events` (the cast's own
+    /// slice, cast first), `elapsed` authored seconds after the cast began:
+    /// so each hit's first damage event is presented on its contact,
+    /// another victim of the same hit `victimStep` later, anything the kit
+    /// puts between two hits (a per-hit status, a shield's soak, a bar
+    /// push, a defeat) sharing the gap evenly, and the last hit's last
+    /// victim keeping the dwell its blows earn — `heavyDwell`,
+    /// `criticalDwell`, `lethalDwell`, or the damage's own hold. A rite's
+    /// cast, with no hit after it, holds to its release. Nil past the last
+    /// hit's last victim, and for a slice that does not open on a cast:
+    /// those events keep their own holds.
+    func hold(after index: Int, in events: [BattleEvent], elapsed: TimeInterval) -> TimeInterval? {
+        guard index >= 0, index < events.count else { return nil }
+        let due = dues(in: events)
+        guard due[index] != nil else { return nil }
+        let lastDue = due.lastIndex { $0 != nil } ?? 0
+        if index == lastDue {
+            guard index > 0 else {
+                // A rite's cast: its release is its one contact.
+                let release: TimeInterval = times.first ?? 0
+                return max(Self.shortestStep, release - elapsed)
+            }
+            return dwell(after: index, in: events)
+        }
+        guard let next = due[index + 1] else { return nil }
+        return max(Self.shortestStep, next - elapsed)
+    }
+
+    /// When each event of the slice is due, in authored seconds from the
+    /// cast's start: the cast at 0; each damage its caster deals on a hit
+    /// this timeline times on the hit's contact, the next victims of the
+    /// same hit `victimStep` apart (never before the victim before them);
+    /// anything between two of those sharing the gap evenly; anything
+    /// between the cast and the first hit pressed against the first contact
+    /// `leadStep` apart; nil for every event after the last hit's last
+    /// victim.
+    func dues(in events: [BattleEvent]) -> [TimeInterval?] {
+        var due = [TimeInterval?](repeating: nil, count: events.count)
+        guard let opening = events.first, case .skillCast(let caster, _, _, _, _, _, _) = opening else { return due }
+        due[0] = 0
+        var anchors: [(index: Int, due: TimeInterval)] = [(index: 0, due: 0)]
+        var struck: [Int: Int] = [:]
+        for index in events.indices.dropFirst() {
+            guard case .damage(let source, _, _, _, _, _, _, let hit, _) = events[index], source == caster,
+                  hit >= 0, hit < times.count else { continue }
+            let before = struck[hit] ?? 0
+            struck[hit] = before + 1
+            let wanted: TimeInterval = times[hit] + Self.victimStep * TimeInterval(before)
+            let floor: TimeInterval = anchors[anchors.count - 1].due
+            anchors.append((index: index, due: max(wanted, floor)))
+        }
+        for (from, to) in zip(anchors, anchors.dropFirst()) {
+            due[to.index] = to.due
+            let between = to.index - from.index - 1
+            guard between > 0 else { continue }
+            for step in 1...between {
+                let at: TimeInterval
+                if from.index == 0 {
+                    let back: TimeInterval = Self.leadStep * TimeInterval(between - step + 1)
+                    at = max(from.due, to.due - back)
+                } else {
+                    let share: TimeInterval = TimeInterval(step) / TimeInterval(between + 1)
+                    at = from.due + (to.due - from.due) * share
+                }
+                due[from.index + step] = at
+            }
+        }
+        return due
+    }
+
+    /// The dwell after the last hit: the longest any of its damage earned.
+    private func dwell(after index: Int, in events: [BattleEvent]) -> TimeInterval {
+        guard case .damage(let caster, _, _, _, _, _, _, let lastHit, _) = events[index] else {
+            return events[index].presentationDuration
+        }
+        var longest: TimeInterval = 0
+        for event in events {
+            guard case .damage(let source, _, _, let critical, _, _, let remaining, let hit, _) = event,
+                  source == caster, hit == lastHit else { continue }
+            let earned: TimeInterval
+            if remaining <= 0 {
+                earned = Self.lethalDwell
+            } else if critical {
+                earned = Self.criticalDwell
+            } else if heavy {
+                earned = Self.heavyDwell
+            } else {
+                earned = event.presentationDuration
+            }
+            longest = max(longest, earned)
+        }
+        return longest
+    }
 }
 
 /// Renders damage numbers and words to a picture for the plate overlay.

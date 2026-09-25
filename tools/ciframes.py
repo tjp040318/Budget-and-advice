@@ -22,12 +22,27 @@ network policy refuses; the branch does not.
 
 The simulator captures a landscape-only app in a portrait framebuffer, so a
 frame taller than it is wide is stood up here.
+
+The last step, the skill reel (2026-09-25, Docs/PLAN.md "Skills that look
+like themselves"), is RECORDED: the job publishes skill_reel.mp4 (or, when
+no MP4 could be made, the simulator's own skill_reel.mov) beside the frames,
+and skill_reel.txt saying how it was made. This prints the video's path, size,
+length and frame size and every cast the reel made, and lays the video out as
+a contact sheet, reel_sheet.jpg beside the frames' sheet, a frame every
+--reel-every seconds (OpenCV when it is installed, else the ffmpeg that
+imageio-ffmpeg ships; --no-reel-sheet skips it).
+
+    python3 tools/ciframes.py --reel-every 1.5   # a denser reel sheet
 """
-import argparse, glob, json, os, re, subprocess, sys
+import argparse, glob, json, os, re, shutil, subprocess, sys, tempfile
 
 from PIL import Image, ImageDraw
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# The skill reel's video as the job publishes it: the MP4 first, the raw
+# recording when no MP4 could be made.
+REEL_VIDEOS = ("skill_reel.mp4", "skill_reel.mov")
 
 
 def crash_summary(path):
@@ -103,12 +118,92 @@ def frames_summary(lines, hitches=8):
     return out
 
 
+def reel_frames(path, every, limit=64):
+    """(seconds, PIL image) pairs from the skill reel's video, one every
+    `every` seconds, and the video's length in seconds. OpenCV reads it
+    front to back when it is installed (a seek lands on the keyframe before
+    the time asked for, and the reel's keyframes are two seconds apart);
+    otherwise the ffmpeg imageio-ffmpeg ships writes the frames out. Nothing,
+    and a length of 0, when neither is here."""
+    try:
+        import cv2
+    except ImportError:
+        cv2 = None
+    if cv2 is not None:
+        capture = cv2.VideoCapture(path)
+        if capture.isOpened():
+            rate = capture.get(cv2.CAP_PROP_FPS) or 30.0
+            picked, index, due = [], 0, 0.0
+            while len(picked) < limit:
+                ok, frame = capture.read()
+                if not ok:
+                    break
+                seconds = index / rate
+                if seconds + 1e-6 >= due:
+                    picked.append((seconds, Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))))
+                    due += every
+                index += 1
+            # The length from the frames read, not the container's count,
+            # which a variable-rate recording gets wrong.
+            while True:
+                ok = capture.grab()
+                if not ok:
+                    break
+                index += 1
+            capture.release()
+            return picked, index / rate
+    try:
+        import imageio_ffmpeg
+        ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return [], 0.0
+    # The length off ffmpeg's own reading of the file ("Duration: 00:01:14.53").
+    probe = subprocess.run([ffmpeg, "-hide_banner", "-i", path], capture_output=True, text=True).stderr
+    found = re.search(r"Duration: (\d+):(\d+):([\d.]+)", probe)
+    length = int(found.group(1)) * 3600 + int(found.group(2)) * 60 + float(found.group(3)) if found else 0.0
+    work = tempfile.mkdtemp(prefix="reel_")
+    try:
+        subprocess.run([ffmpeg, "-loglevel", "error", "-i", path, "-vf", f"fps=1/{every}",
+                        "-frames:v", str(limit), os.path.join(work, "f%04d.png")], check=False)
+        shots = sorted(glob.glob(os.path.join(work, "f*.png")))
+        picked = [(k * every, Image.open(f).convert("RGB")) for k, f in enumerate(shots)]
+        return picked, length or len(shots) * every
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def reel_sheet(picked, out, width=480, cols=4):
+    """The reel's frames on one sheet, each with its second on the video's
+    clock; a portrait frame (the recording as the simulator wrote it) is
+    stood up as the stills are."""
+    thumbs = []
+    for seconds, im in picked:
+        if im.height > im.width:
+            im = im.rotate(90, expand=True)
+        thumbs.append((seconds, im))
+    h = int(thumbs[0][1].height * width / thumbs[0][1].width)
+    rows = (len(thumbs) + cols - 1) // cols
+    sheet = Image.new("RGB", (cols * width, rows * (h + 18)), (10, 10, 16))
+    draw = ImageDraw.Draw(sheet)
+    for i, (seconds, im) in enumerate(thumbs):
+        x, y = (i % cols) * width, (i // cols) * (h + 18)
+        sheet.paste(im.resize((width, h)), (x, y + 18))
+        draw.text((x + 4, y + 3), f"{seconds:5.1f} s", fill=(255, 230, 120))
+    sheet.save(out, quality=82)
+    return sheet.size
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default="/tmp/ci_frames/ci_sheet.jpg")
     ap.add_argument("--width", type=int, default=640, help="width of one frame on the sheet")
     ap.add_argument("--cols", type=int, default=3)
     ap.add_argument("--log-lines", type=int, default=40, help="console lines of interest to print per step")
+    ap.add_argument("--reel-every", type=float, default=2.5,
+                    help="seconds between the skill reel's frames on its contact sheet")
+    ap.add_argument("--no-reel-sheet", action="store_true", help="skip the skill reel's contact sheet")
     a = ap.parse_args()
 
     out_dir = os.path.dirname(os.path.abspath(a.out))
@@ -200,6 +295,35 @@ def main():
             print("   " + line[:220])
         print()
 
+    # The skill reel (step 54, 2026-09-25): the video's path, size, length
+    # and frame size, what the job said making it (skill_reel.txt), and
+    # every cast the reel made — each family's name, the skill, the clip it
+    # asked for and the clip that played when the family ships no file for
+    # it — from the step's console. Its contact sheet is made below.
+    reel = next((os.path.join(frames_dir, n) for n in REEL_VIDEOS
+                 if os.path.exists(os.path.join(frames_dir, n))), None)
+    notes = os.path.join(frames_dir, "skill_reel.txt")
+    reel_console = sorted(glob.glob(os.path.join(frames_dir, "*-skill_reel-console.txt")))
+    picked, length = [], 0.0
+    if reel or os.path.exists(notes) or reel_console:
+        print("\n== SKILL REEL ==")
+        if reel:
+            megabytes = os.path.getsize(reel) / 1_048_576
+            if not a.no_reel_sheet:
+                picked, length = reel_frames(reel, max(0.2, a.reel_every))
+            shape = f", {length:.1f} s, {picked[0][1].width}x{picked[0][1].height}" if picked else ""
+            print(f"   {reel}  {megabytes:.1f} MB{shape}")
+        else:
+            print("   no video on ci/screens")
+        if os.path.exists(notes):
+            for line in open(notes, errors="replace").read().splitlines()[:30]:
+                print("   " + line[:220])
+        for log in reel_console:
+            for line in open(log, errors="replace").read().splitlines():
+                if "[Tour] reel" in line or "[TourCue] reel" in line:
+                    print("   " + line[:220])
+        print()
+
     # The job also publishes what the app printed during each step. The lines
     # that decide anything are the loader's and the frameworks' complaints;
     # the rest is there in the file for when they are not enough.
@@ -236,6 +360,17 @@ def main():
         print(f"-- {os.path.basename(crash)}")
         for l in crash_summary(crash):
             print("   " + l[:220])
+
+    # The reel's contact sheet, beside the frames' sheet: a video cannot be
+    # looked at in this session, and a still of a cast cannot show whether
+    # the body struck as many times as the numbers landed.
+    if picked:
+        reel_out = os.path.join(out_dir, "reel_sheet.jpg")
+        size = reel_sheet(picked, reel_out)
+        print(f"{len(picked)} reel frames, one every {a.reel_every:g} s -> {reel_out}  {size[0]}x{size[1]}")
+    elif reel and not a.no_reel_sheet:
+        print("no reel sheet: neither OpenCV nor an ffmpeg could read the video "
+              "(pip install opencv-python-headless, or imageio-ffmpeg)")
 
     files = sorted(f for f in glob.glob(os.path.join(frames_dir, "*")) if f.lower().endswith((".jpg", ".png")))
     if not files:

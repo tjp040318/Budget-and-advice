@@ -63,6 +63,38 @@ enum VFXLibrary {
     /// over a row fades out (`standingFlipbook`).
     static let floorFadeHeight: Float = 0.9
 
+    /// What a painted sheet is multiplied by at each reach: as designed for
+    /// one victim; half toward the caster's tint at 0.7 for one of several
+    /// (the sheets off white, so a line of them is no slab); 0.6 toward it
+    /// at `rowSheetStrength` over a whole row. `spawn` and every piece
+    /// `SkillFX` draws read the rule here, so the two cannot drift.
+    static func reachTint(_ sheetTint: UIColor, casterTint: UIColor, reach: Reach) -> UIColor {
+        switch reach {
+        case .single:
+            return sheetTint
+        case .member:
+            return sheetTint.mixed(with: casterTint, amount: 0.5).withAlphaComponent(0.7)
+        case .row:
+            return sheetTint.mixed(with: casterTint, amount: 0.6).withAlphaComponent(rowSheetStrength)
+        }
+    }
+
+    /// How wide a painted sheet is drawn at each reach: as asked for one
+    /// victim; 0.85 of it for one of several; as wide as the row asks (up to
+    /// half again) over a row; never wider than `areaSheetLimit` when more
+    /// than one victim shares the frame.
+    static func reachSide(_ size: CGFloat, reach: Reach) -> CGFloat {
+        switch reach {
+        case .single:
+            return size
+        case .member:
+            return min(areaSheetLimit, size * 0.85)
+        case .row(let span):
+            let spread = CGFloat(min(1.5, max(1, span / 4.8)))
+            return min(areaSheetLimit, size * spread)
+        }
+    }
+
     /// A cast on several victims: an element's hit, a heal or a blessing
     /// lands on each of them, quietly, with one light at the row's centre; a
     /// named skill effect is drawn once over the row and every victim gets
@@ -154,18 +186,10 @@ enum VFXLibrary {
             spread = CGFloat(min(1.5, max(1, span / 4.8)))
         }
         func paintedTint(_ sheetTint: UIColor) -> UIColor {
-            switch reach {
-            case .single:
-                return sheetTint
-            case .member:
-                return sheetTint.mixed(with: tint, amount: 0.5).withAlphaComponent(0.7)
-            case .row:
-                return sheetTint.mixed(with: tint, amount: 0.6).withAlphaComponent(rowSheetStrength)
-            }
+            reachTint(sheetTint, casterTint: tint, reach: reach)
         }
         func paintedSide(_ size: CGFloat) -> CGFloat {
-            guard crowded else { return size }
-            return min(areaSheetLimit, size * spread)
+            reachSide(size, reach: reach)
         }
         func drawSheet(_ name: String, tint sheetTint: UIColor, size: CGFloat, life: CGFloat, lift: Float = 0) {
             let side = paintedSide(size)
@@ -461,15 +485,18 @@ enum VFXLibrary {
     /// frames are stepped from the main thread on a timer, as
     /// `groundFlipbook` steps its own, and the sheet holds for half its
     /// life and fades over the rest by its opacity, as the slash does.
-    private static func standingFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
-                                         size: CGFloat, life: TimeInterval, lift: Float) {
+    /// False, with nothing drawn, when the sheet has not shipped (internal
+    /// since 2026-09-25: `SkillFX` stands its pillars and strikes with it).
+    @discardableResult
+    static func standingFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
+                                 size: CGFloat, life: TimeInterval, lift: Float) -> Bool {
         let cut = frames(of: name, rows: 4, cols: 4)
-        guard !cut.isEmpty else { return }
+        guard !cut.isEmpty else { return false }
         let centreHeight: Float = position.y + lift
         let upright: Float = cameraUpright(in: scene)
         let side = Float(size)
         guard let mask = floorFadeMask(tint: tint, side: side, centreHeight: centreHeight, upright: upright) else {
-            return
+            return false
         }
         let plane = SCNPlane(width: size, height: size)
         let material = SCNMaterial()
@@ -515,6 +542,7 @@ enum VFXLibrary {
             node.opacity = CGFloat(min(1.0, max(0.0, remaining)))
         }
         RunLoop.main.add(timer, forMode: .common)
+        return true
     }
 
     /// The standing sheets that have printed their line.
@@ -569,10 +597,19 @@ enum VFXLibrary {
 
     private static var frameCache: [String: [CGImage]] = [:]
 
-    /// The sixteen frames of a sheet as separate images, cut once and kept.
+    /// The sixteen frames of a sheet as separate images, cut once and kept
+    /// while the sheet is among the last `sheetsKept` used (`noteSheet`).
+    /// The whole sheet is read only to be cut: a sheet `sprite` did not
+    /// already hold for a particle is not kept after it, so a sheet drawn
+    /// only as planes costs its frames and no second copy (2026-09-25).
     private static func frames(of name: String, rows: Int, cols: Int) -> [CGImage] {
-        if let cached = frameCache[name] { return cached }
-        guard let image = sprite("\(name)_sheet"), let cg = image.cgImage else { return [] }
+        if let cached = frameCache[name] {
+            noteSheet(name)
+            return cached
+        }
+        let key = "\(name)_sheet"
+        let held = spriteCache[key] != nil
+        guard let image = sprite(key), let cg = image.cgImage else { return [] }
         let width = cg.width / cols, height = cg.height / rows
         var cut: [CGImage] = []
         for row in 0..<rows {
@@ -582,7 +619,9 @@ enum VFXLibrary {
                 }
             }
         }
+        if !held { spriteCache[key] = nil }
         frameCache[name] = cut
+        noteSheet(name)
         return cut
     }
 
@@ -616,11 +655,14 @@ enum VFXLibrary {
     /// there. The arena fight of 2026-09-15 died two seconds in on
     /// "Hidden nodes should have been removed from the pipeline already",
     /// six times across three render threads, with nothing else new off the
-    /// main thread. Nothing here touches the scene off it now.
-    private static func groundFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
-                                       size: CGFloat, life: TimeInterval) {
+    /// main thread. Nothing here touches the scene off it now. False, with
+    /// nothing drawn, when the sheet has not shipped (internal since
+    /// 2026-09-25: `SkillFX` lays an element's ring with it).
+    @discardableResult
+    static func groundFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
+                               size: CGFloat, life: TimeInterval) -> Bool {
         let cut = frames(of: name, rows: 4, cols: 4)
-        guard !cut.isEmpty else { return }
+        guard !cut.isEmpty else { return false }
         let plane = SCNPlane(width: size, height: size)
         let material = SCNMaterial()
         material.lightingModel = .constant
@@ -655,6 +697,7 @@ enum VFXLibrary {
             }
         }
         RunLoop.main.add(timer, forMode: .common)
+        return true
     }
 
     /// The gathering before an ultimate: motes of the element drawn up round
@@ -738,7 +781,10 @@ enum VFXLibrary {
     private static var spriteCache: [String: UIImage?] = [:]
 
     static func sprite(_ name: String) -> UIImage? {
-        if let cached = spriteCache[name] { return cached }
+        if let cached = spriteCache[name] {
+            if cached != nil, name.hasSuffix(sheetSuffix) { noteSheet(String(name.dropLast(sheetSuffix.count))) }
+            return cached
+        }
         var image = UIImage(named: "vfx_\(name)")
         if let found = image, paintedOnLightGround(found) {
             let line = "[VFX] vfx_\(name) refused: painted on a light ground (an opaque square when added)"
@@ -747,7 +793,59 @@ enum VFXLibrary {
             image = nil
         }
         spriteCache[name] = image
+        if image != nil, name.hasSuffix(sheetSuffix) { noteSheet(String(name.dropLast(sheetSuffix.count))) }
         return image
+    }
+
+    // MARK: - Keeping the sheets in bounds (2026-09-25)
+
+    /// A painted sheet's name ends in this (`vfx_<name>_sheet.png`).
+    private static let sheetSuffix = "_sheet"
+
+    /// The sheets held decoded, least recently used first. A 1,024-pixel
+    /// sheet is four megabytes decoded and its cut frames four more, and
+    /// both caches kept every sheet ever drawn for the life of the process:
+    /// harmless with the nine sheets of 2026-09-15, not with the skill
+    /// grammar's sixty-odd (Docs/PLAN.md *Skills that look like themselves*
+    /// — eight per element, the support columns, the signatures), when the
+    /// owner's crashes with no report were memory (2026-09-24). So only the
+    /// last `sheetsKept` stay, which is more than one fight draws from, and
+    /// all of them go when memory is short (`MemoryRelief`). A sheet let go
+    /// is read from the bundle again on its next use; a particle or a plane
+    /// still drawing one holds its own reference.
+    private static var sheetsInUse: [String] = []
+    private static let sheetsKept = 20
+
+    /// The purge registered with `MemoryRelief`, once, the first time a
+    /// sheet is kept.
+    private static let reliefHeard: Bool = {
+        MemoryRelief.observe { VFXLibrary.forgetSheets() }
+        return true
+    }()
+
+    /// A sheet was drawn: it is the most recent, and the one used longest
+    /// ago past the bound is let go.
+    private static func noteSheet(_ name: String) {
+        _ = reliefHeard
+        if let at = sheetsInUse.firstIndex(of: name) { sheetsInUse.remove(at: at) }
+        sheetsInUse.append(name)
+        while sheetsInUse.count > sheetsKept {
+            forget(sheetsInUse.removeFirst())
+        }
+    }
+
+    /// A sheet's decoded image and frames let go. A sheet known to be
+    /// missing or refused stays known (a nil entry costs nothing).
+    private static func forget(_ name: String) {
+        frameCache[name] = nil
+        let key = name + sheetSuffix
+        if let held = spriteCache[key], held != nil { spriteCache[key] = nil }
+    }
+
+    /// Main thread, when memory is short: every sheet let go.
+    static func forgetSheets() {
+        for name in sheetsInUse { forget(name) }
+        sheetsInUse.removeAll()
     }
 
     /// True when the image's outer border is bright and opaque — a sprite
@@ -1415,7 +1513,10 @@ enum VFXLibrary {
     /// effect may not relight the set. Brightness belongs to the additive
     /// sprite, which covers only its own pixels; a light in an effect
     /// reaches about as far as the thing it is lighting.
-    private static func flash(
+    ///
+    /// Internal since 2026-09-25: `SkillFX` lights a painted burst with it,
+    /// one light a hit, under the same rules.
+    static func flash(
         at position: SCNVector3,
         in scene: SCNScene,
         color: UIColor,
@@ -1745,8 +1846,10 @@ enum VFXLibrary {
     private static var predrawHolder: SCNNode?
 
     /// The node an effect's hosts hang from: the stage's root, or the
-    /// pre-draw's holder while one is being drawn.
-    private static func stageRoot(of scene: SCNScene) -> SCNNode {
+    /// pre-draw's holder while one is being drawn. Internal since
+    /// 2026-09-25: `SkillFX` hangs every piece of a cast from it too, so a
+    /// pre-draw's retirement takes those as well.
+    static func stageRoot(of scene: SCNScene) -> SCNNode {
         predrawHolder ?? scene.rootNode
     }
 
@@ -1821,7 +1924,47 @@ enum VFXLibrary {
             holder.addChildNode(piece)
             index += 1
         }
-        print("[VFX] pre-drawn under the stage card: \(plan.effects.count) effect(s), \(plan.projectiles.count) projectile(s)\(plan.boss ? ", a boss's dust" : "")")
+        // The skill grammar's own paintings (2026-09-25, `SkillFX`), as far
+        // as they have shipped: each fighting element's burst and slash —
+        // the slash turned as a flurry turns it — and its orb in flight,
+        // which every hit draws, and the support columns. Their pipelines
+        // are the pieces' above; this uploads the paintings while nobody is
+        // looking. The rarer sheets (a pillar, a strike, a ring, an aura, a
+        // signature) are left to their first use: the sheets kept in memory
+        // are bounded (`sheetsKept`), and this stays under the bound.
+        var elements: [Element] = []
+        for effect in plan.effects where effect.name.hasPrefix("impact_") {
+            let raw = String(effect.name.dropFirst("impact_".count))
+            if let element = Element(rawValue: raw), !elements.contains(element) { elements.append(element) }
+        }
+        var paintings = 0
+        for element in elements {
+            let tint = UIColor(hex: element.accentHex) ?? white
+            if playSheet("\(element.rawValue)_burst", at: place(index), in: scene, tint: white, casterTint: tint,
+                         size: 2, life: 2) {
+                index += 1
+                paintings += 1
+            }
+            if playSheet("\(element.rawValue)_slash", at: place(index), in: scene, tint: white, casterTint: tint,
+                         size: 2, life: 2, angle: 25) {
+                index += 1
+                paintings += 1
+            }
+            let from = place(index)
+            if orb(element, from: from, to: SCNVector3(from.x + 1, from.y, from.z), in: scene, tint: tint,
+                   duration: 2, scale: 1) {
+                index += 1
+                paintings += 1
+            }
+        }
+        for name in ["heal", "buff", "debuff", "shield"] {
+            let at = place(index)
+            if supportColumn(name, feet: SCNVector3(at.x, 0, at.z), in: scene, height: 1.9) {
+                index += 1
+                paintings += 1
+            }
+        }
+        print("[VFX] pre-drawn under the stage card: \(plan.effects.count) effect(s), \(plan.projectiles.count) projectile(s)\(plan.boss ? ", a boss's dust" : ""), \(paintings) skill painting(s)")
         return holder
     }
 
@@ -1960,4 +2103,437 @@ enum VFXLibrary {
         formatter.dateFormat = "HH:mm:ss.SSS"
         return formatter
     }()
+}
+
+// MARK: - The pieces a skill is drawn with (2026-09-25)
+//
+// `SkillFX` composes a cast from these (Docs/PLAN.md *Skills that look like
+// themselves*): a painted sheet played once at a point and turned, a sheet
+// standing on the floor (a pillar, a strike from the sky, a signature), a
+// sheet looping round a caster through a wind-up, an orb and an arrow in
+// flight, the element's circle under a spell, and the plain sparks and
+// motes. Each drawing piece answers false and draws nothing when its
+// painting has not shipped (or `sprite` refused it), so every caller keeps a
+// fallback and the build is right before a single new sheet ships. Every
+// host hangs from `stageRoot` and every one that carries a particle system
+// leaves through `retire`; the lights go through `flash`, under its rules;
+// nothing here is a custom shader.
+
+extension VFXLibrary {
+
+    /// A painted 4 × 4 sheet played once at `position`, `lift` metres above
+    /// it, turned `angle` degrees in the screen's plane: a burst, a slash, a
+    /// release. It is drawn by `reach`'s rules as `spawn` draws its own
+    /// sheets — off white at 0.7 and 0.85 of the size for one of several
+    /// victims, at `rowSheetStrength` over a row — and, like them, stands as
+    /// a plane faded into the floor when it is drawn over a row or would
+    /// reach below the floor (`standingFlipbook`; a standing sheet is not
+    /// turned). `casterTint` is what `reach` mixes the sheet's own tint
+    /// toward.
+    @discardableResult
+    static func playSheet(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
+                          casterTint: UIColor, size: CGFloat, life: CGFloat, lift: Float = 0,
+                          angle: CGFloat = 0, reach: Reach = .single) -> Bool {
+        guard sprite(name + sheetSuffix) != nil else { return false }
+        let side = reachSide(size, reach: reach)
+        let paint = reachTint(tint, casterTint: casterTint, reach: reach)
+        let lowerEdge: Float = position.y + lift - Float(side) * 0.45
+        var stands = lowerEdge < 0
+        if case .row = reach { stands = true }
+        if stands {
+            return standingFlipbook(name, at: position, in: scene, tint: paint, size: side,
+                                    life: TimeInterval(life), lift: lift)
+        }
+        guard let burst = flipbook(name, rows: 4, cols: 4, tint: paint, size: side, life: life) else { return false }
+        // Degrees, in the screen's plane: the system is screen-aligned.
+        burst.particleAngle = angle
+        let host = SCNNode()
+        host.name = "vfx_\(name)"
+        host.position = SCNVector3(position.x, position.y + lift, position.z)
+        stageRoot(of: scene).addChildNode(host)
+        host.addParticleSystem(burst)
+        retire(host, after: max(3.0, TimeInterval(life) + 1.0))
+        return true
+    }
+
+    /// Whether a sheet has shipped, without decoding it: what `sprite` or
+    /// `frames` already found, else the bundle's word (a sheet refused for
+    /// its light ground reads as shipped until its first use refuses it).
+    /// For timing a piece whose painting lands part way through its life:
+    /// it starts early only when there is a painting to land.
+    static func hasSheet(_ name: String) -> Bool {
+        if let known = spriteCache[name + sheetSuffix] { return known != nil }
+        if frameCache[name] != nil { return true }
+        return Bundle.main.url(forResource: "vfx_\(name)\(sheetSuffix)", withExtension: "png") != nil
+    }
+
+    /// A painted sheet standing ON the floor at `feet`, its lower edge on
+    /// the ground: a pillar rising out of it, a strike landing on it, a
+    /// signature over a victim. The camera looks down on the field, so a
+    /// sheet facing it leans back and its lower edge stands `upright` of
+    /// half its side below its centre (`cameraUpright`). A boss's feet are
+    /// sunk under the rim, so the height is the floor's, not the feet's.
+    @discardableResult
+    static func anchoredSheet(_ name: String, feet: SCNVector3, in scene: SCNScene, tint: UIColor,
+                              size: CGFloat, life: TimeInterval) -> Bool {
+        let upright: Float = cameraUpright(in: scene)
+        let lift: Float = Float(size) * 0.5 * upright
+        return standingFlipbook(name, at: SCNVector3(feet.x, 0, feet.z), in: scene, tint: tint,
+                                size: size, life: life, lift: lift)
+    }
+
+    /// A painted sheet LOOPING round a figure for `duration` seconds — an
+    /// ultimate's aura through its wind-up — standing on the floor at
+    /// `feet`, set `behind` metres back from the lens so the figure stands
+    /// in front of it (the aura's paintings leave their middle dark, round
+    /// an invisible figure), faded into the floor like every standing sheet
+    /// (`floorFadeMask`), in over 0.15 s and out over the last 0.3. Its
+    /// frames turn over every `cycle` seconds on a main-thread timer, as
+    /// `standingFlipbook` steps its own.
+    @discardableResult
+    static func loopingSheet(_ name: String, feet: SCNVector3, behind: Float, in scene: SCNScene, tint: UIColor,
+                             size: CGFloat, duration: TimeInterval, cycle: TimeInterval) -> Bool {
+        let cut = frames(of: name, rows: 4, cols: 4)
+        guard let first = cut.first, duration > 0.05 else { return false }
+        let upright: Float = cameraUpright(in: scene)
+        let side = Float(size)
+        let centreHeight: Float = side * 0.5 * upright
+        guard let mask = floorFadeMask(tint: tint, side: side, centreHeight: centreHeight, upright: upright) else {
+            return false
+        }
+        let node = additivePlane(first, tint: .white, width: size, height: size)
+        node.geometry?.firstMaterial?.multiply.contents = mask
+        node.name = "vfx_\(name)"
+        let front = cameraFront(in: scene)
+        let flat: Float = max(0.001, (front.x * front.x + front.z * front.z).squareRoot())
+        node.position = SCNVector3(feet.x + front.x / flat * behind, centreHeight, feet.z + front.z / flat * behind)
+        let billboard = SCNBillboardConstraint()
+        billboard.freeAxes = .all
+        node.constraints = [billboard]
+        node.opacity = 0
+        stageRoot(of: scene).addChildNode(node)
+        let count = cut.count
+        let loop: TimeInterval = max(0.1, cycle)
+        let start = CACurrentMediaTime()
+        var shown = 0
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak node] timer in
+            guard let node, node.parent != nil else { timer.invalidate(); return }
+            let elapsed = CACurrentMediaTime() - start
+            guard elapsed < duration else {
+                timer.invalidate()
+                node.removeFromParentNode()
+                return
+            }
+            let phase: Double = elapsed.truncatingRemainder(dividingBy: loop) / loop
+            let index = min(count - 1, max(0, Int(phase * Double(count))))
+            if index != shown {
+                shown = index
+                node.geometry?.firstMaterial?.diffuse.contents = cut[index]
+            }
+            let rise: Double = min(1, elapsed / 0.15)
+            let fall: Double = min(1, max(0, (duration - elapsed) / 0.3))
+            node.opacity = CGFloat(min(rise, fall))
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        return true
+    }
+
+    /// A blow's sparks on a host of their own, retired once they are out.
+    static func sparkBurst(at position: SCNVector3, in scene: SCNScene, tint: UIColor, count: Int,
+                           speed: CGFloat, scale: Float) {
+        let host = SCNNode()
+        host.name = "vfx_sparks"
+        host.position = position
+        stageRoot(of: scene).addChildNode(host)
+        host.addParticleSystem(sparks(tint: tint, count: count, speed: speed, scale: scale))
+        retire(host, after: 3.0)
+    }
+
+    /// Motes of light rising off a point — a rite's release lifting off its
+    /// caster — on a host of their own, retired once they are out.
+    static func risingMotes(at position: SCNVector3, in scene: SCNScene, tint: UIColor, count: Int, scale: Float) {
+        let host = SCNNode()
+        host.name = "vfx_rising"
+        host.position = position
+        stageRoot(of: scene).addChildNode(host)
+        host.addParticleSystem(rising(tint: tint, count: count, scale: scale))
+        retire(host, after: 3.0)
+    }
+
+    /// An element's shot in flight with its painted orb as the body
+    /// (`vfx_<element>_orb_sheet`: a fireball, a water orb, a wind blade, a
+    /// lance of light, a sphere of shadow, painted flying to the right): a
+    /// flat piece turned along its path as the screen sees it, its frames
+    /// looping, the element's trail behind it and `projectile`'s arc; gone
+    /// on arrival, the frame its hit lands on. False, and nothing flies,
+    /// until the sheet ships: the caller throws `projectile`'s sprite.
+    @discardableResult
+    static func orb(_ element: Element, from start: SCNVector3, to end: SCNVector3, in scene: SCNScene,
+                    tint: UIColor, duration: TimeInterval, scale: Float) -> Bool {
+        let cut = frames(of: "\(element.rawValue)_orb", rows: 4, cols: 4)
+        guard let first = cut.first else { return false }
+        let host = SCNNode()
+        host.name = "vfx_orb_\(element.rawValue)"
+        host.position = start
+        host.constraints = [SCNBillboardConstraint()]
+        stageRoot(of: scene).addChildNode(host)
+        let side = CGFloat(scale)
+        let body = additivePlane(first, tint: tint.mixed(with: .white, amount: 0.55), width: side, height: side)
+        host.addChildNode(body)
+        let look = flightLook(of: element)
+        addTrail(to: host, sprite: look.trail, tint: tint, scale: scale, rise: element == .ember ? 1.5 : 0)
+        flash(at: start, in: scene, color: tint, radius: 0.8 * scale, duration: 0.12)
+        fly(host, body: body, from: start, to: end, rise: look.arc * scale, duration: duration,
+            axes: screenAxes(in: scene))
+        stepFrames(of: body, host: host, cut: cut, cycle: 0.55)
+        return true
+    }
+
+    /// A support effect's painted column on a unit — `vfx_heal_sheet`,
+    /// `vfx_buff_sheet`, `vfx_debuff_sheet`, `vfx_shield_sheet`,
+    /// `vfx_revive_sheet` — standing on the floor at `feet`, a little taller
+    /// than the unit, at 0.85 of its paint (a line of them healed at once is
+    /// a line of columns, not a wash). False until the sheet ships, when the
+    /// caller draws the effect it always drew.
+    @discardableResult
+    static func supportColumn(_ name: String, feet: SCNVector3, in scene: SCNScene, height: Float) -> Bool {
+        let tall = CGFloat(max(1.9, min(height, 2.6)) * 1.3)
+        return anchoredSheet(name, feet: feet, in: scene, tint: UIColor(white: 1, alpha: 0.85), size: tall, life: 0.9)
+    }
+
+    /// An arrow in flight: a thin flat piece turned along its path as the
+    /// screen sees it — the painted `vfx_arrow` once it ships, a drawn shaft
+    /// of light until then — tinted toward the element, its trail behind it,
+    /// on a low arc (`arc` metres at the middle; none for an arrow dropping
+    /// from the sky); gone on arrival, the frame its hit lands on.
+    static func arrow(from start: SCNVector3, to end: SCNVector3, in scene: SCNScene, element: Element,
+                      tint: UIColor, duration: TimeInterval, scale: Float, arc: Float = 0.35) {
+        guard let image = arrowImage() else { return }
+        let host = SCNNode()
+        host.name = "vfx_arrow"
+        host.position = start
+        host.constraints = [SCNBillboardConstraint()]
+        stageRoot(of: scene).addChildNode(host)
+        let length = CGFloat(1.25 * scale)
+        let tall = length * CGFloat(image.height) / CGFloat(max(1, image.width))
+        let body = additivePlane(image, tint: tint.mixed(with: .white, amount: 0.55), width: length, height: tall)
+        host.addChildNode(body)
+        addTrail(to: host, sprite: flightLook(of: element).trail, tint: tint, scale: scale * 0.8, rise: 0)
+        fly(host, body: body, from: start, to: end, rise: arc * scale, duration: duration,
+            axes: screenAxes(in: scene))
+    }
+
+    /// The element's painted magic circle (`vfx_<element>_circle`) flat
+    /// under a caster for the length of a spell, turning slowly, in after
+    /// `delay` over 0.15 s and out over its last 0.35 — `castRing`'s timing,
+    /// with the element's own glyphs in place of the dais's runes. On the
+    /// caster, as the ring is, so it stays under a figure that moves; it
+    /// carries no particle system, so its removal action is safe. False
+    /// until the painting ships: the caller lays `castRing`.
+    @discardableResult
+    static func castCircle(under caster: SCNNode, element: Element, tint: UIColor, radius: CGFloat,
+                           duration: TimeInterval, after delay: TimeInterval) -> Bool {
+        guard let image = circleImage(element) else { return false }
+        let disc = additivePlane(image, tint: tint.mixed(with: .white, amount: 0.35), width: radius * 2, height: radius * 2)
+        disc.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        let spinner = SCNNode()
+        spinner.name = "cast_circle"
+        spinner.position = SCNVector3(0, 0.035, 0)
+        spinner.castsShadow = false
+        spinner.opacity = 0
+        spinner.addChildNode(disc)
+        caster.addChildNode(spinner)
+        spinner.runAction(.repeatForever(.rotateBy(x: 0, y: .pi * 2, z: 0, duration: 14)))
+        spinner.runAction(.sequence([
+            .wait(duration: max(0, delay)),
+            .fadeOpacity(to: 0.8, duration: 0.15),
+            .wait(duration: max(0.2, duration - 0.5)),
+            .fadeOut(duration: 0.35),
+            .removeFromParentNode(),
+        ]))
+        return true
+    }
+
+    // MARK: Their parts
+
+    /// How high each element's shot arcs and what trails it: `projectile`'s
+    /// own table (the fireball lobbed, the wind blade nearly straight).
+    static func flightLook(of element: Element) -> (arc: Float, trail: String) {
+        switch element {
+        case .ember: return (1.1, "ember")
+        case .tide: return (0.7, "shard")
+        case .gale: return (0.15, "leaf")
+        case .radiance: return (0.3, "flare")
+        case .umbra: return (0.6, "wisp")
+        }
+    }
+
+    /// The lens's right and up in the world, to turn a flat piece along its
+    /// path as the screen sees it; the home camera's (square behind the
+    /// team, 19° down) when the scene has no camera yet.
+    private static func screenAxes(in scene: SCNScene) -> (right: SCNVector3, up: SCNVector3) {
+        let cameras = scene.rootNode.childNodes { node, _ in node.camera != nil }
+        guard let camera = cameras.first else {
+            return (right: SCNVector3(1, 0, 0), up: SCNVector3(0, 0.946, -0.326))
+        }
+        let shown = camera.presentation
+        return (right: shown.worldRight, up: shown.worldUp)
+    }
+
+    /// Where the lens looks, in the world.
+    private static func cameraFront(in scene: SCNScene) -> SCNVector3 {
+        let cameras = scene.rootNode.childNodes { node, _ in node.camera != nil }
+        guard let camera = cameras.first else { return SCNVector3(0, -0.326, -0.946) }
+        return camera.presentation.worldFront
+    }
+
+    /// Carries a shot's host from `start` to `end` over `duration` seconds
+    /// of scene time on an arc `rise` metres high at its middle, `body`
+    /// turned every frame along the path as the screen sees it (the host
+    /// faces the lens, so the body's own turn is in the screen's plane),
+    /// and dismissed on arrival from the main thread, where `dismiss` takes
+    /// its trail off (`projectile` says why never in the action).
+    private static func fly(_ host: SCNNode, body: SCNNode, from start: SCNVector3, to end: SCNVector3,
+                            rise: Float, duration: TimeInterval, axes: (right: SCNVector3, up: SCNVector3)) {
+        let flight = SCNVector3(end.x - start.x, end.y - start.y, end.z - start.z)
+        let span: TimeInterval = max(0.05, duration)
+        let right = axes.right
+        let up = axes.up
+        let move = SCNAction.customAction(duration: span) { [weak body] node, elapsed in
+            let t = Float(min(1, elapsed / CGFloat(span)))
+            let arcHeight: Float = rise * sin(t * .pi)
+            node.position = SCNVector3(start.x + flight.x * t, start.y + flight.y * t + arcHeight, start.z + flight.z * t)
+            // The path's direction here, as the screen sees it.
+            let climb: Float = flight.y + rise * .pi * cos(t * .pi)
+            let across: Float = flight.x * right.x + climb * right.y + flight.z * right.z
+            let upward: Float = flight.x * up.x + climb * up.y + flight.z * up.z
+            body?.eulerAngles = SCNVector3(0, 0, atan2(upward, across))
+        }
+        host.runAction(.sequence([
+            move,
+            SCNAction.run { node in
+                DispatchQueue.main.async { VFXLibrary.dismiss(node, reportsLive: false) }
+            },
+        ]))
+    }
+
+    /// Steps a flat piece through `cut` on the main thread, looping every
+    /// `cycle` seconds, for as long as its host stands in the scene unhidden.
+    private static func stepFrames(of body: SCNNode, host: SCNNode, cut: [CGImage], cycle: TimeInterval) {
+        let count = cut.count
+        guard count > 1 else { return }
+        let loop: TimeInterval = max(0.05, cycle)
+        let start = CACurrentMediaTime()
+        var shown = 0
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak body, weak host] timer in
+            guard let body, let host, host.parent != nil, !host.isHidden else { timer.invalidate(); return }
+            let elapsed = CACurrentMediaTime() - start
+            let phase: Double = elapsed.truncatingRemainder(dividingBy: loop) / loop
+            let index = min(count - 1, max(0, Int(phase * Double(count))))
+            if index != shown {
+                shown = index
+                body.geometry?.firstMaterial?.diffuse.contents = cut[index]
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    /// A flat piece of light: `image` (premultiplied — `.add` adds a
+    /// pixel's colour whatever its alpha) times `tint`, adding light and
+    /// writing no alpha, read against the depth and writing none; the
+    /// ground ring's material exactly, so it compiles nothing new.
+    private static func additivePlane(_ image: CGImage, tint: UIColor, width: CGFloat, height: CGFloat) -> SCNNode {
+        let plane = SCNPlane(width: width, height: height)
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = image
+        material.multiply.contents = tint
+        material.blendMode = .add
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        material.isDoubleSided = true
+        plane.firstMaterial = material
+        let node = SCNNode(geometry: plane)
+        node.castsShadow = false
+        return node
+    }
+
+    /// A shot's trail: the element's sprite, a looping puff behind it, as
+    /// `projectile` draws its own (`dismiss` takes it off on arrival).
+    private static func addTrail(to host: SCNNode, sprite name: String, tint: UIColor, scale: Float, rise: Float) {
+        guard let image = sprite(name) else { return }
+        let system = puff(image, tint: tint, count: 1, speed: 0.6, size: 0.16 * CGFloat(scale), life: 0.35,
+                          spread: 180, lift: rise, spin: 3)
+        system.loops = true
+        system.emissionDuration = 1
+        system.birthRate = 70
+        host.addParticleSystem(system)
+    }
+
+    /// The arrow's picture: the painted one premultiplied, or the drawn one.
+    private static var arrowPicture: CGImage?
+
+    private static func arrowImage() -> CGImage? {
+        if let made = arrowPicture { return made }
+        let painted: CGImage? = sprite("arrow")?.cgImage.flatMap { premultiplied($0) }
+        let made = painted ?? drawnArrow()
+        arrowPicture = made
+        return made
+    }
+
+    /// A shaft of light with a head and a fletching, pointing right, in
+    /// white for the tint to colour: the arrow until `vfx_arrow` ships.
+    /// Premultiplied, as a renderer's picture is.
+    private static func drawnArrow() -> CGImage? {
+        let size = CGSize(width: 256, height: 32)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = false
+        let picture = UIGraphicsImageRenderer(size: size, format: format).image { context in
+            let cg = context.cgContext
+            let middle: CGFloat = size.height / 2
+            // The shaft, brightening from the fletching to the head.
+            let colours = [UIColor(white: 1, alpha: 0.15).cgColor, UIColor(white: 1, alpha: 0.9).cgColor] as CFArray
+            let stops: [CGFloat] = [0, 1]
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colours, locations: stops) {
+                cg.saveGState()
+                cg.clip(to: CGRect(x: 16, y: middle - 1.5, width: 204, height: 3))
+                cg.drawLinearGradient(gradient, start: CGPoint(x: 16, y: middle), end: CGPoint(x: 220, y: middle), options: [])
+                cg.restoreGState()
+            }
+            // The head.
+            let head = UIBezierPath()
+            head.move(to: CGPoint(x: 254, y: middle))
+            head.addLine(to: CGPoint(x: 212, y: middle - 9))
+            head.addLine(to: CGPoint(x: 222, y: middle))
+            head.addLine(to: CGPoint(x: 212, y: middle + 9))
+            head.close()
+            UIColor.white.setFill()
+            head.fill()
+            // The fletching.
+            for side in [CGFloat(-1), CGFloat(1)] {
+                let vane = UIBezierPath()
+                vane.move(to: CGPoint(x: 18, y: middle))
+                vane.addLine(to: CGPoint(x: 2, y: middle + side * 10))
+                vane.addLine(to: CGPoint(x: 42, y: middle + side * 2))
+                vane.close()
+                UIColor(white: 1, alpha: 0.55).setFill()
+                vane.fill()
+            }
+        }
+        return picture.cgImage
+    }
+
+    /// Each element's painted circle, premultiplied once.
+    private static var circlePictures: [Element: CGImage] = [:]
+
+    private static func circleImage(_ element: Element) -> CGImage? {
+        if let made = circlePictures[element] { return made }
+        guard let painted = sprite("\(element.rawValue)_circle")?.cgImage, let flat = premultiplied(painted) else {
+            return nil
+        }
+        circlePictures[element] = flat
+        return flat
+    }
 }
