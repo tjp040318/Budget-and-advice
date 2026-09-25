@@ -113,7 +113,7 @@
   "tool": "tools/motion_palette.py breaks"
  },
  "skill_x2": {
-  "preset": "Art/Motions/aimed/style_polearm_x2.motion.npz",
+  "preset": "Art/Motions/style_polearm_x2.motion.npz",
   "frames": 72,
   "seconds": 2.4,
   "rate": 1.0

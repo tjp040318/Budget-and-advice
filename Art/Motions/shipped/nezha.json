@@ -86,7 +86,7 @@
   "tool": "tools/motion_palette.py breaks"
  },
  "skill_x2": {
-  "preset": "Art/Motions/aimed/style_polearm_x2.motion.npz",
+  "preset": "Art/Motions/style_polearm_x2.motion.npz",
   "frames": 72,
   "seconds": 2.4,
   "rate": 1.0,
@@ -97,14 +97,14 @@
   }
  },
  "skill_x3": {
-  "preset": "Art/Motions/aimed/style_polearm_x3.motion.npz",
-  "frames": 91,
-  "seconds": 3.03,
-  "rate": 1.08,
+  "preset": "Art/Motions/style_polearm_x3.motion.npz",
+  "frames": 77,
+  "seconds": 2.57,
+  "rate": 0.92,
   "mirrored": {
    "mode": "delta, on the donor",
    "weapon_hand": "L",
-   "round_trip": 6.9e-08
+   "round_trip": 7.6e-08
   }
  }
 }

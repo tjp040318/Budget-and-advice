@@ -166,7 +166,7 @@
   "recover": 16
  },
  "style_polearm_x2": {
-  "note": "a level two-handed thrust, then a high stab driven down (two single sentences bought for the chain)",
+  "note": "a level two-handed thrust, then a high stab driven down (two single sentences bought for the chain). Audited 2026-09-25: the thrust's rear hand made the hands read as a spread, so the ship aimed by the stab alone; unturned by both strikes (+1)",
   "segments": [
    {
     "src": "Art/Motions/style_polearm_thrust.motion.npz",
@@ -182,10 +182,11 @@
    }
   ],
   "blend": 6,
-  "recover": 12
+  "recover": 12,
+  "aim_heading": 1
  },
  "style_polearm_x3": {
-  "note": "thrust, stab, then the wide sweep of style_polearm_area",
+  "note": "thrust, stab, then the wide sweep of style_polearm_area. Audited 2026-09-25: the ship had turned it 85 deg on the sweep's heading and shown its back through the thrust; unturned by its own strikes (-0.5), the sweep's blow moved to where it crosses the line (f21 -> f16) and cut before it wraps behind (to f28, a 14-frame recovery)",
   "segments": [
    {
     "src": "Art/Motions/style_polearm_thrust.motion.npz",
@@ -204,13 +205,14 @@
    {
     "src": "Art/Motions/style_polearm_area.motion.npz",
     "from": 6,
-    "to": 46,
-    "blow": 21,
+    "to": 28,
+    "blow": 16,
     "speed": 1.1
    }
   ],
   "blend": 6,
-  "recover": 12
+  "recover": 14,
+  "aim_heading": -0.5
  },
  "style_polearm_x4": {
   "note": "two quick thrusts, the stab, the sweep",
@@ -384,7 +386,7 @@
   "recover": 12
  },
  "style_unarmed_x2": {
-  "note": "Punch Combo (198): its two punches",
+  "note": "Punch Combo (198): its two punches. Audited 2026-09-25: each punch's own hand (-28.4); the ship had averaged the guard hand in",
   "segments": [
    {
     "src": "Art/Motions/preset_198.motion.npz",
@@ -400,10 +402,11 @@
    }
   ],
   "blend": 4,
-  "recover": 12
+  "recover": 12,
+  "aim_heading": -28.4
  },
  "style_unarmed_x3": {
-  "note": "Punch Combo's two punches (198), then a Right Uppercut from Guard (194)",
+  "note": "Punch Combo's two punches (198), then a Right Uppercut from Guard (194). Audited 2026-09-25: each punch's own hand (-31.4); the ship had averaged the guard hand in",
   "segments": [
    {
     "src": "Art/Motions/preset_198.motion.npz",
@@ -427,10 +430,11 @@
    }
   ],
   "blend": 6,
-  "recover": 12
+  "recover": 12,
+  "aim_heading": -31.4
  },
  "style_unarmed_x4": {
-  "note": "two punches (198), the uppercut (194), then a Spartan Kick (206)",
+  "note": "two punches (198), the uppercut (194), then a Spartan Kick (206). Audited 2026-09-25: each punch's own hand (-37.0); the ship had averaged the guard hand in, and the turn eases off (56-70) before the kick, which lands as made",
   "segments": [
    {
     "src": "Art/Motions/preset_198.motion.npz",
@@ -461,7 +465,12 @@
    }
   ],
   "blend": 6,
-  "recover": 12
+  "recover": 12,
+  "aim_heading": -37.0,
+  "aim_release": [
+   56,
+   70
+  ]
  },
  "style_archer_x2": {
   "note": "an arrow from the quiver, drawn and loosed, then a second nocked and loosed at once (one sentence bought for the chain; the bow in the LEFT hand)",

@@ -10780,7 +10780,18 @@ feet and the chest at every strike):
 
 | clip | the ship read | the blow | done |
 |---|---|---|---|
-AUDIT_ROWS
+| Perseus's ultimate | +112° (the hanging left hand) | +3°: the fling passes the front and ends straight overhead | unturned (pinned) |
+| Thor's basic | +91° (the pulled-back left fist) | +23°: the hook's own fist | pinned +23° |
+| Fenrir's ultimate | +45° (one claw of two closing in) | +5°: a symmetric two-claw rake | unturned (pinned) |
+| Hephaestus's ultimate | +56° (both hands) | +54°: the two-handed slam | the ship was right |
+| Nezha's basic (cut) | +48° | +48°: the baton chop | the ship was right |
+| Taweret's basic (cut) | +66° (both hands) | +66°: the staff chop | the ship was right |
+FREYA_ROWS
+| polearm ×3 | +85° (the stab and the sweep's wrap; the thrust read as a spread) | −0.5° by the thrust and the stab | unturned; the sweep's blow moved to where it crosses the line (f56 → f51) and cut before it wraps behind |
+| polearm ×2 | +35° (the stab alone) | +1° by both strikes | unturned |
+| unarmed ×2 | −42° (the guard hand averaged in) | −28°: the hook's hand, the uppercut's | pinned −28° |
+| unarmed ×3 | −41° | −31° | pinned −31° |
+| unarmed ×4 | −44° | −37° by the three punches | pinned −37°, eased off (f56–70) before the kick, which lands as made |
 
 **The composed moves.** The 30 shared second-skill moves (blade, heavy,
 polearm, unarmed ×2–×4, caster ×2–×5, archer ×2/×3/×5, the areas and the
@@ -10865,6 +10876,13 @@ remake is still the fix (*The robe ring's verdict*).
 - Sounds can sum past full scale when a cast's pieces land together (1.61 at
   worst, lane C's mix check): a limiter, which means `AVAudioEngine`, is the
   fix.
+- The polearm ×2 and ×3 open on a two-handed thrust led by the LEFT hand, so
+  a family that holds its spear in the right (the valkyrie; Nezha, mirrored)
+  holds it in the rear hand and the spear points about 67° to the side
+  through the first strike. A thrust sentence led by the right hand is the
+  fix: 13 credits, and a re-rigged donor after the 26th.
+- A cut that opens side-on (Taweret's basic) stays side-on for its first
+  frames: `aim_blows` ramps its turn in, with no way to start turned.
 
 **The bill.** 3,743 of the 3,754 credits, 11 left:
 

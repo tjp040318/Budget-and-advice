@@ -933,7 +933,18 @@ jobs:
                   writer.startSession(atSourceTime: CMSampleBufferGetPresentationTimeStamp(sample))
                   started = true
               }
-              while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.005) }
+              // A writer that has failed never becomes ready again, and an
+              // encoder error can surface after an append that returned
+              // true: give up on either rather than spin out the job's time.
+              var idle = 0
+              while !input.isReadyForMoreMediaData {
+                  if writer.status == .failed || writer.status == .cancelled {
+                      fail("writing: \(String(describing: writer.error))")
+                  }
+                  idle += 1
+                  if idle > 6000 { fail("the writer was not ready for 30 s at frame \(written)") }
+                  Thread.sleep(forTimeInterval: 0.005)
+              }
               if !input.append(sample) { fail("frame \(written): \(String(describing: writer.error))") }
               written += 1
           }
@@ -942,7 +953,7 @@ jobs:
           input.markAsFinished()
           let finished = DispatchSemaphore(value: 0)
           writer.finishWriting { finished.signal() }
-          finished.wait()
+          if finished.wait(timeout: .now() + 120) == .timedOut { fail("finishing took over two minutes") }
           if writer.status != .completed { fail("finishing: \(String(describing: writer.error))") }
           let seconds = String(format: "%.1f", asset.duration.seconds)
           print("reel_convert: \(written) frames at \(outWidth) x \(outHeight),"

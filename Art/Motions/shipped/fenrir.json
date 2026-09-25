@@ -17,7 +17,7 @@
   "rate": 1.31
  },
  "ultimate": {
-  "preset": "Art/Motions/aimed/fenrir_ultimate.motion.npz",
+  "preset": "Art/Motions/fenrir_ultimate.motion.npz",
   "frames": 90,
   "seconds": 3.0,
   "rate": 0.88
