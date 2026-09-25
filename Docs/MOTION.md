@@ -295,7 +295,7 @@ if so). The half-guard stance (below) should read as a different pose from
    the base and the awakened rig, with its blow read on the board and cut
    into `PRESET_CUTS`-style windows.
 
-## 9. The assignment (as shipped, 2026-09-24)
+## 9. The assignment (as shipped, 2026-09-25)
 
 `python3 tools/motion_palette.py plan --markdown` prints this table: the deal
 (the 5-stars first, the pools, `JUMPERS`, `OVERRIDES`), then the board
@@ -309,23 +309,32 @@ the deal left in the guard) made over the guard the deal gave it — raw, stood
 stance is refused; `natural` is the family's natural idle worn as its stance
 (§11: the 35 sovereigns, graces and mystics the deal stood up). An
 unmirrored clip on a left-handed family (`242`, `102` on Loki, Surtr,
-Achilles and the Dark Elf) is a judgment of §10, not an omission. No two
-families share their five clips; the robed casters, the archers and four
-left-handed blades share attack triples (§10, what is left).
+Achilles and the Dark Elf) is a judgment of §10, not an omission. The
+victory column is §11's phase 3 since 2026-09-25 (41 families took 403, 255
+or 41; `mirrored: victory` is the free hand leading). The robed casters,
+the archers and four left-handed blades share attack triples (§10, what is
+left), and until the bow no two families shared all five; now three pairs
+of robed casters do — Chang'e and Ptah, Hathor and the Siren, Hel and the
+Vestal (`plan` prints "identical five-clip sets: 3"). Each bow is laid over
+its own family's idle, so the two start and end apart, but it is the same
+gesture. Kept on purpose: the bow tears 0–16 edges past 3x on the six where
+their old victories tore 74–763; one of each pair given back its old
+victory (298 or 412) is the owner's call, or a fourth robed victory when
+one is bought.
 
 | family | grade | kind | hand | basic | heavy | ultimate | stance | victory | mirrored |
 |---|---|---|---|---|---|---|---|---|---|
-| ares | 5★ | blade | R | own:ares | own:ares | own:ares | ready (89) | 412 |  |
-| ares_awakened | 5★ | blade | R | own:ares | own:ares | own:ares | ready (89) | 412 |  |
+| ares | 5★ | blade | R | own:ares | own:ares | own:ares | ready (89) | 403 |  |
+| ares_awakened | 5★ | blade | R | own:ares | own:ares | own:ares | ready (89) | 403 |  |
 | horus | 5★ | blade | - | 219 | 242 | 102 | ready (half) | 412 |  |
 | horus_awakened | 5★ | blade | R | 219 | 242 | 102 | ready (half) | 412 |  |
 | loki | 5★ | blade | L | 220 | 242 | 102 | ready (89) | 88 | basic |
-| mars | 5★ | blade | R | 220 | 238 | 91 | ready (89) | 412 |  |
+| mars | 5★ | blade | R | 220 | 238 | 91 | ready (89) | 403 | victory |
 | mars_awakened | 5★ | blade | R | 220 | 238 | 91 | ready (89) | 412 |  |
-| sekhmet | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | ready (half) | 298 |  |
-| sekhmet_awakened | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | ready (half) | 298 |  |
+| sekhmet | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | ready (half) | 403 |  |
+| sekhmet_awakened | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | ready (half) | 403 |  |
 | surtr | 5★ | blade | L | 220 | 242 | 102 | ready (stand) | 88 | basic |
-| baldr | 5★ | caster | R | 129 | 130 | 126 | natural | 412 |  |
+| baldr | 5★ | caster | R | 129 | 130 | 126 | natural | 41 |  |
 | boss_unwrapped_king | 5★ | caster | R | 136 | 125 | 130 | ready (half) | 298 |  |
 | hades | 5★ | caster | R | 133 | 136 | 125 | natural | 412 |  |
 | hades_awakened | 5★ | caster | R | 133 | 136 | 125 | natural | 412 |  |
@@ -337,15 +346,15 @@ left-handed blades share attack triples (§10, what is left).
 | zeus | 5★ | caster | R | own:zeus | own:zeus | own:zeus | natural | 412 |  |
 | zeus_awakened | 5★ | caster | R | own:zeus | own:zeus | own:zeus | natural | 412 |  |
 | boss_colossus | 5★ | heavy | - | 128 | 237 | 127 | 85 | 88 |  |
-| thor | 5★ | heavy | R | 219 | 128 | 238 | ready (89) | 412 |  |
-| thor_awakened | 5★ | heavy | R | 219 | 128 | 238 | ready (89) | 412 |  |
+| thor | 5★ | heavy | R | 219 | 128 | 238 | ready (89) | 255 |  |
+| thor_awakened | 5★ | heavy | R | 219 | 128 | 238 | ready (89) | 255 |  |
 | athena | 5★ | polearm | R | 219 | 242 | 105 | natural | 412 |  |
 | athena_awakened | 5★ | polearm | R | 219 | 242 | 105 | natural | 412 |  |
 | poseidon | 5★ | polearm | R | 97 | 242 | 102 | ready (half) | 298 |  |
 | poseidon_awakened | 5★ | polearm | R | 97 | 242 | 102 | ready (half) | 298 |  |
 | sun_wukong | 5★ | polearm | - | 220 | 238 | 86 | ready (stand) | 412 |  |
-| freya | 5★ | robed | R | 136 | 133 | 126 | natural | 412 |  |
-| freya_awakened | 5★ | robed | R | 136 | 133 | 126 | natural | 412 |  |
+| freya | 5★ | robed | R | 136 | 133 | 126 | natural | 41 |  |
+| freya_awakened | 5★ | robed | R | 136 | 133 | 126 | natural | 41 |  |
 | frigg | 5★ | robed | R | 129 | 136 | 126 | natural | 298 |  |
 | hera | 5★ | robed | R | 133 | 125 | 126 | natural | 412 |  |
 | hera_awakened | 5★ | robed | R | 133 | 125 | 126 | natural | 412 |  |
@@ -353,49 +362,49 @@ left-handed blades share attack triples (§10, what is left).
 | isis_awakened | 5★ | robed | R | 136 | 133 | 126 | natural | 298 |  |
 | osiris | 5★ | robed | R | 129 | 136 | 126 | natural | 412 |  |
 | osiris_awakened | 5★ | robed | R | 129 | 136 | 126 | natural | 412 |  |
-| thoth | 5★ | robed | R | own:thoth | own:thoth | own:thoth | natural | 298 |  |
-| thoth_awakened | 5★ | robed | R | own:thoth | own:thoth | own:thoth | natural | 298 |  |
+| thoth | 5★ | robed | R | own:thoth | own:thoth | own:thoth | natural | 41 |  |
+| thoth_awakened | 5★ | robed | R | own:thoth | own:thoth | own:thoth | natural | 41 |  |
 | artemis | 4★ | archer | L | 224 | 224 | 222 | ready (89) | 298 |  |
 | diana | 4★ | archer | - | 224 | 224 | 222 | ready (stand) | 412 |  |
 | skadi | 4★ | archer | R | 224 | 224 | 222 | 226 | 412 | basic, heavy, ult, stance |
-| ullr | 4★ | archer | L | 224 | 224 | 222 | ready (half) | 412 |  |
-| achilles | 4★ | blade | L | 219 | 242 | 102 | ready (89) | 412 | basic |
-| anhur | 4★ | blade | R | 97 | 242 | 91 | ready (half) | 298 |  |
+| ullr | 4★ | archer | L | 224 | 224 | 222 | ready (half) | 403 | victory |
+| achilles | 4★ | blade | L | 219 | 242 | 102 | ready (89) | 403 | basic, victory |
+| anhur | 4★ | blade | R | 97 | 242 | 91 | ready (half) | 403 |  |
 | anubis | 4★ | blade | R | own:anubis | own:anubis | own:anubis | natural | 88 |  |
 | heimdall | 4★ | blade | R | 206 | 238 | 105 | ready (89) | 412 |  |
 | mercury | 4★ | blade | L | 220 | 105 | 86 | ready (half) | 298 | basic, heavy, ult |
 | nike | 4★ | blade | R | 97 | 238 | 102 | ready (stand) | 88 |  |
 | njord | 4★ | blade | L | 220 | 242 | 105 | ready (89) | 412 | basic, heavy, ult |
-| perseus | 4★ | blade | R | 219 | 105 | 91 | ready (half) | 298 |  |
+| perseus | 4★ | blade | R | 219 | 105 | 91 | ready (half) | 403 |  |
 | set | 4★ | blade | R | 206 | 221 | 91 | ready (stand) | 88 |  |
-| sif | 4★ | blade | R | 220 | 221 | 102 | ready (89) | 412 |  |
-| apollo | 4★ | caster | R | 129 | 136 | 130 | ready (half) | 298 |  |
+| sif | 4★ | blade | R | 220 | 221 | 102 | ready (89) | 403 |  |
+| apollo | 4★ | caster | R | 129 | 136 | 130 | ready (half) | 41 |  |
 | bragi | 4★ | caster | R | 136 | 130 | 126 | natural | 88 |  |
 | demeter | 4★ | caster | R | 133 | 125 | 130 | ready (half) | 412 |  |
 | dionysus | 4★ | caster | R | 129 | 130 | 125 | ready (stand) | 412 |  |
 | hermes | 4★ | caster | R | 136 | 133 | 130 | ready (half) | 298 |  |
 | bellona | 4★ | heavy | L | 219 | 221 | 102 | ready (half) | 88 | heavy, ult |
 | guan_yu | 4★ | heavy | R | 128 | 242 | 238 | 85 | 88 |  |
-| hephaestus | 4★ | heavy | R | 97 | 128 | 127 | 85 | 412 |  |
+| hephaestus | 4★ | heavy | R | 97 | 128 | 127 | 85 | 255 |  |
 | heracles | 4★ | heavy | R | 219 | 237 | 102 | ready (89) | 298 |  |
-| khnum | 4★ | heavy | R | 219 | 242 | 127 | ready (half) | 88 |  |
+| khnum | 4★ | heavy | R | 219 | 242 | 127 | ready (half) | 255 |  |
 | neptune | 4★ | polearm | R | 219 | 242 | 91 | ready (89) | 412 |  |
 | nezha | 4★ | polearm | L | 97 | 221 | 91 | ready (half) | 298 | basic, heavy |
 | sobek | 4★ | polearm | R | 219 | 238 | 102 | ready (stand) | 88 |  |
-| taweret | 4★ | polearm | R | 220 | 242 | 105 | ready (89) | 88 |  |
-| vidar | 4★ | polearm | R | 97 | 238 | 105 | ready (half) | 412 |  |
-| aphrodite | 4★ | robed | R | 133 | 136 | 126 | natural | 298 |  |
-| chang_e | 4★ | robed | R | 136 | 125 | 126 | natural | 412 |  |
-| hathor | 4★ | robed | R | 129 | 133 | 126 | natural | 88 |  |
-| hel | 4★ | robed | - | 129 | 125 | 126 | natural | 298 |  |
+| taweret | 4★ | polearm | R | 220 | 242 | 105 | ready (89) | 255 |  |
+| vidar | 4★ | polearm | R | 97 | 238 | 105 | ready (half) | 403 | victory |
+| aphrodite | 4★ | robed | R | 133 | 136 | 126 | natural | 41 |  |
+| chang_e | 4★ | robed | R | 136 | 125 | 126 | natural | 41 |  |
+| hathor | 4★ | robed | R | 129 | 133 | 126 | natural | 41 |  |
+| hel | 4★ | robed | - | 129 | 125 | 126 | natural | 41 |  |
 | idunn | 4★ | robed | - | 129 | 136 | 126 | ready (half) | 412 |  |
 | maat | 4★ | robed | R | 129 | 133 | 126 | natural | 298 |  |
-| nephthys | 4★ | robed | - | 136 | 133 | 125 | natural | 412 |  |
-| nuwa | 4★ | robed | R | 133 | 125 | 126 | natural | 298 |  |
+| nephthys | 4★ | robed | - | 136 | 133 | 125 | natural | 41 |  |
+| nuwa | 4★ | robed | R | 133 | 125 | 126 | natural | 41 |  |
 | pluto | 4★ | robed | R | 129 | 136 | 126 | natural | 88 |  |
-| ptah | 4★ | robed | R | 136 | 125 | 126 | natural | 298 |  |
-| bastet | 4★ | unarmed | - | 97 | 238 | 86 | ready (89) | 298 |  |
-| fenrir | 4★ | unarmed | - | 206 | 221 | 91 | ready (half) | 88 |  |
+| ptah | 4★ | robed | R | 136 | 125 | 126 | natural | 41 |  |
+| bastet | 4★ | unarmed | - | 97 | 238 | 86 | ready (89) | 41 |  |
+| fenrir | 4★ | unarmed | - | 206 | 221 | 91 | ready (half) | 255 |  |
 | serqet | 4★ | unarmed | - | 219 | 242 | 105 | ready (89) | 412 |  |
 | tyr | 4★ | unarmed | R | 97 | 221 | 105 | ready (half) | 298 |  |
 | atalanta | 3★ | archer | L | 224 | 224 | 222 | ready (89) | 412 |  |
@@ -405,27 +414,27 @@ left-handed blades share attack triples (§10, what is left).
 | dark_elf | 3★ | blade | L | 220 | 242 | 102 | ready (89) | 412 | basic |
 | harpy | 3★ | blade | L | 220 | 242 | 102 | ready (half) | 88 | basic, heavy |
 | hoplite | 3★ | blade | - | 219 | 221 | 102 | ready (stand) | 88 |  |
-| jackal_warrior | 3★ | blade | R | 97 | 105 | 102 | ready (89) | 412 |  |
-| shield_maiden | 3★ | blade | R | 220 | 238 | 86 | ready (half) | 298 |  |
-| light_elf | 3★ | caster | R | 133 | 136 | 126 | ready (half) | 412 |  |
+| jackal_warrior | 3★ | blade | R | 97 | 105 | 102 | ready (89) | 255 |  |
+| shield_maiden | 3★ | blade | R | 220 | 238 | 86 | ready (half) | 403 |  |
+| light_elf | 3★ | caster | R | 133 | 136 | 126 | ready (half) | 41 |  |
 | medusa | 3★ | caster | - | 136 | 130 | 126 | natural | 412 |  |
-| nymph | 3★ | caster | R | 129 | 125 | 130 | natural | 412 |  |
+| nymph | 3★ | caster | R | 129 | 125 | 130 | natural | 41 |  |
 | satyr | 3★ | caster | R | 133 | 130 | 125 | ready (half) | 298 |  |
-| siren | 3★ | caster | R | 129 | 133 | 126 | natural | 412 |  |
-| amazon | 3★ | heavy | L | 97 | 237 | 238 | ready (89) | 412 | basic, heavy, ult |
-| berserker | 3★ | heavy | - | 128 | 221 | 102 | ready (half) | 298 |  |
+| siren | 3★ | caster | R | 129 | 133 | 126 | natural | 41 |  |
+| amazon | 3★ | heavy | L | 97 | 237 | 238 | ready (89) | 403 | basic, heavy, ult, victory |
+| berserker | 3★ | heavy | - | 128 | 221 | 102 | ready (half) | 255 |  |
 | cyclops | 3★ | heavy | R | 128 | 242 | 127 | 85 | 88 |  |
 | draugr | 3★ | heavy | R | 219 | 128 | 102 | ready (89) | 412 |  |
 | dwarf_smith | 3★ | heavy | R | 97 | 221 | 238 | ready (half) | 88 |  |
 | einherjar | 3★ | heavy | R | 128 | 237 | 238 | 85 | 88 |  |
 | frost_troll | 3★ | heavy | - | 219 | 128 | 127 | ready (89) | 412 |  |
-| minotaur | 3★ | heavy | R | 128 | 242 | 102 | ready (half) | 298 |  |
+| minotaur | 3★ | heavy | R | 128 | 242 | 102 | ready (half) | 255 |  |
 | scarab_knight | 3★ | heavy | R | 97 | 221 | 127 | 85 | 88 |  |
 | terracotta_soldier | 3★ | polearm | R | 220 | 221 | 102 | ready (stand) | 298 |  |
-| valkyrie | 3★ | polearm | R | 219 | 221 | 86 | ready (89) | 298 |  |
+| valkyrie | 3★ | polearm | R | 219 | 221 | 86 | ready (89) | 403 |  |
 | cobra_priestess | 3★ | robed | R | 129 | 133 | 126 | ready (half) | 88 |  |
 | fox_spirit | 3★ | robed | R | 129 | 136 | 126 | ready (half) | 298 |  |
-| vestal | 3★ | robed | R | 129 | 125 | 126 | natural | 412 |  |
+| vestal | 3★ | robed | R | 129 | 125 | 126 | natural | 41 |  |
 | gladiator | 3★ | unarmed | R | 206 | 242 | 86 | ready (89) | 88 |  |
 | jiangshi | 3★ | unarmed | - | 219 | 238 | 102 | ready (half) | 412 |  |
 | mummy | 3★ | unarmed | - | 97 | 242 | 91 | ready (89) | 412 |  |
@@ -1049,6 +1058,103 @@ at half (`3-training-pose-blend`, `21-collection_stage-pose-blend`) and
 `21-collection_stage-fidget`); every change prints a `[Pose]` line naming the
 players and their blends. Nothing of it has been compiled or run yet.
 
+### Phase 3: the victories (`<family>_victory.usdz`, 2026-09-25)
+
+Three of the four victories bought on the 24th are dealt by the stages'
+archetype (`VICTORY_DEAL`): the champions', soldiers' and hunters' **403
+Victory Fist Pump**, the brutes' and beasts' **255 Angry Ground Stomp**,
+the mystics' and graces' **41 Formal Bow**. **306 Cheer with One Hand Up**
+was cut for the sovereigns and is NOT dealt: on the boards the arm folds
+over the head through the hop and the landing swings the chest 30°, which
+reads as flailing, and the robed sovereigns tear in it; they keep 298, 412
+and 88. The trickster and the construct keep their own taunt and cheer.
+
+Each is made by `motion_palette.py victories` into a scratch bundle (it
+refuses the app's) and judged there on `victory-board` (the old victory
+beside the new at four instants), then copied in:
+- cut to its window (`PRESET_CUTS`: 403 f0–46, 255 f0–42, 41 f0–108), the
+  donor's joints matched by role (`roles`), the hips' travel KEPT (`root`:
+  these are motion capture of a body shifting over planted feet, where the
+  root lock would slide the feet), every contact planted where it stands
+  (`plant`, `plant_contacts`);
+- laid over the family's natural idle (`rebase_on_idle`) so it starts and
+  ends where the stages' idle stands: the body by a WORLD turn (the delta
+  N = B·W0ᵀ·Wi over the idle's mean pose, each joint's local read back as
+  N[j]·N[p]ᵀ), and a gesture's arms — clavicle, upper arm, forearm and the
+  hand's subtree — as the donor's own retargeted arms, eased in over the
+  first 6 keys and out over the last 10 (`VICTORY_ARM_EASE`); the bow keeps
+  the delta arms (`arms="delta"`). The first run turned each joint in its
+  OWN frame, and every fist pump came out with the arms held out sideways
+  and the head bowed;
+- held to `victory_guard`, strictly: no more edges past 3x on the shipped
+  base than the victory it replaces, no planted foot sliding over 1 mm,
+  no sole deeper than the idle's floor limit or the old clip's, and no more
+  arm through the body than the old clip. Where laid over the idle fails,
+  the preset as retargeted with the root's travel is tried (`+abs`), and a
+  lateral preset (403) also with the free hand leading (`~m`, `~nm`);
+  a family nothing passes keeps its victory (`VICTORY_KEPT`, the reason
+  written beside it).
+
+**41 shipped:** 14 fist pumps (among them Sekhmet and Ares, and Mars and
+Vidar with the free hand leading; Hephaestus, Sekhmet, Sif and Mars as
+`+abs`), 9 stomps, 18 bows. On them the victories tear 24,398 → 7,912 edges
+past 3x (five with none; none before), no planted foot slides (the old
+clips' slid 99 mm at the median and 600 at worst, the root locked and the
+feet dragged), a sole goes at most 6.3 mm into the floor, and the hips
+travel 6.8–11.4 cm. **31 keep theirs**: seven on their boards (Artemis's
+and Nezha's pump read as a hand to the hair and a stretch, the Medjay's bow
+held level as a draw, and a cloak tears or spikes in the gesture on
+Atalanta, Heimdall, Heracles and Njord) and 24 by the rule. Each cut report
+records the victory's preset, its plant and its measured rule; `make_plan`
+applies `victory_for` before the hands and the mirrors, so `roll` deals the
+same 41, and §9's table reads them.
+
+**The game plays them (`RevealEntrance`, `UnitNode`, `PoseLayer`).** The
+reveal knows each by the length SceneKit reports (1.5333, 1.4 and 3.6 s; 306's
+1.6667 is kept so a clip of its length is read right) and plays its window —
+the fist pump to 1.05 s, the stomp to 0.95, the bow 0.4–3.1 s with the name
+on its deepest point. A bow is never an idle break (`RevealEntrance.breaks`):
+a greeting repeated at no one reads as broken, so those families break with
+their `_break` alone. In battle a victory now plays that same window at its
+own tempo, eased in over 0.25 s and blended out into the stance
+(`UnitNode.play`; it was retimed to the 2.0 s one-shot contract and played
+whole), and the triumph holds for the longest window among the survivors,
+2.4–3.6 s (`BattleSceneController.triumphHold(forVictory:)`).
+
+### Phase 3: the wider weight shift and the gaze
+
+**The weight shift on 79 of 117.** A blend's foot error is nearly all SINK
+(the pelvis on its chord, the legs on arcs), and a sole 5 mm into the floor
+is what the idle itself is allowed. So where the 3 mm rule finds no shift
+(no alt that passed it changes), the widened rule lets the blend sink a foot
+joint to the idle's floor limit while it slides and rises no more than 3 mm,
+reaches smaller shifts (the travel to the centre, the roll to a quarter),
+searches the whole grid (`ALT_WIDE_TRIES` 64), and still has to move either
+hip joint's loop-mean 2.5% of the height (`ALT_VISIBLE`). Every candidate is
+measured as written (`as_written`, the scales in half floats). **19 more**:
+12 by the widened rule (Anubis, Aphrodite, Apollo, Bastet, Dionysus, the
+awakened Freya, Guan Yu, the Minotaur, the Siren, Sun Wukong, Vidar, Zeus:
+the feet 3.0–4.5 mm down at the blend's middle, sliding at most 2.8 mm,
+rising none, the hips moving 4.1–10.4% of the height) and 7 found by the
+whole grid under the 3 mm rule (the Jötunn, Fenrir, the awakened Hera,
+Horus, the awakened Mars, Medusa, the awakened Zeus). The awakened Ares was
+refused as written (a foot 5.10 mm into the floor). `blendcheck` passes all
+79 pairs, and no alt tears more than its idle.
+
+**The gaze (`Pantheon/Render/Gaze.swift`).** The pose lab's verdict (run
+260: a transform constraint turned the neck +20.0° of +20 over the playing
+idle; writing the joint after the animations turned it 0.0°) chose the
+constraint. On the reveal, the Hall of Ka's altar and the collection's
+Stage (`PoseLayer.lens`), the joint the head hangs from turns toward the
+lens over whatever the clip holds: up to 25° across and 12° up or down, all
+of it within 80° of the figure's front and none past 120°, eased with a
+0.35 s time constant; a break takes the head and gives it back over 0.25 s.
+The reveal's whole-figure sway is one 1.5 s turn now. The finger and the
+battle are later (Docs/PLAN.md, *As built (phase 3)*). `-tour-gaze left`
+relaunches steps 3 and 21 with the head held 40° to the figure's left
+(`3-training-gaze`, `21-collection_stage-gaze`) and every stage prints
+`[Gaze]` lines.
+
 ### The commands, and the places that make the idle
 
 ```
@@ -1064,6 +1170,8 @@ python3 tools/ready_stance.py board [families] --bundle GUARDS --json F --out DI
 python3 tools/ready_stance.py ship <family> --bundle DIR [--guard 89]                # a re-ship's derivation
 python3 tools/motion_palette.py breaks [families] --out DIR [--idle-bundle DIR] --json F [--retry-held]
 python3 tools/motion_palette.py break-board hera ares --bundle DIR --out F.jpg      # the idle, then the break
+python3 tools/motion_palette.py victories [families] --out DIR --json F [--preset N]   # into scratch only
+python3 tools/motion_palette.py victory-board sekhmet hathor --bundle DIR --json F --out DIR   # old, then new at four instants
 ```
 
 The app's bundle holds the READY stances now, so the guard can no longer be
@@ -1119,10 +1227,10 @@ stance were re-made through `roll` into scratch and compared):
    instants look alike. Raise it to 1.5–2.5° if the CI's `[StageDoctor]`
    Hips and Hand lines read still (they were 7 mm and 3 cm in five seconds
    before).
-3. **The weight shift on the other 57** (the 32 whose feet leave their spots
-   mid-blend above all): blend through a middle pose (a Swift change), or
-   allow 5 mm of sink with the slide kept under 3 mm. The judge kept the 3 mm
-   rule for now.
+3. **The weight shift on the other 38** (phase 3 allowed the idle's own
+   5 mm of sink and shipped 19 more): their feet leave the floor's limit
+   mid-blend, or every shift tears more than the idle. Blending through a
+   middle pose (a Swift change) is what is left for them.
 4. **Stances that barely changed:** Horus and the awakened Hera (the weight
    held back by a kilt or a skirt on both thighs), the awakened Ra, Diana
    (her arms came in only 2° — further tore her), and Sun Wukong, whose whole
@@ -1132,7 +1240,8 @@ stance were re-made through `roll` into scratch and compared):
    at 12 of 12, Hermes and Bragi at 11.
 6. **Gestures:** every break is a look-around. The hand rub (318) waits on
    the owner's word on §10's rule; the stretch (12) needs hand IK or remeshed
-   cloth; Nephthys's retry waits on its board. The gaze is step 6.
+   cloth; Nephthys's retry waits on its board. The gaze is built (phase 3),
+   toward the lens.
 7. **Apollo's third arm** (the audit's fault) shows plainly with the arms
    hanging: a remake, not an idle.
 8. **The quiet (b) stances** may read still at battle distance (a bob of
@@ -1143,3 +1252,7 @@ stance were re-made through `roll` into scratch and compared):
    so on Zeus, Thor and the smith a clip's neck turn lands in the joint over
    the hips (their `neck`) and the skull never turns; the breaks match by
    role (`by_role`), the roll-out's clips still carry it.
+10. **The victories:** the three pairs of robed casters that now share their
+    five presets (§9); the finger's gaze on the Hall of Ka, the Stage and the
+    unit sheet, and the gaze in battle toward the acting unit; 306 dealt to
+    no one until a rig reads it as a raised hand.

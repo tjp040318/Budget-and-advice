@@ -62,7 +62,8 @@ jobs:
     # minute against run 256's 61. Its steps 5 and 7 (2026-09-25) add four
     # more — steps 3 and 21 each with -tour-pose-blend 0.5 (a six- and a
     # five-second sleep) and -tour-fidget (a cue of at most 20 s, then a
-    # second) — about half a minute, and a minute if both cues run out.
+    # second) — about half a minute, and a minute if both cues run out; and
+    # its step 6 two -tour-gaze relaunches, a six- and a five-second sleep.
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
@@ -554,13 +555,18 @@ jobs:
                 # beside 3-training; the console's [Pose] lines name the
                 # players on the figure and their blends.
                 again -tour-pose-blend 0.5; sleep 6; shoot_lit "$step-${names[$step]}-pose-blend"
-                again -tour-fidget; cue_again fidget-held 20; sleep 1; shoot_lit "$step-${names[$step]}-fidget" ;;
-              # The collection's Stage, then the same two relaunches of the
-              # figure's life as the Hall of Ka's (build steps 5 and 7).
+                again -tour-fidget; cue_again fidget-held 20; sleep 1; shoot_lit "$step-${names[$step]}-fidget"
+                # The gaze (build step 6): the head held 40 degrees to the
+                # figure's left instead of toward the lens, beside 3-training;
+                # the console's [Gaze] line gives the turn the block laid on.
+                again -tour-gaze left; sleep 6; shoot_lit "$step-${names[$step]}-gaze" ;;
+              # The collection's Stage, then the same three relaunches of the
+              # figure's life as the Hall of Ka's (build steps 5, 7 and 6).
               collection_stage)
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-pose-blend 0.5; sleep 5; shoot_lit "$step-${names[$step]}-pose-blend"
-                again -tour-fidget; cue_again fidget-held 20; sleep 1; shoot_lit "$step-${names[$step]}-fidget" ;;
+                again -tour-fidget; cue_again fidget-held 20; sleep 1; shoot_lit "$step-${names[$step]}-fidget"
+                again -tour-gaze left; sleep 5; shoot_lit "$step-${names[$step]}-gaze" ;;
               # More's Diagnostics row, opened: where the model board and the
               # console went when they left More's front page.
               more)

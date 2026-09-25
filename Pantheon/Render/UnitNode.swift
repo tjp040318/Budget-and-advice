@@ -707,12 +707,26 @@ final class UnitNode: SCNNode {
             // a flinch was barely visible at all.
             animation.fadeInDuration = clip.loops ? 0.25 : 0.05
             animation.fadeOutDuration = clip.loops ? 0.25 : 0.16
+            // A victory is a gesture, not a blow: nothing in the fight is
+            // timed to it. It eases in from the stance as a loop does, plays
+            // at its own tempo (the contract below would have played the
+            // bow at 1.8x and the stomp at 0.7x), and plays only the window
+            // of it the reveal measured (`RevealEntrance.cut`: 412 turns its
+            // back after 1.6 s, 88 opens in a crouch turned away), then
+            // hands back (`scheduleClipEnd`).
+            var window: RevealEntranceCut?
+            if clip == .victory {
+                let cut: RevealEntranceCut = RevealEntrance.cut(forClipLength: animation.duration)
+                window = cut
+                animation.fadeInDuration = Self.victoryBlendIn
+                animation.timeOffset = cut.start
+            }
 
             var rate = playbackSpeed
             // Where in its cycle a loop starts, as a share: the idle's
             // second variant is started on the same beat (`PoseLayer`).
             var phase: Double = 0
-            if !clip.loops, clip != .death, animation.duration > 0.05 {
+            if !clip.loops, clip != .death, clip != .victory, animation.duration > 0.05 {
                 // EVERY one-shot is retimed to its contract now, not only the
                 // ones that run long. The fight is timed to `fallbackDuration`
                 // — `BattleSceneController` presents the damage at a fraction
@@ -751,8 +765,9 @@ final class UnitNode: SCNNode {
                 }
             }
             if !clip.loops {
-                let played = animation.duration > 0
-                    ? animation.duration / Double(max(0.05, animation.speed))
+                let length: TimeInterval = window.map { max(0.1, $0.end - $0.start) } ?? animation.duration
+                let played = length > 0
+                    ? length / Double(max(0.05, animation.speed))
                     : beat(clip.fallbackDuration)
                 // Off the battle's field the body stays, faded to 0.6; on it,
                 // it leaves once the clip has played (`onFallen`, W2.8), and
@@ -840,6 +855,12 @@ final class UnitNode: SCNNode {
                 completion?()
                 // A death holds its last frame for good.
                 guard let self, clip != .death, !self.isDefeated, self.currentClip == clip else { return }
+                // A victory's window is over: it blends out under the loop
+                // coming back, rather than playing on to its clip's end.
+                if clip == .victory {
+                    self.modelContainer.removeAnimation(forKey: clip.rawValue,
+                                                        blendOutDuration: CGFloat(RevealEntrance.blendOut))
+                }
                 self.play(self.idleAfterClip)
             }
         }
@@ -1725,8 +1746,9 @@ final class UnitNode: SCNNode {
     /// 2026-09-24). Nothing re-paces a unit once the HUD has gone: the
     /// controller calls this after ending the slow motion, and the speed
     /// control is hidden with the HUD.
-    func celebrate(facing lens: SCNVector3, turn duration: TimeInterval, pace: Double = 1) {
-        guard !isDefeated else { return }
+    @discardableResult
+    func celebrate(facing lens: SCNVector3, turn duration: TimeInterval, pace: Double = 1) -> TimeInterval {
+        guard !isDefeated else { return 0 }
         celebrating = true
         cancelPendingClip()
         removeAction(forKey: "dash")
@@ -1747,7 +1769,21 @@ final class UnitNode: SCNNode {
         SCNTransaction.commit()
         playbackSpeed = pace
         play(.victory)
+        return victoryWindow / max(0.05, pace)
     }
+
+    /// Seconds the unit's victory plays for at x1 — its window
+    /// (`RevealEntrance.cut`) — or 0 with no victory clip.
+    var victoryWindow: TimeInterval {
+        guard let clip = ModelLibrary.shared.animation(.victory, for: clipAsset) else { return 0 }
+        let cut: RevealEntranceCut = RevealEntrance.cut(forClipLength: clip.duration)
+        return max(0, cut.end - cut.start)
+    }
+
+    /// A victory eases in from the stance over this, as a loop does: a
+    /// one-shot's 0.05 s snapped the ready stance into the gesture's first
+    /// key.
+    static let victoryBlendIn: CGFloat = 0.25
 
     func revive(healthFraction: Double) {
         isDefeated = false

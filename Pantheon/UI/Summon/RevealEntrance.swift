@@ -46,8 +46,33 @@ import UIKit
 ///   the chest at 2.1–2.9 s. The entrance is 1.1–3.35 s, the high point the
 ///   fists striking, at 2.25 s.
 ///
-/// No clip moves the hips over the floor (the pipeline locks the root:
-/// 0.00 m of travel on all 115), so none steps off the dais. Each preset's
+/// Since 2026-09-25 three of the four victories bought on the 24th are
+/// dealt by archetype (`tools/motion_palette.py victories`, Docs/PLAN.md
+/// *Natural poses*, step 8.4), each laid over the family's own idle so it
+/// starts and ends where the stages' idle stands, and measured the same way
+/// on the families that took them:
+///
+/// - **306 Cheer with One Hand Up** (51 frames, 1.67 s; measured for the
+///   sovereigns and NOT dealt): a crouch, a hop with one arm straight up —
+///   the hand 1.42 of the height at 0.53 s — and a landing that swings the
+///   chest 30° to its left at 0.9 s. On our rigs the arm folds over the
+///   head through the hop and it read as flailing on the boards, so the
+///   sovereigns keep the three below; its cut stays so a clip of its
+///   length is read right. Played to 1.2 s.
+/// - **403 Victory Fist Pump** (the champions, soldiers and hunters, 47
+///   frames, 1.53 s): both fists to head height at 0.40 s, pulled down by
+///   0.7 s; the chest never turns. Played to 1.05 s.
+/// - **255 Angry Ground Stomp** (the brutes and beasts, 43 frames, 1.4 s):
+///   the arms flung up and a foot stamped three times, the first landing at
+///   0.3 s. Played to 0.95 s.
+/// - **41 Formal Bow** (the mystics and graces, 109 frames, 3.6 s): the
+///   arms settle, the body bows a third of its height by 2.0 s and is up
+///   by 3.3 s. Played from 0.4 s to 3.1 s, the name on the deepest point —
+///   and never an idle break (`breaks`): a bow is a greeting.
+///
+/// The bought four keep the hips' travel (their hop and their weight
+/// shifting over planted feet); the three dealt before them lock the root
+/// (0.00 m of travel on all 115), and none steps off the dais. Each preset's
 /// `stance` turns the figure so the chest's facing over the played window
 /// averages a few degrees TOWARD the words on the right, the subject
 /// looking into its open space: +5° for the cheer, +38° for 412 (whose
@@ -83,17 +108,38 @@ enum RevealEntrance {
     static let cheer = RevealEntranceCut(preset: "298 Cheer", start: 0, end: 1.45, apex: 0.68, stance: 0.095)
     static let victory = RevealEntranceCut(preset: "412 Victory", start: 0, end: 1.6, apex: 0.45, stance: 0.66)
     static let chestPound = RevealEntranceCut(preset: "88 Chest Pound Taunt", start: 1.1, end: 3.35, apex: 2.25, stance: -0.2)
+    // The bought four (2026-09-25), measured on run 3 of the victories: the
+    // stance sets the chest's mean over the window 5° toward the words, as
+    // the three above do (the cheer's landing swings it 11° their way by
+    // itself; the bow is judged facing the lens, its chest's yaw meaningless
+    // bent double).
+    static let cheerOneHand = RevealEntranceCut(preset: "306 Cheer with One Hand Up", start: 0, end: 1.2, apex: 0.53, stance: -0.10)
+    static let fistPump = RevealEntranceCut(preset: "403 Victory Fist Pump", start: 0, end: 1.05, apex: 0.4, stance: 0.087)
+    static let stomp = RevealEntranceCut(preset: "255 Angry Ground Stomp", start: 0, end: 0.95, apex: 0.3, stance: 0.035)
+    static let bow = RevealEntranceCut(preset: "41 Formal Bow", start: 0.4, end: 3.1, apex: 2.0, stance: 0)
 
     /// The presets by the length SceneKit reports for their clip.
     static let presets: [(length: TimeInterval, cut: RevealEntranceCut)] = [
         (1.9, cheer),
         (3.9333, victory),
         (3.8667, chestPound),
+        (1.6667, cheerOneHand),
+        (1.5333, fistPump),
+        (1.4, stomp),
+        (3.6, bow),
     ]
 
     /// How close a clip's length must be to a preset's to be that preset:
-    /// the two long ones are 0.067 s apart.
+    /// the two long ones are 0.067 s apart, the bought three shortest
+    /// 0.133 s.
     static let lengthTolerance: TimeInterval = 0.02
+
+    /// Whether a victory may play as an idle break on a stage (`PoseLayer`):
+    /// every one but the bow, which greets the player and would read as
+    /// broken repeated at no one.
+    static func breaks(_ cut: RevealEntranceCut) -> Bool {
+        cut != bow
+    }
 
     /// The cut for a victory clip of `length` seconds: its preset's, or for
     /// a clip no preset made (a bespoke victory to come), its first seconds

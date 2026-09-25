@@ -37,10 +37,43 @@
   "carrier": "89"
  },
  "victory": {
-  "preset": "88",
-  "frames": 117,
-  "seconds": 3.9,
-  "rate": 1.95
+  "preset": "41",
+  "frames": 109,
+  "seconds": 3.63,
+  "rate": 1.81,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "hathor_idle.usdz",
+   "arms": "delta",
+   "ease": null,
+   "problems": []
+  },
+  "plant": {
+   "runs": 7,
+   "spots": "natural idle",
+   "moved_mm": 20.1,
+   "drop_mm": 8.5,
+   "missed_mm": 0.0,
+   "slide_before_mm": 6.33,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "41",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "88",
+  "measured": {
+   "over3": 16,
+   "old_over3": 686,
+   "worst": 5.2,
+   "old_worst": 13.6,
+   "slide_mm": 0.0,
+   "old_slide_mm": 266.23,
+   "sink_mm": 2.04,
+   "arm_in": 12,
+   "hips_travel_cm": 9.6,
+   "seconds": 3.6
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

@@ -3932,12 +3932,16 @@ extension BattleSceneController {
     /// turns); each plate swaps health for a gold EXP bar that fills from ->
     /// to, with LEVEL UP rising over a unit whose levelsGained > 0. Units
     /// missing from the map just pose.
-    func celebrate(experience: [UUID: ExperienceGain]) {
-        guard !celebrated else { return }
+    ///
+    /// Returns the longest victory it started, in seconds of the beat
+    /// (`triumphHold(forVictory:)` holds the reckoning for it), 0 for none.
+    @discardableResult
+    func celebrate(experience: [UUID: ExperienceGain]) -> TimeInterval {
+        guard !celebrated else { return 0 }
         celebrated = true
         endSlowMotion()
         let survivors = unitNodes.values.filter { $0.side == .player && !$0.isDefeated }
-        guard !survivors.isEmpty else { return }
+        guard !survivors.isEmpty else { return 0 }
         // Where each stands when it has walked the last of the way home.
         let team = survivors.map { node in
             (position: homeMarks[node.combatantID] ?? node.position, height: node.spec.height)
@@ -3946,15 +3950,28 @@ extension BattleSceneController {
         // The plates stand through the beat (the reckoning takes them).
         plates.setFieldHidden(false)
         let posePace = Self.triumphPosePace
+        var longest: TimeInterval = 0
         for node in survivors {
             node.setHighlighted(false)
             node.setMatchup(nil)
-            node.celebrate(facing: lens, turn: Self.triumphTurn, pace: posePace)
+            longest = max(longest, node.celebrate(facing: lens, turn: Self.triumphTurn, pace: posePace))
             guard let gain = experience[node.combatantID] else { continue }
             node.plate?.showExperience(from: gain.from, to: gain.to, levels: gain.levelsGained,
                                        after: Self.experienceDelay)
         }
+        return longest
     }
+
+    /// How long the reckoning waits on the field after `celebrate`: the
+    /// beat's 2.4 s, or long enough for the longest victory posing to finish
+    /// and settle (the mystics' bow runs about 2.9 s), never past
+    /// `triumphLongest` — so the field's still behind the reward box shows
+    /// the team standing, not bent double.
+    static func triumphHold(forVictory window: TimeInterval) -> TimeInterval {
+        min(triumphLongest, max(triumphDuration, window + triumphSettle))
+    }
+    static let triumphLongest: TimeInterval = 3.6
+    static let triumphSettle: TimeInterval = 0.3
 
     /// Main thread, on a LOSS: the camera's saturation eases to 0.15 over
     /// the duration (restored when a new run is built).

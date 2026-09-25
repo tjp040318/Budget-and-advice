@@ -11,10 +11,38 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "403",
+  "frames": 47,
+  "seconds": 1.57,
+  "rate": 0.79,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "absolute": true,
+  "plant": {
+   "runs": 6,
+   "spots": "natural idle",
+   "moved_mm": 145.7,
+   "drop_mm": 42.2,
+   "missed_mm": 0.0,
+   "slide_before_mm": 10.52,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "403+abs",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 111,
+   "old_over3": 408,
+   "worst": 5.5,
+   "old_worst": 8.3,
+   "slide_mm": 0.0,
+   "old_slide_mm": 116.23,
+   "sink_mm": 1.38,
+   "arm_in": 2,
+   "hips_travel_cm": 7.7,
+   "seconds": 1.533
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

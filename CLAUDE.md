@@ -1040,7 +1040,15 @@ environment can and cannot do. The short version:
   goes through `ModelLibrary.parseScene` / `withImporter` (one lock held
   around the parse only, never the caches) and `loadOrCached` parses a
   mesh ONCE when two threads ask at the same moment. Never call the
-  importer directly. Serialising the parses alone did NOT start the
+  importer directly. **And a material is copied only inside
+  `ModelLibrary.copyingMaterials`** (the importer's lock, 2026-09-25): run
+  260's summon stress died in `SCNMaterial.copy()` on the main thread
+  (`separateTheSet`, EXC_BAD_ACCESS retaining a freed sampler) while the
+  warm pass's parse flushed its transaction on another thread; the reveal's
+  set, the battle set (`separateBattleSet`) and every figure's element tint
+  copy under it. The lock is not re-entrant: never copy inside a
+  `withImporter` block, and nothing holding it may wait on the main
+  thread. Serialising the parses alone did NOT start the
   idle (run 170); the attach order did. And **a node with a
   one-shot particle system goes only after the system has finished**:
   SceneKit's particle manager keeps a finished instance and looks its
@@ -2406,10 +2414,14 @@ environment can and cannot do. The short version:
   → about 18° from straight down. The 35 calm families (the sovereigns,
   graces and mystics the deal stood up for battle: `motion_palette.CALM`,
   stance `natural`) wear the same file as `_idle_combat`. **Beside it
-  (phase 2, the same day):** `<family>_idle_alt.usdz` for 60 families, the
-  same idle on the other leg on the same foot spots (`--alt`; the other 57
-  were refused because a blend of two players sinks the planted feet past
-  3 mm mid-way, or tears more — `blendcheck` re-reads every pair), and
+  (phase 2, the same day):** `<family>_idle_alt.usdz` for 79 families, the
+  same idle on the other leg on the same foot spots (`--alt`: 60 on the
+  3 mm rule, and since phase 3 nineteen more on the widened one, tried only
+  where the 3 mm rule finds nothing — a blend may SINK a planted foot to the
+  idle's own floor limit while it slides and rises under 3 mm, and must
+  move a hip 2.5% of the height (`ALT_VISIBLE`), every candidate measured
+  as written (`as_written`); the other 38 leave the floor's limit or tear
+  more — `blendcheck` re-reads every pair), and
   `<family>_break.usdz` for 114, a look-around from the presets bought on
   the 24th laid ADDITIVELY over the idle's mean pose, its ends eased into
   it, its feet planted, quietened down a ladder where it tears more than
@@ -2445,7 +2457,26 @@ environment can and cannot do. The short version:
   held an invisible shield and panted 47 times a minute; `stand_idle.py`
   stays as the fallback. Left: the breath is quiet on purpose — raise it
   if `[StageDoctor]` reads still on the phone — and twelve (b) fighters may
-  read still in battle (a 1 cm bob).
+  read still in battle (a 1 cm bob). **The victories (phase 3, MOTION.md
+  §11):** 41 families' `_victory.usdz` are three of the presets bought on
+  the 24th, dealt by the stages' archetype (`VICTORY_DEAL`) — 403 the fist
+  pump (champions, soldiers, hunters), 255 the stomp (brutes, beasts), 41
+  the bow (mystics, graces) — made by `motion_palette.py victories` into
+  scratch and judged on `victory-board`: laid over the family's idle by a
+  WORLD turn (`rebase_on_idle`; a turn in each joint's own frame held every
+  fist pump's arms out sideways), the gesture's arms the donor's own eased
+  in and out, the feet planted, and held to `victory_guard` (no more tear,
+  arm-through or sink than the old victory, no planted foot sliding over
+  1 mm): 24,398 → 7,912 edges past 3x on the 41. 306 is dealt to no one —
+  it read as flailing, so the sovereigns keep 298, 412 and 88 — and
+  `VICTORY_KEPT` names the 31 others that keep theirs, and why.
+  `RevealEntrance` knows each by its clip's length (a new preset gets a
+  length no other shares, `PoseLifeTests`); a bow is never an idle break
+  (`RevealEntrance.breaks`); in battle a victory plays its window at its
+  own tempo, eased in over 0.25 s, and the triumph waits for the longest
+  one (`triumphHold(forVictory:)`, 2.4–3.6 s). Three pairs of robed
+  casters now share all five presets (MOTION.md §9), kept for the bow's
+  tear and the owner's to reverse.
 - **A figure on a stage has a life (`PoseLayer`, 2026-09-25).** The
   reveal, the Hall of Ka's altar and the collection's Stage start their
   idle through `PoseLayer.startIdle`, never a bare `startLoop`, and the
@@ -2462,7 +2493,18 @@ environment can and cannot do. The short version:
   `stop()` is final and every stage's `dismantleUIView` calls it.
   `-tour-pose-blend 0.5` and `-tour-fidget` photograph the blend and a
   held break on steps 3 and 21, and every change prints a `[Pose]` line.
-  A new stage that holds a figure starts its idle the same way.
+  **The gaze (phase 3, `Gaze.swift`):** a stage sets `PoseLayer.lens` to
+  its camera, and an `SCNTransformConstraint.orientationConstraint(
+  inWorldSpace: false)` on the joint the head hangs from lays a turn toward
+  the lens over the clip — ±25° across, ±12° up, all of it within 80° of
+  the figure's front and none past 120°, eased at 0.35 s, handed to a
+  break and back over 0.25 s — built in a `nonisolated static func` and
+  reading only a lock-guarded `GazeState` (run 260's lab: the constraint
+  turned the neck +20.0° of +20 over the playing idle, writing the joint
+  after the animations 0.0°). The reveal's whole-figure sway is one turn
+  now; the finger and the battle are later. `-tour-gaze left` relaunches
+  steps 3 and 21 (`[Gaze]` lines). A new stage that holds a figure starts
+  its idle the same way and sets `lens`.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 

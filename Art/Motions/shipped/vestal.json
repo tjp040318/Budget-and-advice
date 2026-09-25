@@ -37,10 +37,43 @@
   "carrier": "89"
  },
  "victory": {
-  "preset": "412",
-  "frames": 119,
-  "seconds": 3.97,
-  "rate": 1.99
+  "preset": "41",
+  "frames": 109,
+  "seconds": 3.63,
+  "rate": 1.81,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "vestal_idle.usdz",
+   "arms": "delta",
+   "ease": null,
+   "problems": []
+  },
+  "plant": {
+   "runs": 8,
+   "spots": "natural idle",
+   "moved_mm": 18.2,
+   "drop_mm": 2.8,
+   "missed_mm": 0.0,
+   "slide_before_mm": 4.71,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "41",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "412",
+  "measured": {
+   "over3": 4,
+   "old_over3": 191,
+   "worst": 3.5,
+   "old_worst": 23.8,
+   "slide_mm": 0.0,
+   "old_slide_mm": 94.32,
+   "sink_mm": 1.97,
+   "arm_in": 2,
+   "hips_travel_cm": 10.0,
+   "seconds": 3.6
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

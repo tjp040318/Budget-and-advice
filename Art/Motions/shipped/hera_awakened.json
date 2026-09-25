@@ -53,8 +53,13 @@
   }
  },
  "idle_alt": {
-  "made": null,
-  "why": "no shift passed (travel 0.90 roll 0.75: 100 edges past 3x against 68; travel 0.60 roll 1.00: 113 edges past 3x against 68; travel 0.80 roll 0.75: 98 edges past 3x against 68)"
+  "made": "tools/natural_idle.py --alt (the widened rule, 2026-09-25)",
+  "rule": "3mm",
+  "blend_drift_mm": 1.78,
+  "blend_slide_mm": 1.6,
+  "blend_sink_mm": 1.78,
+  "hip_shift": 0.0478,
+  "blend_over3": 35
  },
  "break": {
   "preset": "336",

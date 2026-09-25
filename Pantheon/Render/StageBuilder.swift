@@ -545,23 +545,26 @@ enum StageBuilder {
     /// modifier. A constant material is a light of its own (the painting,
     /// the mist, the rune rings) and is left as it is.
     static func separateBattleSet(_ root: SCNNode) {
-        root.enumerateHierarchy { node, _ in
-            node.categoryBitMask = setCategory
-            node.light?.categoryBitMask = setLights
-            guard let geometry = node.geometry else { return }
-            let tuned = geometry.materials.contains { $0.shaderModifiers?[.fragment] != nil }
-            if tuned {
-                guard let own = geometry.copy() as? SCNGeometry else { return }
-                own.materials = geometry.materials.map { shared in
-                    guard shared.shaderModifiers?[.fragment] != nil,
-                          let material = shared.copy() as? SCNMaterial else { return shared }
-                    MaterialTuner.tuneSetProp(material)
-                    return material
-                }
-                node.geometry = own
-            } else {
-                for material in geometry.materials where material.lightingModel != .constant {
-                    MaterialTuner.calmSet(material)
+        // Copied with the importer to ourselves (`ModelLibrary.copyingMaterials`).
+        ModelLibrary.copyingMaterials {
+            root.enumerateHierarchy { node, _ in
+                node.categoryBitMask = setCategory
+                node.light?.categoryBitMask = setLights
+                guard let geometry = node.geometry else { return }
+                let tuned = geometry.materials.contains { $0.shaderModifiers?[.fragment] != nil }
+                if tuned {
+                    guard let own = geometry.copy() as? SCNGeometry else { return }
+                    own.materials = geometry.materials.map { shared in
+                        guard shared.shaderModifiers?[.fragment] != nil,
+                              let material = shared.copy() as? SCNMaterial else { return shared }
+                        MaterialTuner.tuneSetProp(material)
+                        return material
+                    }
+                    node.geometry = own
+                } else {
+                    for material in geometry.materials where material.lightingModel != .constant {
+                        MaterialTuner.calmSet(material)
+                    }
                 }
             }
         }

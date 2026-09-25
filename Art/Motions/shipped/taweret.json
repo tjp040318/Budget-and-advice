@@ -44,10 +44,46 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "88",
-  "frames": 117,
-  "seconds": 3.9,
-  "rate": 1.95
+  "preset": "255",
+  "frames": 43,
+  "seconds": 1.43,
+  "rate": 0.71,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "taweret_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 12,
+   "spots": "natural idle",
+   "moved_mm": 62.5,
+   "drop_mm": 0.0,
+   "missed_mm": 0.0,
+   "slide_before_mm": 9.74,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "255",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "88",
+  "measured": {
+   "over3": 116,
+   "old_over3": 133,
+   "worst": 15.9,
+   "old_worst": 19.9,
+   "slide_mm": 0.0,
+   "old_slide_mm": 599.69,
+   "sink_mm": 6.31,
+   "arm_in": 30,
+   "hips_travel_cm": 9.9,
+   "seconds": 1.4
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

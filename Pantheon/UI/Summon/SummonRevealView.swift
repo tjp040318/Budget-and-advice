@@ -2482,33 +2482,38 @@ struct SummonStageView: UIViewRepresentable {
     static func separateTheSet(in scene: SCNScene) -> [RevealHouseMaterial] {
         guard let stage = scene.rootNode.childNode(withName: "stage", recursively: false) else { return [] }
         var house: [RevealHouseMaterial] = []
-        stage.enumerateHierarchy { node, _ in
-            node.categoryBitMask = setCategory
-            if let shared = node.light, let light = shared.copy() as? SCNLight {
-                light.categoryBitMask = setCategory
-                if light.type == .omni {
-                    light.attenuationEndDistance = brazierReach
+        // Copied with the importer to ourselves: CI run 260's summon stress
+        // died here, copying a material while the warm pass parsed a clip
+        // (`ModelLibrary.copyingMaterials`).
+        ModelLibrary.copyingMaterials {
+            stage.enumerateHierarchy { node, _ in
+                node.categoryBitMask = setCategory
+                if let shared = node.light, let light = shared.copy() as? SCNLight {
+                    light.categoryBitMask = setCategory
+                    if light.type == .omni {
+                        light.attenuationEndDistance = brazierReach
+                    }
+                    node.light = light
                 }
-                node.light = light
+                guard let geometry = node.geometry, let own = geometry.copy() as? SCNGeometry else { return }
+                var materials: [SCNMaterial] = []
+                for shared in geometry.materials {
+                    guard let material = shared.copy() as? SCNMaterial else {
+                        materials.append(shared)
+                        continue
+                    }
+                    materials.append(material)
+                    if material.shaderModifiers?[.fragment] != nil {
+                        tuneSetMaterial(material)
+                    }
+                    if let dimmed = houseDimmed(material) {
+                        house.append(RevealHouseMaterial(material: material, dimmed: dimmed))
+                        holdMultiplyStage(material)
+                    }
+                }
+                own.materials = materials
+                node.geometry = own
             }
-            guard let geometry = node.geometry, let own = geometry.copy() as? SCNGeometry else { return }
-            var materials: [SCNMaterial] = []
-            for shared in geometry.materials {
-                guard let material = shared.copy() as? SCNMaterial else {
-                    materials.append(shared)
-                    continue
-                }
-                materials.append(material)
-                if material.shaderModifiers?[.fragment] != nil {
-                    tuneSetMaterial(material)
-                }
-                if let dimmed = houseDimmed(material) {
-                    house.append(RevealHouseMaterial(material: material, dimmed: dimmed))
-                    holdMultiplyStage(material)
-                }
-            }
-            own.materials = materials
-            node.geometry = own
         }
         return house
     }
@@ -3269,6 +3274,9 @@ struct SummonStageView: UIViewRepresentable {
         scene.rootNode.addChildNode(rig)
         rig.addChildNode(cameraNode)
         view.pointOfView = cameraNode
+        // The gaze looks toward this lens once the figure's life begins,
+        // after its entrance (`Gaze`, Docs/PLAN.md *Natural poses*, step 6).
+        context.coordinator.pose?.lens = cameraNode
         context.coordinator.cameraRig = rig
         context.coordinator.cameraNode = cameraNode
         context.coordinator.visibleHeight = visibleHeight
@@ -3516,18 +3524,18 @@ struct SummonStageView: UIViewRepresentable {
     }
 
     /// The figure settles out of its three-quarter stance to face the player
-    /// as the stars tick in, then breathes: a slow sway of a fifth of a
-    /// radian either way, which is enough to keep the silhouette alive
-    /// without ever turning the face away. A reveal is the most-looked-at
-    /// second in the game and a dead-still model is the tell that it is a
-    /// prop rather than a character.
+    /// as the stars tick in: one slow turn, and then it stands. It swayed a
+    /// fifth of a radian either way every 4.5 s after that until 2026-09-25,
+    /// the only sign of life a figure on its guard stood up had; a natural
+    /// idle breathes, shifts its weight, breaks and looks at the lens
+    /// (`PoseLayer`, `Gaze`), and a turntable under all that read as one.
     ///
     /// "Face the player" is read off the FEET, not assumed (2026-09-18):
     /// a family with no `idle` plays its combat idle here, a guard stance
     /// whose feet point off the mesh's forward — Sekhmet showed her
     /// profile and the awakened Ares his back on three runs of frames,
     /// lit by the cool fill on the side the camera saw. The correction
-    /// turns the feet toward the lens and the sway swings about it.
+    /// turns the feet toward the lens.
     /// Called on the figure's first frame on the beam (`figureShown`): the
     /// joints' presentation positions are all zero until the renderer has
     /// posed the figure once, and run 186 read a zero heel-to-toe vector
@@ -3539,11 +3547,7 @@ struct SummonStageView: UIViewRepresentable {
         let facing = facingCorrection(for: figure)
         let turn = SCNAction.rotateTo(x: 0, y: CGFloat(facing), z: 0, duration: 1.5, usesShortestUnitArc: true)
         turn.timingMode = .easeOut
-        let swayRight = SCNAction.rotateTo(x: 0, y: CGFloat(facing + 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
-        swayRight.timingMode = .easeInEaseOut
-        let swayLeft = SCNAction.rotateTo(x: 0, y: CGFloat(facing - 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
-        swayLeft.timingMode = .easeInEaseOut
-        figure.runAction(.sequence([turn, .repeatForever(.sequence([swayRight, swayLeft]))]), forKey: "turn")
+        figure.runAction(turn, forKey: "turn")
     }
 
     /// The yaw that turns the figure's feet toward the camera (+Z), read off

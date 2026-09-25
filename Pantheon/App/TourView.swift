@@ -1891,6 +1891,18 @@ enum PoseTour {
         let args = ProcessInfo.processInfo.arguments
         return args.contains("-tour") && args.contains("-tour-fidget")
     }()
+
+    /// `-tour-gaze left|right` (Docs/PLAN.md *Natural poses*, build step 6):
+    /// the stages' gaze held to a direction 40° off the figure's front, to
+    /// its left (or right), level, instead of the lens — past the gaze's
+    /// 25°, so the frame shows the whole turn. Nil when absent.
+    static let gazeDirection: SIMD3<Float>? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("-tour"), let at = args.firstIndex(of: "-tour-gaze"), at + 1 < args.count else { return nil }
+        let degrees: Float = args[at + 1] == "right" ? -40 : 40
+        let radians: Float = degrees * .pi / 180
+        return SIMD3<Float>(sin(radians), 0, cos(radians))
+    }()
 }
 
 // MARK: - The pose lab (Docs/PLAN.md *Natural poses*, build step 3)

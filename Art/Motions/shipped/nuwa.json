@@ -37,10 +37,43 @@
   "carrier": "89"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "41",
+  "frames": 109,
+  "seconds": 3.63,
+  "rate": 1.81,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "nuwa_idle.usdz",
+   "arms": "delta",
+   "ease": null,
+   "problems": []
+  },
+  "plant": {
+   "runs": 8,
+   "spots": "natural idle",
+   "moved_mm": 22.7,
+   "drop_mm": 10.6,
+   "missed_mm": 0.0,
+   "slide_before_mm": 6.73,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "41",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 633,
+   "old_over3": 3341,
+   "worst": 39.2,
+   "old_worst": 82.0,
+   "slide_mm": 0.0,
+   "old_slide_mm": 92.03,
+   "sink_mm": 0.69,
+   "arm_in": 13,
+   "hips_travel_cm": 11.4,
+   "seconds": 3.6
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

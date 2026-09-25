@@ -44,10 +44,46 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "403",
+  "frames": 47,
+  "seconds": 1.57,
+  "rate": 0.79,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "shield_maiden_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 8,
+   "spots": "natural idle",
+   "moved_mm": 20.3,
+   "drop_mm": 17.9,
+   "missed_mm": 0.0,
+   "slide_before_mm": 8.06,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "403",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 14,
+   "old_over3": 129,
+   "worst": 3.8,
+   "old_worst": 4.6,
+   "slide_mm": 0.0,
+   "old_slide_mm": 74.4,
+   "sink_mm": 0.52,
+   "arm_in": 0,
+   "hips_travel_cm": 7.3,
+   "seconds": 1.533
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

@@ -37,10 +37,43 @@
   "carrier": "89"
  },
  "victory": {
-  "preset": "412",
-  "frames": 119,
-  "seconds": 3.97,
-  "rate": 1.99
+  "preset": "41",
+  "frames": 109,
+  "seconds": 3.63,
+  "rate": 1.81,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "nephthys_idle.usdz",
+   "arms": "delta",
+   "ease": null,
+   "problems": []
+  },
+  "plant": {
+   "runs": 8,
+   "spots": "natural idle",
+   "moved_mm": 21.0,
+   "drop_mm": 8.2,
+   "missed_mm": 0.0,
+   "slide_before_mm": 6.86,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "41",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "412",
+  "measured": {
+   "over3": 0,
+   "old_over3": 22,
+   "worst": 1.8,
+   "old_worst": 4.3,
+   "slide_mm": 0.0,
+   "old_slide_mm": 62.22,
+   "sink_mm": 1.25,
+   "arm_in": 0,
+   "hips_travel_cm": 9.6,
+   "seconds": 3.6
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

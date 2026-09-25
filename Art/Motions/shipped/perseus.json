@@ -44,10 +44,46 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "403",
+  "frames": 47,
+  "seconds": 1.57,
+  "rate": 0.79,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "perseus_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 8,
+   "spots": "natural idle",
+   "moved_mm": 21.9,
+   "drop_mm": 15.7,
+   "missed_mm": 0.0,
+   "slide_before_mm": 10.6,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "403",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 127,
+   "old_over3": 298,
+   "worst": 24.0,
+   "old_worst": 35.6,
+   "slide_mm": 0.0,
+   "old_slide_mm": 106.52,
+   "sink_mm": 0.26,
+   "arm_in": 13,
+   "hips_travel_cm": 6.8,
+   "seconds": 1.533
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

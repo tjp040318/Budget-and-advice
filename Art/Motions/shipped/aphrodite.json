@@ -37,10 +37,43 @@
   "carrier": "89"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "41",
+  "frames": 109,
+  "seconds": 3.63,
+  "rate": 1.81,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "aphrodite_idle.usdz",
+   "arms": "delta",
+   "ease": null,
+   "problems": []
+  },
+  "plant": {
+   "runs": 6,
+   "spots": "natural idle",
+   "moved_mm": 21.3,
+   "drop_mm": 0.0,
+   "missed_mm": 0.0,
+   "slide_before_mm": 5.71,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "41",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 15,
+   "old_over3": 2942,
+   "worst": 4.0,
+   "old_worst": 29.6,
+   "slide_mm": 0.0,
+   "old_slide_mm": 90.85,
+   "sink_mm": 2.01,
+   "arm_in": 21,
+   "hips_travel_cm": 10.8,
+   "seconds": 3.6
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",
@@ -51,8 +84,13 @@
   "hung": null
  },
  "idle_alt": {
-  "made": null,
-  "why": "no shift keeps the feet within 3 mm (roll 1.00, travel 0.12: the blend's feet 6.6 mm; roll 0.75, travel 0.12: the blend's feet 5.7 mm; roll 0.50, travel 0.12: the blend's feet 5.1 mm)"
+  "made": "tools/natural_idle.py --alt (the widened rule, 2026-09-25)",
+  "rule": "wide",
+  "blend_drift_mm": 4.16,
+  "blend_slide_mm": 2.57,
+  "blend_sink_mm": 4.16,
+  "hip_shift": 0.0863,
+  "blend_over3": 4
  },
  "break": {
   "preset": "336",

@@ -357,6 +357,23 @@ final class ModelLibrary {
         return try body()
     }
 
+    /// Copies materials with the importer to ourselves. A parse on another
+    /// thread commits its scene through SceneKit's own transaction, and a
+    /// `SCNMaterial.copy()` on the main thread in the middle of that flush
+    /// retained a texture sampler already freed: CI run 260's summon stress
+    /// died at its seventh reveal copying the temple's materials
+    /// (`SummonStageView.separateTheSet`, `-[SCNMaterial copyWithZone:]` →
+    /// `C3DEffectSlotSetTextureSampler` → `objc_retain`) while the warm
+    /// pass parsed a clip (`-[SCNSceneSource ...]` → `C3DTransactionFlush`).
+    /// Every pass that copies materials — the figure's tint, the battle
+    /// set's and the temple's own copies — runs inside this, so it waits for
+    /// at most the one file being read, and no parse starts in the middle of
+    /// it. Never call it from inside `withImporter`: the lock is not
+    /// re-entrant.
+    static func copyingMaterials<T>(_ body: () throws -> T) rethrows -> T {
+        try withImporter(body)
+    }
+
     /// Parses a model file, one parse at a time (see `importerLock`).
     static func parseScene(at url: URL, options: [SCNSceneSource.LoadingOption: Any]? = nil) throws -> SCNScene {
         try withImporter { try SCNScene(url: url, options: options) }
@@ -1666,29 +1683,32 @@ enum MaterialTuner {
         tint.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
 
         var textured = 0
-        node.enumerateHierarchy { child, _ in
-            guard let geometry = child.geometry,
-                  let unique = geometry.copy() as? SCNGeometry else { return }
-            unique.materials = geometry.materials.map { source in
-                guard let material = source.copy() as? SCNMaterial else { return source }
-                ModelLibrary.noteTinted(material)
-                if material.diffuse.contents != nil && !(material.diffuse.contents is UIColor) {
-                    textured += 1
+        // Copied with the importer to ourselves (`ModelLibrary.copyingMaterials`).
+        ModelLibrary.copyingMaterials {
+            node.enumerateHierarchy { child, _ in
+                guard let geometry = child.geometry,
+                      let unique = geometry.copy() as? SCNGeometry else { return }
+                unique.materials = geometry.materials.map { source in
+                    guard let material = source.copy() as? SCNMaterial else { return source }
+                    ModelLibrary.noteTinted(material)
+                    if material.diffuse.contents != nil && !(material.diffuse.contents is UIColor) {
+                        textured += 1
+                    }
+                    material.setValue(NSNumber(value: Float(hue)), forKey: "costumeHue")
+                    material.setValue(NSNumber(value: Float(saturation)), forKey: "costumeSaturation")
+                    material.setValue(NSNumber(value: Float(costume)), forKey: "costumeMix")
+                    material.setValue(NSNumber(value: Float(sourceHue / 360)), forKey: "costumeSourceHue")
+                    material.setValue(NSValue(scnVector3: SCNVector3(Float(red), Float(green), Float(blue))), forKey: "rimColor")
+                    material.multiply.contents = wash
+                    // Never overwrite a real emissive map the export shipped with —
+                    // glowing eyes and runes are authored, not incidental.
+                    if material.emission.contents == nil {
+                        material.emission.contents = lift
+                    }
+                    return material
                 }
-                material.setValue(NSNumber(value: Float(hue)), forKey: "costumeHue")
-                material.setValue(NSNumber(value: Float(saturation)), forKey: "costumeSaturation")
-                material.setValue(NSNumber(value: Float(costume)), forKey: "costumeMix")
-                material.setValue(NSNumber(value: Float(sourceHue / 360)), forKey: "costumeSourceHue")
-                material.setValue(NSValue(scnVector3: SCNVector3(Float(red), Float(green), Float(blue))), forKey: "rimColor")
-                material.multiply.contents = wash
-                // Never overwrite a real emissive map the export shipped with —
-                // glowing eyes and runes are authored, not incidental.
-                if material.emission.contents == nil {
-                    material.emission.contents = lift
-                }
-                return material
+                child.geometry = unique
             }
-            child.geometry = unique
         }
         report(node, "\(textured) textured material(s); the \(Int(sourceHue))° costume accent becomes \(Int(hue * 360))° for \(hex) in the surface shader")
     }

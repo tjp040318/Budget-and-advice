@@ -11,10 +11,50 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "403",
+  "frames": 47,
+  "seconds": 1.57,
+  "rate": 0.79,
+  "by_role": {
+   "Spine02": "neck",
+   "Spine01": "Spine02",
+   "Head": "Head1"
+  },
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "sekhmet_awakened_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 8,
+   "spots": "natural idle",
+   "moved_mm": 23.5,
+   "drop_mm": 18.0,
+   "missed_mm": 0.0,
+   "slide_before_mm": 12.35,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "403",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 2,
+   "old_over3": 101,
+   "worst": 3.0,
+   "old_worst": 5.6,
+   "slide_mm": 0.0,
+   "old_slide_mm": 69.6,
+   "sink_mm": 0.84,
+   "arm_in": 25,
+   "hips_travel_cm": 7.1,
+   "seconds": 1.533
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

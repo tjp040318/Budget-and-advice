@@ -44,10 +44,46 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "88",
-  "frames": 117,
-  "seconds": 3.9,
-  "rate": 1.95
+  "preset": "255",
+  "frames": 43,
+  "seconds": 1.43,
+  "rate": 0.71,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "khnum_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 10,
+   "spots": "natural idle",
+   "moved_mm": 80.3,
+   "drop_mm": 0.0,
+   "missed_mm": 0.0,
+   "slide_before_mm": 6.25,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "255",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "88",
+  "measured": {
+   "over3": 18,
+   "old_over3": 21,
+   "worst": 4.7,
+   "old_worst": 4.7,
+   "slide_mm": 0.0,
+   "old_slide_mm": 358.05,
+   "sink_mm": 2.39,
+   "arm_in": 0,
+   "hips_travel_cm": 11.3,
+   "seconds": 1.4
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

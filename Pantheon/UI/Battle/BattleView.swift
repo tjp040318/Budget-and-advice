@@ -484,9 +484,9 @@ struct BattleView: View {
         beatBegan = Date()
         let hold: TimeInterval
         if field == .victory {
-            model.sceneController.celebrate(experience: concluded.experience)
+            let victory: TimeInterval = model.sceneController.celebrate(experience: concluded.experience)
             withAnimation(.easeOut(duration: 0.35)) { beat = .triumph }
-            hold = Self.touringVictory ? Self.tourTriumphHold : BattleSceneController.triumphDuration
+            hold = Self.touringVictory ? Self.tourTriumphHold : BattleSceneController.triumphHold(forVictory: victory)
             if Self.touringVictory { print("[TourCue] triumph") }
         } else {
             model.sceneController.drainColour(duration: Self.drainDuration)

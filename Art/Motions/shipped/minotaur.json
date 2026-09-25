@@ -45,10 +45,46 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "255",
+  "frames": 43,
+  "seconds": 1.43,
+  "rate": 0.71,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "minotaur_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 10,
+   "spots": "natural idle",
+   "moved_mm": 63.7,
+   "drop_mm": 2.8,
+   "missed_mm": 0.0,
+   "slide_before_mm": 11.0,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "255",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 43,
+   "old_over3": 262,
+   "worst": 13.5,
+   "old_worst": 24.0,
+   "slide_mm": 0.0,
+   "old_slide_mm": 66.53,
+   "sink_mm": 0.31,
+   "arm_in": 0,
+   "hips_travel_cm": 11.1,
+   "seconds": 1.4
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",
@@ -61,8 +97,13 @@
   }
  },
  "idle_alt": {
-  "made": null,
-  "why": "no shift keeps the feet within 3 mm (roll 1.00, travel 0.24: the blend's feet 3.2 mm; roll 0.75, travel 0.24: the blend's feet 3.2 mm; roll 0.50, travel 0.24: the blend's feet 3.1 mm)"
+  "made": "tools/natural_idle.py --alt (the widened rule, 2026-09-25)",
+  "rule": "wide",
+  "blend_drift_mm": 3.75,
+  "blend_slide_mm": 2.66,
+  "blend_sink_mm": 3.75,
+  "hip_shift": 0.078,
+  "blend_over3": 0
  },
  "break": {
   "preset": "335",

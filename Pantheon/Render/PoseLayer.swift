@@ -137,6 +137,7 @@ final class PoseLayer {
     private var shiftTimer: Timer?
     private var fidgetTimer: Timer?
     private var breakTimer: Timer?
+    private var gazeTimer: Timer?
     /// The break playing now, under its own key (a serial in it, so a break
     /// cut short and still blending out is never taken for the next one).
     private var breakPlayer: SCNAnimationPlayer?
@@ -145,6 +146,14 @@ final class PoseLayer {
     private var lastBreak: String?
     /// What this family can break with, found at the first break.
     private var choices: [PoseBreak]?
+    /// The head's turn toward the lens (`Gaze`, build step 6), hung once the
+    /// life has begun and the stage has named its lens.
+    private var gaze: Gaze?
+    /// The stage's camera, which the gaze looks toward: set by the figure
+    /// stages once their camera exists, never by the island.
+    weak var lens: SCNNode? {
+        didSet { startGaze() }
+    }
     /// Whether the family ships the idle's second variant at all: a bundle
     /// lookup, once. Without one the shift's clock never starts.
     private lazy var shipsAlternate: Bool = ModelLibrary.shared.hasClipFile(.idleAlt, for: clips)
@@ -160,7 +169,7 @@ final class PoseLayer {
         // Held by a stage's coordinator or a `UnitNode`, both let go of on
         // the main thread; the hop is for a node SceneKit frees elsewhere.
         // Each clock also stops itself the first time it finds this gone.
-        let timers: [Timer] = [loadTimer, warmTimer, shiftTimer, fidgetTimer, breakTimer].compactMap { $0 }
+        let timers: [Timer] = [loadTimer, warmTimer, shiftTimer, fidgetTimer, breakTimer, gazeTimer].compactMap { $0 }
         let ticker: FrameTicker? = ease
         if Thread.isMainThread {
             for timer in timers { timer.invalidate() }
@@ -311,6 +320,7 @@ final class PoseLayer {
         } else {
             armShift()
         }
+        startGaze()
         // The island times its own breaks (its stirs), under the tour too.
         guard fidgetsBySelf else { return }
         if Self.fidgetsAtOnce {
@@ -326,14 +336,17 @@ final class PoseLayer {
     func stop() {
         living = false
         stopped = true
-        for timer in [loadTimer, warmTimer, shiftTimer, fidgetTimer, breakTimer] { timer?.invalidate() }
+        for timer in [loadTimer, warmTimer, shiftTimer, fidgetTimer, breakTimer, gazeTimer] { timer?.invalidate() }
         loadTimer = nil
         warmTimer = nil
         shiftTimer = nil
         fidgetTimer = nil
         breakTimer = nil
+        gazeTimer = nil
         ease?.stop()
         ease = nil
+        gaze?.stop()
+        gaze = nil
     }
 
     /// A touch on the stage (a drag turning the figure, a rite on the
@@ -433,6 +446,8 @@ final class PoseLayer {
         breakPlayer = player
         breakKey = key
         lastBreak = choice.name
+        // A look-around is the head's own: the gaze gives way to it.
+        gaze?.state.setStrength(0)
         let window: TimeInterval = max(Self.breakBlendIn + 0.1, choice.end - choice.start)
         report(String(format: "break: %@ (%@, %.2f-%.2f s of a %.2f s clip)",
                       choice.name, choice.preset, choice.start, choice.end, choice.clip.duration))
@@ -478,6 +493,7 @@ final class PoseLayer {
         player.stop(withBlendOutDuration: seconds)
         breakPlayer = nil
         breakKey = nil
+        gaze?.state.setStrength(1)
         _ = after(seconds + 0.05) { layer in
             layer.figure?.removeAnimation(forKey: key)
             layer.armFidget()
@@ -513,9 +529,14 @@ final class PoseLayer {
         if library.hasClipFile(.victory, for: clips), let clip = library.animation(.victory, for: clips) {
             // The window the reveal measured for the preset: the part of the
             // victory that faces the lens (412 turns its back after 1.6 s).
+            // A bow is a greeting, never a fidget: a figure that bowed to
+            // no one every half minute would read as broken (the mystics'
+            // and graces' victory since 2026-09-25, `RevealEntrance.bow`).
             let cut: RevealEntranceCut = RevealEntrance.cut(forClipLength: clip.duration)
-            found.append(PoseBreak(name: PoseBreak.victory, clip: clip, start: cut.start, end: cut.end,
-                                   apex: cut.apex, preset: cut.preset))
+            if RevealEntrance.breaks(cut) {
+                found.append(PoseBreak(name: PoseBreak.victory, clip: clip, start: cut.start, end: cut.end,
+                                       apex: cut.apex, preset: cut.preset))
+            }
         }
         choices = found
         return found
@@ -551,6 +572,68 @@ final class PoseLayer {
                           selector: #selector(WeakTickTarget.tick(_:)), userInfo: nil, repeats: false)
         RunLoop.main.add(timer, forMode: .common)
         return timer
+    }
+
+    // MARK: The gaze (build step 6)
+
+    /// Hangs the gaze on the figure once its life has begun and its stage
+    /// has named a lens (`lens`): the reveal's after its entrance, the
+    /// altar's and the collection's at once. Never on the island, which
+    /// names none, and never in a fight, which makes no layer.
+    private func startGaze() {
+        guard living, !stopped, gaze == nil, Self.gazes, let figure, let lens else { return }
+        guard let made = Gaze(figure: figure, lens: lens) else {
+            report("no gaze: \(clips) has no head over a neck")
+            return
+        }
+        if let direction = Self.tourGazeDirection {
+            made.state.setFixedDirection(direction)
+        }
+        gaze = made
+        report(Self.tourGazeDirection == nil ? "the gaze toward the lens" : "the gaze held off the figure's front (-tour-gaze)")
+        #if DEBUG
+        if PoseTour.touring {
+            gazeTimer = after(Self.gazeReportAfter) { layer in
+                layer.gazeTimer = nil
+                layer.reportGaze()
+            }
+        }
+        #endif
+    }
+
+    /// Whether the figure stages hang a gaze: not under the pose lab, which
+    /// turns the same joint and measures the clip's head without it.
+    static var gazes: Bool {
+        #if DEBUG
+        return PoseLab.mode == nil
+        #else
+        return true
+        #endif
+    }
+
+    /// `-tour-gaze left|right`: a direction in the figure's frame the gaze
+    /// holds to instead of the lens. Nil outside the tour.
+    static var tourGazeDirection: SIMD3<Float>? {
+        #if DEBUG
+        return PoseTour.gazeDirection
+        #else
+        return nil
+        #endif
+    }
+
+    /// Seconds after the gaze is hung that the tour's `[Gaze]` line reads
+    /// it: long enough to have settled (`Gaze.followTime` 0.35 s).
+    static let gazeReportAfter: TimeInterval = 3
+
+    /// `[Gaze]`: the turn the block lays on and where the lens stands,
+    /// under the tour.
+    private func reportGaze() {
+        #if DEBUG
+        guard let gaze else { return }
+        let seen = gaze.state.reading()
+        print(String(format: "[Gaze] %@ %@: the head turned %+.1f° across and %+.1f° up over its clip, the lens %+.1f° off its front, strength %.2f, %d frames",
+                     label, clips, seen.yaw, seen.pitch, seen.across, seen.strength, seen.frames))
+        #endif
     }
 
     // MARK: The tour

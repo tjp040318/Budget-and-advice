@@ -58,8 +58,13 @@
   "hung": null
  },
  "idle_alt": {
-  "made": null,
-  "why": "no shift keeps the feet within 3 mm (roll 1.00, travel 0.12: the blend's feet 5.8 mm; roll 0.75, travel 0.12: the blend's feet 5.2 mm; roll 0.50, travel 0.12: the blend's feet 3.7 mm)"
+  "made": "tools/natural_idle.py --alt (the widened rule, 2026-09-25)",
+  "rule": "wide",
+  "blend_drift_mm": 3.3,
+  "blend_slide_mm": 2.67,
+  "blend_sink_mm": 3.3,
+  "hip_shift": 0.0656,
+  "blend_over3": 0
  },
  "break": {
   "preset": "338",

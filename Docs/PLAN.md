@@ -10281,3 +10281,167 @@ Ka's or the collection's second placement can catch the old figure's
 `fidget-held` cue, a victory used as a break blends out into its turn away,
 and a player's `blendFactor` mixing over the idle is Apple's documentation,
 not yet a frame.
+
+### As built (phase 3: the victories, the wider weight shift, the gaze)
+
+Built on 2026-09-25 by two lanes (V the victories, A the weight shift) and
+this hand (the gaze, the battle's victory, a crash). No credits and no
+Gemini: the four victories were among the presets bought on the 24th.
+
+**Run 260's first.** Phase 2's run was green (the build, the tests, every
+tour step) and its frames were right — the altar's and the collection
+Stage's weight shift and break, the island, every battle — but the memory
+stress DIED in its summon half (`== STRESS: THE APP DIED ==`, 06:16:20). The
+crash report beside the frames (`crash-Pantheon-2026-09-25-061606.ips.txt`)
+has the main thread in `SCNMaterial.copy()` inside
+`SummonStageView.separateTheSet(in:)`, called from `makeUIView`
+(`C3DMaterialCopy` → `C3DEffectSlotSetTextureSampler` → `objc_retain` on a
+freed sampler, EXC_BAD_ACCESS), while the warm pass was parsing a clip on
+another thread: the parse commits its scene through SceneKit's own
+transaction, and a material copied on the main thread in the middle of that
+flush reads a sampler the flush is replacing. Phase 2 made it likelier (two
+more stage clips per family to warm), not new: every copy pass in the app
+had the race. **The fix:** `ModelLibrary.copyingMaterials` holds the
+importer's lock (the one every parse already holds) around the three passes
+that copy materials — the reveal's `separateTheSet`, the battle set's
+`StageBuilder.separateBattleSet` and every figure's
+`MaterialTuner.applyElementTint`. The lock is not re-entrant; no caller of
+the three runs under it (`loadOrCached` takes and releases it before
+`node(for:)` tints, and `MaterialTuner.tune`, which does run under it, copies
+nothing), and nothing holding it waits on the main thread. The cost: a
+stage built while a warm parse runs waits for that parse, at most one file.
+**Main was NOT moved to 11d75897**: the fix and this phase go together, and
+main moves once a run's stress finishes alive.
+
+**The victories (lane V, `motion_palette.py victories`, judged on boards).**
+The four bought victories were cut to their windows (`PRESET_CUTS`: 306, 403,
+255, 41, each with `roles`, `root` and `plant`) and dealt by the STAGES'
+archetype (`VICTORY_DEAL`), laid over each family's natural idle so the
+gesture starts and ends where the idle stands, the feet planted on the idle's
+spots through every contact (`plant_contacts`), and held to the strictest
+rule yet (`victory_guard`): no more edges past 3x than the victory it
+replaces, a planted foot sliding at most 1 mm, no deeper into the floor than
+the idle's limit or the old clip, and no more arm through the body than the
+old clip. **The first run was wrong on every fist pump**: it laid each
+joint's turn over the idle in the joint's OWN frame, and the donor's arms
+came out held out sideways with the head bowed. The rebase is a WORLD turn
+now (`rebase_on_idle`: the body's delta N = B·W0ᵀ·Wi, each joint's local
+read back as N[j]·N[p]ᵀ), and a gesture's arms — the clavicle, the upper arm,
+the forearm and the hand's subtree — are the donor's own retargeted arms,
+eased in and out of the rebased ones over `VICTORY_ARM_EASE` (6 and 10 keys);
+the bow keeps the delta arms (`arms="delta"`), since its arms only settle.
+Judged on old-beside-new boards at four instants of every family:
+- **41 shipped**: the champions', soldiers' and hunters' fist pump (403, 14
+  families: Sekhmet and Ares among them), the brutes' and beasts' stomp
+  (255, 9), the mystics' and graces' bow (41, 18). Five took a variant
+  (`VICTORY_SIDE`): Hephaestus, Sekhmet, Sif and Mars as retargeted with
+  the root's travel (`+abs`), where laid over the idle they failed the
+  rule, and Mars and Vidar with the free hand leading (`~m`). On the 41: **24,398 →
+  7,912 edges past 3x**, five with none (none before); the old clips' planted
+  feet slid 99 mm at the median and 600 at worst, the new none; a sole at
+  most 6.3 mm into the floor; the hips travel 6.8–11.4 cm (the bought four
+  keep the root's travel — the hop, the weight over planted feet — where the
+  three dealt before them lock it). The robed and cloaked tear a fraction of
+  what their old cheer did: Aphrodite 2,942 → 15, Nuwa 3,341 → 633.
+- **The sovereigns keep theirs** (298, 412 and 88): 306's one hand raised
+  reads as flailing on our rigs — the arm folds over the head through the
+  hop and the landing swings the chest 30° — on Minerva, Poseidon and the
+  Unwrapped King's boards, and the robed sovereigns tear in it. Its cut
+  stays in `RevealEntrance` (`cheerOneHand`) so a clip of its length is read
+  right; no family ships it.
+- **31 others keep theirs** (`VICTORY_KEPT`, each with its reason): seven
+  on their boards — Artemis's and Nezha's pump read as a hand to the hair
+  and a stretch, the Medjay's bow held level as a draw, and a cloak tears
+  or spikes in the gesture on Atalanta, Heimdall, Heracles and Njord — and
+  24 by the rule, each named with the edges or the arm through the body
+  that refused it.
+- The cut reports (`Art/Motions/shipped/<family>.json`) record each
+  victory's preset, its plant and its measured rule; `make_plan` applies
+  `victory_for` before the hands and the mirrors, so a re-roll deals the
+  same 41.
+
+**The game plays them right (`RevealEntrance`, `UnitNode`,
+`BattleSceneController`).** `RevealEntrance.presets` knows the four by the
+length SceneKit reports (1.6667, 1.5333, 1.4 and 3.6 s, every pair of
+lengths more than twice the 0.02 s tolerance apart) with their windows: the
+fist pump played to 1.05 s (both fists up at 0.40), the stomp to 0.95 (the
+first landing at 0.3), the bow from 0.4 to 3.1 s with the name on the
+deepest point at 2.0. **A bow is never an idle break** (`breaks`): it greets
+the player, and repeated at no one it would read as broken; `PoseLayer`
+breaks those families with their `_break` alone. In BATTLE the victory was
+retimed to the one-shot contract (2.0 s: the bow at 1.8x, the stomp at 0.7x)
+and played whole, 412 turning its back after 1.6 s; now a victory plays the
+reveal's measured window at its own tempo, eases in from the stance over
+0.25 s (`victoryBlendIn`; a one-shot's 0.05 s snapped the stance into the
+gesture's first key) and blends out over `RevealEntrance.blendOut` into the
+stance when the window ends. The triumph waits for the longest window among
+the survivors (`triumphHold(forVictory:)`: 2.4 s at least, the window + 0.3 s
+to settle, 3.6 s at most), so a bow finishes before the reckoning comes up.
+`PoseLifeTests` and `SummonRevealFeelTests` pin the lengths, the windows, the
+bow and the hold, and a shipped family per preset (Heracles 298, Athena 412,
+Anubis 88, Sekhmet 403, the Minotaur 255, Hathor 41).
+
+**The wider weight shift (lane A, `natural_idle.py --alt`).** Phase 2 held
+every alt to the 3 mm rule, and 57 families had none. Measured, a blend's
+foot error is nearly all SINK — the pelvis goes along its chord while the
+legs turn on arcs, so the planted feet go down along the leg (Anubis at the
+ladder's floor: 3.0 mm down, 2.1 mm sideways, nothing up); the 32 feet
+refusals of phase 2 were 3.4–9 mm, every one of it down. A sole 5 mm into
+the floor is what the idle itself is allowed (`FLOOR_SINK`, scaled for a
+giant), so the widened rule, tried only where the 3 mm rule finds nothing (no
+alt that passed changes), lets a blend SINK a foot joint that far while it
+still slides and rises no more than 3 mm; it reaches smaller shifts too (the
+travel down to the centre, the roll to a quarter), searches the whole grid
+(`ALT_WIDE_TRIES` 64: a robe's tear falls only at the smallest shifts), and
+still has to change the hips VISIBLY — either hip joint's loop-mean moving
+2.5% of the height (`ALT_VISIBLE`: the Terracotta Soldier's 2.0%, which the
+phase-2 judge could not see, is under it). Every candidate is measured AS
+WRITTEN (`as_written`: the scales in half floats, as `write_usdz` writes
+them), which refused the awakened Ares's (a foot 5.10 mm into the floor as
+written, over the idle's 5 mm). **19 more ship, 79 of 117 now**: 12 by the widened rule (Anubis,
+Aphrodite, Apollo, Bastet, Dionysus, the awakened Freya, Guan Yu, the
+Minotaur, the Siren, Sun Wukong, Vidar, Zeus: the feet down 3.0–4.5 mm at
+the blend's middle, sliding at most 2.8 mm, rising none, the hips moving
+4.1–10.4% of the height) and 7 by the whole grid under the 3 mm rule (the
+Jötunn, Fenrir, the awakened Hera, Horus, the awakened Mars, Medusa and the
+awakened Zeus). `blendcheck` re-reads all 79 pairs as written, and none
+tears more than its idle. The other 38 stay without: their feet leave their
+spots past the floor's limit, or every shift tears more than the idle.
+
+**The gaze (step 6; `Pantheon/Render/Gaze.swift`, new).** Run 260's pose lab
+decided it: a transform constraint turned Thoth's neck +20.0° of +20 over 32
+frames of his playing idle, and writing the joint after the animations
+turned it 0.0° over 44. So each stage figure with a life gets an
+`SCNTransformConstraint.orientationConstraint(inWorldSpace: false)` on the
+joint its `Head` hangs from (the joint that carries the skull on every rig;
+the lab's), built in a `nonisolated static func` (a closure formed on the
+main actor traps on SceneKit's render thread under Swift 6), reading only a
+lock-guarded `GazeState`. Each frame it reads the lens off the presentation
+tree, puts it in the figure's frame, and lays a turn over what the clip holds:
+up to 25° across and 12° up or down (the craft's range; past it Meshy's
+one-joint necks twist the skin), all of it while the lens is within 80° of
+the figure's front and none past 120° (behind a shoulder, where following it
+would swing the head across as the figure is spun), eased with a 0.35 s time
+constant. A break takes the head (`setStrength(0)`, eased over 0.25 s) and
+gives it back when it lets go. `PoseLayer.lens` is set by the reveal, the
+Hall of Ka's altar and the collection's Stage; the reveal's `settle`, which
+swayed the whole figure ±11.5° every 4.5 s, is one 1.5 s turn now, the gaze
+the life. **The finger is not in it yet**: the Hall of Ka's and the Stage's
+drag already SPINS the figure, a head that followed the same finger would
+fight the spin, and the tour cannot touch, so a finger's gaze could not be
+seen before the owner tests; the lens is what a player sees looked at, and
+the finger is the next step once a frame of the lens is judged. The gaze in
+battle, toward the acting unit, is still for later. Verified by
+`-tour-gaze left` relaunches of steps 3 and 21 (`3-training-gaze`,
+`21-collection_stage-gaze`: the tour's fixed direction, 40° to the figure's
+left, instead of the lens) and the `[Gaze]` lines (the turn laid on, the
+lens's place, the strength, the frames), which `ciframes.py` prints.
+
+**Still to verify on the next CI run:** that the build compiles `Gaze.swift`
+and the rest; the stress finishing ALIVE (no `THE APP DIED`) with its memory
+curve where run 260's was; `3-training-gaze` and `21-collection_stage-gaze`
+with the head turned toward the figure's left and the `[Gaze]` lines reading
+about +25° across; the reveal (step 5) with its one turn and the head on the
+lens; `20-victory-triumph` with the survivors in the new victories and the
+reckoning after them; and the island's and the stages' breaks, which may now
+be a fist pump or a stomp but never a bow.

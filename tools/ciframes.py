@@ -213,7 +213,9 @@ def main():
         # ahead of the capped list, which the loader's lines fill long before
         # a relaunch. The other [Idle] lines (a loop handed over) stay in the
         # console file: a battle prints a dozen a launch.
-        lab = [l for l in lines if "[PoseLab]" in l or ("[Idle]" in l and "restarted" in l)]
+        # The gaze's line ([Gaze], steps 3 and 21's -tour-gaze relaunches and
+        # every figure stage: the turn its block laid on) likewise.
+        lab = [l for l in lines if "[PoseLab]" in l or "[Gaze]" in l or ("[Idle]" in l and "restarted" in l)]
         print(f"-- {os.path.basename(log)}: {len(lines)} lines, {len(wanted)} of interest")
         # The step's frame pacing beside it (Docs/FEEL.md W2.26): each
         # stage's latest [Frames] line — the governor prints one every three

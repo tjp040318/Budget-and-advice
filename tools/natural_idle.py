@@ -2094,6 +2094,28 @@ ALT_MIN_WEIGHT = 0.53            # the alt stands at least this share of the way
                                  # main does, a construct's 0.53-0.57)
 ALT_TRIES = 8                    # candidates measured through the guards, the most visible first
 ALT_WRITES = 3                   # ... of which written whole and blended at every key
+# The widened rule (lane A, 2026-09-25), tried only where the 3 mm rule above
+# finds no shift, so no alt that passes it changes. A blend's foot error is
+# almost all SINK: the pelvis on its chord and the legs on their arcs take the
+# feet down along the leg (Anubis at the ladder's floor: 3.0 mm down, 2.1 mm
+# sideways, nothing up; the 32 feet refusals of phase 2 were 3.4-9 mm, every
+# one of it down). A sole 5 mm into the floor is what the main idle itself is
+# allowed (FLOOR_SINK, scaled for a giant, or the family's `sink_ok`), so a
+# blend may SINK a foot joint that far - the mesh's lowest point is held to the
+# same floor - while the joint still SLIDES (its distance off the spot across
+# the floor) and rises no more than BLEND_DRIFT. The widened search reaches
+# smaller shifts too, for the alts that tear more than their idle at the
+# ladder's shares: the travel down to the centre (the weight at least leaves
+# the standing leg, never past it) and the roll down to a quarter. Whatever it
+# keeps must still change the hips VISIBLY: either hip joint's loop-mean moves
+# ALT_VISIBLE of the height between the idle and the alt (the Terracotta
+# Soldier's 2.0%, which the judge of phase 2 could not see, is under it; the
+# Shabti's 2.5% is the least any shipped alt moves with no note).
+ALT_WIDE_TRAVEL = ALT_TRAVEL + (0.0,)
+ALT_WIDE_ROLL = ALT_ROLL + (0.25,)
+ALT_VISIBLE = 0.025              # share of the height: the least hip change a widened alt may make
+ALT_WIDE_TRIES = 64              # widened candidates measured through the guards, the most visible first (the
+                                 # whole grid: a robe's tear falls only at the smallest shifts - Bragi's by the 30th)
 
 
 def foot_positions(rig, anim):
@@ -2106,6 +2128,46 @@ def foot_positions(rig, anim):
         local = np.array([trs(anim["T"][fr, j], anim["R"][fr, j], anim["S"][fr, j]) for j in range(J)])
         out[fr] = world_from_local(local, rig.parents)[feet, 3, :3]
     return out
+
+
+def hip_means(rig, anim):
+    """(2, 3): the two hip (upper-leg) joints' world positions, each averaged
+    over the keys of `anim`."""
+    J = len(rig.names)
+    hips = [rig.leg[s]["upleg"] for s in "LR"]
+    out = np.zeros((2, 3))
+    for fr in range(len(anim["T"])):
+        local = np.array([trs(anim["T"][fr, j], anim["R"][fr, j], anim["S"][fr, j]) for j in range(J)])
+        out += world_from_local(local, rig.parents)[hips, 3, :3]
+    return out / max(len(anim["T"]), 1)
+
+
+def hip_shift(rig, main, alt):
+    """How visibly the alt changes the hips: the larger distance either hip
+    joint's loop-mean moves between the idle and the alt, a share of the
+    height (the travel and the roll's flip together; ALT_VISIBLE)."""
+    return float(np.linalg.norm(hip_means(rig, alt) - hip_means(rig, main), axis=1).max()) / rig.height
+
+
+def sink_limit(rig, sink_ok=None):
+    """The main idle's own floor limit (m): FLOOR_SINK, scaled for a giant,
+    or the family's `sink_ok`."""
+    return sink_ok if sink_ok is not None else FLOOR_SINK * max(1.0, rig.height / 1.9)
+
+
+def feet_off(spots, moved):
+    """How the foot joints leave their spots: (the 3 mm rule's drift - the
+    largest travel along any axis - the SLIDE across the floor, the SINK
+    into it and the RISE off it), in m."""
+    d = moved - spots
+    return (float(np.abs(d).max()), float(np.linalg.norm(d[..., [0, 2]], axis=-1).max()),
+            float(max(0.0, -d[..., 1].min())), float(max(0.0, d[..., 1].max())))
+
+
+def as_written(anim):
+    """The loop as a written file carries it: the scales rounded to half
+    floats (character.write_usdz writes a skeleton's scales as Vec3h)."""
+    return dict(anim, S=np.asarray(anim["S"], np.float16).astype(np.float64))
 
 
 def blend_anims(A, B, u):
@@ -2128,19 +2190,32 @@ def blend_anims(A, B, u):
             "S": (1.0 - u) * np.asarray(A["S"], float) + u * np.asarray(B["S"], float), "fps": A["fps"]}
 
 
-def blend_check(rig, base, main, alt, bar=None, sink_ok=None, weapons=True):
+def blend_check(rig, base, main, alt, bar=None, sink_ok=None, weapons=True, rule="3mm"):
     """The two variants blended at BLEND_AT: how far any foot joint leaves
     its spot (the main idle's own, at the same key), the feet's lowest point
     against the floor, the tear of the blended pose (clip_fix's measure) and,
     with `weapons`, each held weapon: a blend may push none deeper into the
     body, nor lower toward the floor, than the idle or its alt holds it (a
     wrist turned differently in the two slerps through poses of its own).
+    The feet are held to the 3 mm rule (`rule` "3mm": every foot joint within
+    BLEND_DRIFT along every axis) or the widened one ("wide": sliding and
+    rising within BLEND_DRIFT, sinking within the main idle's floor limit).
     Returns (facts, fails)."""
     fails = []
     if len(main["T"]) != len(alt["T"]) or abs(main["fps"] - alt["fps"]) > 1e-6:
         return dict(drift_mm=None), [f"the two differ in length ({len(main['T'])} and {len(alt['T'])} keys)"]
+    if rule != "3mm":
+        # measured as the files will carry them: a USD skeleton's scales are
+        # HALF floats, and a centimetre rig's root scale of 0.01 is written
+        # 0.0100021 - the whole figure 0.02% larger about the floor, its soles
+        # 0.2 mm lower than the in-memory loop's (the awakened Ares's blend
+        # sank 4.87 mm here and 5.10 mm off the written pair). The widened rule
+        # runs close to the floor limit by design; the 3 mm rule is left as
+        # every shipped pair was made.
+        main, alt = as_written(main), as_written(alt)
     spots = foot_positions(rig, main)
     drift, worst = 0.0, dict(over3=0, max=1.0, floor_mm=0.0, sink_mm=0.0)
+    slide = dip = rise = 0.0
     per = {}
     held = base.weapons(rig) if weapons else []
     wf = np.unique(np.linspace(0, len(main["T"]) - 1, 12).round().astype(int))
@@ -2151,10 +2226,12 @@ def blend_check(rig, base, main, alt, bar=None, sink_ok=None, weapons=True):
                 ends.setdefault(f["side"], []).append(f)
     for u in BLEND_AT:
         B = blend_anims(main, alt, u)
-        d = float(np.abs(foot_positions(rig, B) - spots).max())
+        d, sl, dp, rs = feet_off(spots, foot_positions(rig, B))
         m = base.measure(B, rig.c.joints, rig, arms=False)
-        per[u] = dict(drift_mm=round(d * 1000, 2), over3=m["over3"])
+        per[u] = dict(drift_mm=round(d * 1000, 2), over3=m["over3"], slide_mm=round(sl * 1000, 2),
+                      dip_mm=round(dp * 1000, 2))
         drift = max(drift, d)
+        slide, dip, rise = max(slide, sl), max(dip, dp), max(rise, rs)
         worst = dict(over3=max(worst["over3"], m["over3"]), max=max(worst["max"], m["max"]),
                      floor_mm=max(worst["floor_mm"], m["floor_mm"]), sink_mm=max(worst["sink_mm"], m["sink_mm"]))
         for f in (base.weapon_facts(rig, B, rig.c.joints, wf) if held else []):
@@ -2167,16 +2244,25 @@ def blend_check(rig, base, main, alt, bar=None, sink_ok=None, weapons=True):
                              f"{deep})")
             if f["low"] < low - 0.01:
                 fails.append(f"the {f['side']} weapon {f['low']:.3f} h off the floor at {int(u * 100)}%")
-    if drift > BLEND_DRIFT:
-        fails.append(f"a foot {drift * 1000:.1f} mm off its spot in the blend")
+    sink = 1000 * sink_limit(rig, sink_ok)
+    if rule == "3mm":
+        if drift > BLEND_DRIFT:
+            fails.append(f"a foot {drift * 1000:.1f} mm off its spot in the blend")
+    else:
+        if slide > BLEND_DRIFT:
+            fails.append(f"a foot slides {slide * 1000:.1f} mm off its spot in the blend")
+        if rise > BLEND_DRIFT:
+            fails.append(f"a foot joint rises {rise * 1000:.1f} mm off its spot in the blend")
+        if dip * 1000 > sink:
+            fails.append(f"a foot joint sinks {dip * 1000:.1f} mm below its spot in the blend (against {sink:.1f})")
     if worst["floor_mm"] > FLOOR_DRIFT * 1000:
         fails.append(f"a foot {worst['floor_mm']:.2f} mm off the floor in the blend")
-    sink = 1000 * (sink_ok if sink_ok is not None else FLOOR_SINK * max(1.0, rig.height / 1.9))
     if worst["sink_mm"] > sink:
         fails.append(f"a foot {worst['sink_mm']:.2f} mm into the floor in the blend")
     if bar is not None and worst["over3"] > bar:
         fails.append(f"the blend tears {worst['over3']} edges past 3x against {bar}")
-    return dict(drift_mm=round(drift * 1000, 2), per=per, **worst), fails
+    return dict(drift_mm=round(drift * 1000, 2), slide_mm=round(slide * 1000, 2), dip_mm=round(dip * 1000, 2),
+                rise_mm=round(rise * 1000, 2), rule=rule, per=per, **worst), fails
 
 
 def alt_params(p, stand, kt, kr=None):
@@ -2191,13 +2277,23 @@ def alt_params(p, stand, kt, kr=None):
     return q
 
 
-def alt_candidates(rig, p, stand):
+def alt_candidates(rig, p, stand, rule="3mm"):
     """The (travel, roll) shares worth measuring, the most visible shift
     first: at each ALT_ROLL, every travel from the largest whose blend with
     the main keeps the feet within BLEND_AIM of BLEND_DRIFT on the measured
     keys down to ALT_MIN_WEIGHT (the drift grows with the travel, so the
     smaller pass too). Returns (candidates [(kt, kr, drift m)], the drift of
-    the smallest travel tried at each roll where none passed)."""
+    the smallest travel tried at each roll where none passed).
+
+    With `rule` "wide": every travel of ALT_WIDE_TRAVEL (and the ladder's
+    floor) at every roll of ALT_WIDE_ROLL, each measured, kept where its
+    blends hold the feet to BLEND_AIM of the widened rule (the slide and the
+    rise to BLEND_DRIFT, the sink to the main idle's floor limit) and its hips
+    change by ALT_VISIBLE of the height, the most visible (the measured hip
+    change) first. Returns (candidates [(kt, kr, facts)], {roll: the least
+    sliding visible travel's facts, or the reason none is visible})."""
+    if rule != "3mm":
+        return wide_candidates(rig, p, stand)
     other = "R" if stand == "L" else "L"
     frames = measured_frames(p, 24)
     main_keys = sample_keys(rig, p, stand, frames)
@@ -2220,6 +2316,41 @@ def alt_candidates(rig, p, stand):
     return out, first
 
 
+def wide_candidates(rig, p, stand):
+    """alt_candidates under the widened rule (see there and ALT_VISIBLE). A
+    candidate's facts: its blends' worst slide, sink and rise (mm), its hip
+    change (a share of the height) and whether it lies on the 3 mm rule's own
+    ladder (`ladder`: the travel down to ALT_MIN_WEIGHT, the roll down to
+    half) or is a smaller shift."""
+    other = "R" if stand == "L" else "L"
+    frames = measured_frames(p, 24)
+    main_keys = sample_keys(rig, p, stand, frames)
+    spots = foot_positions(rig, main_keys)
+    hips0 = hip_means(rig, main_keys)
+    lim = sink_limit(rig, p.get("sink_ok"))
+    floor_kt = min(1.0, (ALT_MIN_WEIGHT - 0.5) / max(p["weight"] - 0.5, 1e-6))
+    travels = sorted(set(ALT_WIDE_TRAVEL) | {round(floor_kt, 4)}, reverse=True)
+    out, near = [], {}
+    for kr in ALT_WIDE_ROLL:
+        for kt in travels:
+            keys = sample_keys(rig, alt_params(p, stand, kt, kr), other, frames)
+            off = [feet_off(spots, foot_positions(rig, blend_anims(main_keys, keys, u))) for u in BLEND_AT]
+            slide, dip, rise = (max(o[i] for o in off) for i in (1, 2, 3))
+            shift = float(np.linalg.norm(hip_means(rig, keys) - hips0, axis=1).max()) / rig.height
+            facts = dict(slide_mm=round(slide * 1000, 2), dip_mm=round(dip * 1000, 2), rise_mm=round(rise * 1000, 2),
+                         shift=round(shift, 4), ladder=bool(kt >= floor_kt - 1e-9 and kr >= min(ALT_ROLL)))
+            if shift < ALT_VISIBLE:
+                near.setdefault(kr, dict(kt=kt, why=f"the hips change {shift * 100:.1f}% of the height"))
+                continue
+            if (slide <= BLEND_AIM * BLEND_DRIFT and rise <= BLEND_AIM * BLEND_DRIFT
+                    and dip <= BLEND_AIM * lim):
+                out.append((kt, kr, facts))
+            elif kr not in near or near[kr].get("slide_mm", 1e9) > facts["slide_mm"] or "why" in near[kr]:
+                near[kr] = dict(kt=kt, **facts)
+    out.sort(key=lambda c: -c[2]["shift"])
+    return out, near
+
+
 def make_alt(family, rig, base, pick, bar):
     """The weight-shift variant of the pick: the same numbers, phases and
     length, the weight on the OTHER leg (the pelvis over it, rolled up there,
@@ -2232,8 +2363,31 @@ def make_alt(family, rig, base, pick, bar):
     The travel and the roll are searched apart (alt_candidates) and the most
     visible shift that passes is kept: every guard the main is held to, the
     tear to the main's own (and so to the file the main replaces), the
-    weapon guard, and blend_check at every key. Returns
+    weapon guard, and blend_check at every key. Only where the 3 mm rule
+    finds nothing is the widened rule searched (ALT_VISIBLE's note: the feet
+    may sink to the main idle's floor limit, and smaller shifts are tried
+    while the hips still visibly change), so an alt the 3 mm rule passes is
+    made exactly as before. The facts' `rule` says which passed: "3mm",
+    "sink" (a shift on the 3 mm rule's own ladder, its feet sinking further),
+    "ladder" (on that ladder and within 3 mm, found past its ALT_TRIES - a
+    robe that tears less a few rungs down) or "smaller" (a smaller shift than
+    that ladder reaches). Returns
     (facts, anim), anim None when nothing passes - the family keeps no alt."""
+    facts, alt = alt_search(family, rig, base, pick, bar, "3mm")
+    if alt is not None:
+        return facts, alt
+    wide, alt = alt_search(family, rig, base, pick, bar, "wide")
+    if alt is not None:
+        wide["refused_3mm"] = facts["fails"]
+        return wide, alt
+    wide["fails"] = [f"3 mm: {'; '.join(facts['fails'])}", f"widened: {'; '.join(wide['fails'])}"]
+    wide["tried"] = (facts.get("tried") or []) + (wide.get("tried") or [])
+    return wide, None
+
+
+def alt_search(family, rig, base, pick, bar, rule):
+    """make_alt's search under one rule ("3mm", or "wide": ALT_VISIBLE's
+    note). Returns (facts, anim), anim None when nothing passes."""
     m, anim, p = pick
     stand = m["stand"]
     other = "R" if stand == "L" else "L"
@@ -2242,15 +2396,22 @@ def make_alt(family, rig, base, pick, bar):
     # idle's count, over a main whose hung club had brought it to 9
     lim = m["over3"] if bar is None else min(bar, m["over3"])
     hung = m.get("hung") or {}
-    cands, first = alt_candidates(rig, p, stand)
+    cands, first = alt_candidates(rig, p, stand, rule)
     tried, written = [], 0
-    if not cands:
+    if not cands and rule == "3mm":
         why = "; ".join(f"roll {kr:.2f}, travel {kt:.2f}: the blend's feet {d * 1000:.1f} mm"
                         for kr, (kt, d) in first.items())
         return dict(stand=other, scale=None, over3=None, hip_tilt=0.0, weight=0.0, blend={},
                     fails=[f"no shift keeps the feet within {BLEND_DRIFT * 1000:g} mm ({why})"]), None
+    if not cands:
+        why = "; ".join(f"roll {kr:.2f}, travel {n['kt']:.2f}: " + (
+            n["why"] if "why" in n else f"the blend's feet slide {n['slide_mm']:.1f} mm, sink {n['dip_mm']:.1f} "
+                                        f"mm (hips {n['shift'] * 100:.1f}%)") for kr, n in first.items())
+        return dict(stand=other, scale=None, over3=None, hip_tilt=0.0, weight=0.0, blend={}, rule=rule,
+                    fails=[f"no visible shift slides under {BLEND_DRIFT * 1000:g} mm and sinks within "
+                           f"{sink_limit(rig, p.get('sink_ok')) * 1000:.1f} mm ({why})"]), None
     wbase = {w["side"]: w for w in base.weapons(rig)}
-    for kt, kr, drift in cands[:ALT_TRIES]:
+    for kt, kr, drift in cands[:ALT_TRIES if rule == "3mm" else ALT_WIDE_TRIES]:
         tag = f"travel {kt:.2f} roll {kr:.2f}"
         q = alt_params(p, stand, kt, kr)
         _, mq, pq = evaluate(family, rig, base, q, other, samples=12, final=False)
@@ -2296,17 +2457,25 @@ def make_alt(family, rig, base, pick, bar):
             fails += weapon_fails(base.weapon_facts(rig, anim_a, rig.c.joints, measured_frames(p_a, 24)), set(hung))
         if p_a["frames"] != p["frames"]:
             fails.append("its loop differs in length")
-        blend, bf = blend_check(rig, base, anim, anim_a, lim, p.get("sink_ok"))
+        blend, bf = blend_check(rig, base, anim, anim_a, lim, p.get("sink_ok"), rule=rule)
         fails += bf
+        shift = hip_shift(rig, anim, anim_a)
+        if rule != "3mm" and shift < ALT_VISIBLE:
+            fails.append(f"the hips change {shift * 100:.1f}% of the height as written (under "
+                         f"{ALT_VISIBLE * 100:g}%)")
         facts = dict(stand=other, scale=round(kt, 3), roll_share=kr, over3=m_a["over3"], max=m_a["max"],
                      drift_mm=m_a["drift_mm"], floor_mm=m_a["floor_mm"], sink_mm=m_a["sink_mm"],
                      through=m_a["through"], through_held=m_a["through_held"], hip_tilt=m_a["hip_tilt"],
                      weight=m_a["weight"], arm_out=m_a["arm_out"], blend=blend, fails=fails, tried=tried,
-                     rehung=replanned, sampled_drift_mm=round(drift * 1000, 2) if drift is not None else None)
+                     rehung=replanned, hip_shift=round(shift, 4),
+                     rule="3mm" if rule == "3mm" else "smaller" if not drift["ladder"] else (
+                         "sink" if blend["drift_mm"] > BLEND_DRIFT * 1000 else "ladder"),
+                     sampled_drift_mm=(round(drift * 1000, 2) if isinstance(drift, float) else
+                                       drift if isinstance(drift, dict) else None))
         if not fails:
             return facts, anim_a
         tried.append(f"{tag}: {fails[0]}")
-    return dict(stand=other, scale=None, over3=None, hip_tilt=0.0, weight=0.0, blend={},
+    return dict(stand=other, scale=None, over3=None, hip_tilt=0.0, weight=0.0, blend={}, rule=rule,
                 fails=[f"no shift passed ({'; '.join(tried[-3:])})"], tried=tried), None
 
 
@@ -2382,6 +2551,13 @@ def write(family, rig, anim, bundle, also_combat=False, against=None, alt=None, 
             na = quiet(clip_fix.clip_stretch, str(base_path), str(made_alt))
             if alt_bar is not None and na["over3"] > alt_bar:
                 aprob.append(f"{na['over3']} edges past 3x against {alt_bar} (clip_fix.clip_stretch)")
+            if not aprob:
+                # the pair as written, blended as blendcheck reads it (the rule
+                # it was made under, the feet, the floor, the tear, the weapon)
+                mw, _ = load_clip(made)
+                aw, _ = load_clip(made_alt)
+                _, pf = pair_check(rig, Base(base_path), mw, aw, alt_bar, override_for(family).get("sink_ok"))
+                aprob += [f"the written pair: {x}" for x in pf]
             if aprob:
                 alt_state = "refused as written: " + "; ".join(aprob)
             else:
@@ -2474,8 +2650,10 @@ def alt_words(r):
     b = a.get("blend") or {}
     if a.get("scale") is None:
         return f"  ALT {a['stand']} REFUSED ({'; '.join(a['fails'])})"
-    head = (f"  ALT {a['stand']} (travel {a['scale']}, roll {a.get('roll_share')}): past3x {a['over3']} tilt "
-            f"{a['hip_tilt']:+.1f} weight {a['weight']:.2f}, blend feet {b.get('drift_mm')} mm past3x {b.get('over3')}"
+    head = (f"  ALT {a['stand']} (travel {a['scale']}, roll {a.get('roll_share')}, rule {a.get('rule', '3mm')}, hips "
+            f"{a.get('hip_shift', 0) * 100:.1f}%): past3x {a['over3']} tilt "
+            f"{a['hip_tilt']:+.1f} weight {a['weight']:.2f}, blend feet {b.get('drift_mm')} mm (slide "
+            f"{b.get('slide_mm')}, sink {b.get('dip_mm')}) past3x {b.get('over3')}"
             + (f" rehung {a['rehung']}" if a.get("rehung") else ""))
     if a["fails"]:
         return head + f" REFUSED ({'; '.join(a['fails'])})"
@@ -2597,6 +2775,15 @@ def cmd_survey(a):
               f"{max(drifts or [0]):.2f} mm (median {float(np.median(drifts or [0])):.2f}); the alts tear "
               f"{sum(r['alt']['over3'] for r in ok_alt)} and their blends {sum(r['alt']['blend']['over3'] for r in ok_alt)} "
               f"edges past 3x; refused: {[r['family'] for r in alts if r['alt']['fails']]}")
+        for rule in ("3mm", "ladder", "sink", "smaller"):
+            by = [r for r in ok_alt if r["alt"].get("rule", "3mm") == rule]
+            if by:
+                print(f"  by the {rule} rule: {len(by)} (the blends slide "
+                      f"{max(r['alt']['blend'].get('slide_mm', 0) for r in by):.2f} mm and sink "
+                      f"{max(r['alt']['blend'].get('dip_mm', 0) for r in by):.2f} mm at most; the hips change "
+                      f"{min(r['alt'].get('hip_shift', 0) for r in by) * 100:.1f}-"
+                      f"{max(r['alt'].get('hip_shift', 0) for r in by) * 100:.1f}% of the height) "
+                      f"{[r['family'] for r in by] if rule != '3mm' else ''}")
     for r in refused:
         print(f"REFUSED {r['family']}: {'; '.join(r['refused'])}")
     if a.json:
@@ -2810,6 +2997,21 @@ def cmd_gif(a):
         print(f"{fam}: gif -> {path}")
 
 
+def pair_check(rig, base, main, alt, bar=None, sink_ok=None):
+    """A written pair held to the rule it was made under: the 3 mm rule, or
+    where that fails the widened one (the feet sinking to the floor limit, the
+    hips changing ALT_VISIBLE of the height). Returns blend_check's (facts,
+    fails) with the rule read and the hip change."""
+    facts, fails = blend_check(rig, base, main, alt, bar, sink_ok)
+    if fails:
+        facts, fails = blend_check(rig, base, main, alt, bar, sink_ok, rule="wide")
+    shift = hip_shift(rig, main, alt)
+    facts["hip_shift"] = round(shift, 4)
+    if facts.get("rule") == "wide" and shift < ALT_VISIBLE:
+        fails.append(f"the hips change {shift * 100:.1f}% of the height (under {ALT_VISIBLE * 100:g}%)")
+    return facts, fails
+
+
 def _blend_row(fam, bundle):
     bundle = Path(bundle)
     try:
@@ -2826,7 +3028,7 @@ def _blend_row(fam, bundle):
         mm = base.measure(main, joints, rig, arms=False)
         ma = base.measure(alt, joints, rig, arms=False)
         lim = mm["over3"] if bar is None else min(bar, mm["over3"])      # make_alt's bar: the idle it varies
-        facts, fails = blend_check(rig, base, main, alt, lim, override_for(fam).get("sink_ok"))
+        facts, fails = pair_check(rig, base, main, alt, lim, override_for(fam).get("sink_ok"))
         if ma["over3"] > lim:
             fails.append(f"the alt tears {ma['over3']} edges past 3x against {lim}")
         return dict(family=fam, archetype=arch_for(fam), keys=len(main["T"]), main=mm["over3"], alt=ma["over3"],
@@ -2853,15 +3055,22 @@ def cmd_blendcheck(a):
         if "per" not in r:
             print(f"{r['family']:22s} FAILED: {'; '.join(r['fails'])}")
             continue
-        per = "  ".join(f"{int(u * 100)}%: {v['drift_mm']:.2f} mm/{v['over3']}" for u, v in r["per"].items())
+        per = "  ".join(f"{int(u * 100)}%: {v['drift_mm']:.2f} mm (slide {v.get('slide_mm', 0):.2f}, sink "
+                        f"{v.get('dip_mm', 0):.2f})/{v['over3']}" for u, v in r["per"].items())
         print(f"{r['family']:22s} {r['archetype']:9s} {r['keys']} keys  weight {r['main_facts']['weight']:.2f} -> "
               f"{r['alt_facts']['weight']:.2f}, tilt {r['main_facts']['hip_tilt']:+.1f} -> {r['alt_facts']['hip_tilt']:+.1f}"
-              f"  past3x shipped {r['shipped']} main {r['main']} alt {r['alt']}  blend {per}  floor +{r['floor_mm']:.2f}/"
-              f"-{r['sink_mm']:.2f} mm  {'PASS' if not r['fails'] else 'FAIL: ' + '; '.join(r['fails'])}")
+              f", hips {r.get('hip_shift', 0) * 100:.1f}%  past3x shipped {r['shipped']} main {r['main']} alt {r['alt']}"
+              f"  blend {per}  floor +{r['floor_mm']:.2f}/-{r['sink_mm']:.2f} mm  rule {r.get('rule', '3mm')}  "
+              f"{'PASS' if not r['fails'] else 'FAIL: ' + '; '.join(r['fails'])}")
     ok = [r for r in rows if "per" in r and not r["fails"]]
-    drifts = [r["drift_mm"] for r in ok]
-    print(f"\n{len(ok)} of {len(rows)} pairs blend within {BLEND_DRIFT * 1000:g} mm; the worst drift "
-          f"{max(drifts or [0]):.2f} mm (median {float(np.median(drifts or [0])):.2f}); the blends tear "
+    strict = [r for r in ok if r.get("rule", "3mm") == "3mm"]
+    wide = [r for r in ok if r.get("rule") == "wide"]
+    drifts = [r["drift_mm"] for r in strict]
+    print(f"\n{len(ok)} of {len(rows)} pairs pass: {len(strict)} blend within {BLEND_DRIFT * 1000:g} mm (the worst "
+          f"drift {max(drifts or [0]):.2f} mm, median {float(np.median(drifts or [0])):.2f}), {len(wide)} by the "
+          f"widened rule (slide {max([r['slide_mm'] for r in wide] or [0]):.2f} mm, sink "
+          f"{max([r['dip_mm'] for r in wide] or [0]):.2f} mm at most; the hips "
+          f"{min([r['hip_shift'] for r in wide] or [0]) * 100:.1f}% of the height at least); the blends tear "
           f"{sum(r['over3'] for r in ok)} edges past 3x (the mains {sum(r['main'] for r in ok)}, the alts "
           f"{sum(r['alt'] for r in ok)})")
     if a.json:
@@ -2898,14 +3107,17 @@ def cmd_altboard(a):
         for label, anim, fr in cols:
             c, width = render_cells(base, anim, joints, [fr], views, size)
             cells.append((label, c[0][1], pose_facts(rig, anim, fr)))
-        facts, fails = blend_check(rig, base, main, alt, None, override_for(fam).get("sink_ok"))
+        facts, fails = pair_check(rig, base, main, alt, None, override_for(fam).get("sink_ok"))
         head, lab = 46, 30
         sheet = Image.new("RGB", (len(cells) * width + 20, head + len(views) * size + lab + 6), (24, 24, 28))
         d = ImageDraw.Draw(sheet, "RGB")
         d.text((8, 4), f"{fam} ({arch_for(fam)}): the weight shift - the idle and its alt on the other leg, the same "
-                       f"foot spots; the blend's feet within {facts['drift_mm']} mm of them",
-               fill=(160, 230, 160), font=preview.font(14))
-        d.text((8, 24), "blends 25/50/75%: " + ", ".join(f"{v['drift_mm']:.2f} mm, {v['over3']} past 3x"
+                       f"foot spots; the blend's feet within {facts['drift_mm']} mm of them (slide "
+                       f"{facts['slide_mm']}, sink {facts['dip_mm']}; rule {facts['rule']}); the hips change "
+                       f"{facts['hip_shift'] * 100:.1f}% of the height{'' if not fails else '  FAILS: ' + fails[0]}",
+               fill=(160, 230, 160) if not fails else (240, 140, 120), font=preview.font(14))
+        d.text((8, 24), "blends 25/50/75%: " + ", ".join(f"{v['drift_mm']:.2f} mm (sink {v['dip_mm']:.2f}), "
+                                                         f"{v['over3']} past 3x"
                                                          for v in facts["per"].values())
                + "; rows front, three-quarter, side", fill=(220, 220, 200), font=preview.font(13))
         for ci, (label, col, pf) in enumerate(cells):

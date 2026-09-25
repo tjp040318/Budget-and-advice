@@ -45,10 +45,46 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "298",
-  "frames": 58,
-  "seconds": 1.93,
-  "rate": 0.96
+  "preset": "255",
+  "frames": 43,
+  "seconds": 1.43,
+  "rate": 0.71,
+  "by_role": "the names match",
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "berserker_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 12,
+   "spots": "natural idle",
+   "moved_mm": 67.8,
+   "drop_mm": 0.0,
+   "missed_mm": 0.0,
+   "slide_before_mm": 12.71,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "255",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "298",
+  "measured": {
+   "over3": 853,
+   "old_over3": 1618,
+   "worst": 33.3,
+   "old_worst": 62.8,
+   "slide_mm": 0.0,
+   "old_slide_mm": 95.88,
+   "sink_mm": 0.39,
+   "arm_in": 3,
+   "hips_travel_cm": 9.9,
+   "seconds": 1.4
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",

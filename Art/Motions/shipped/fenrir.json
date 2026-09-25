@@ -44,10 +44,48 @@
   "tool": "tools/ready_stance.py"
  },
  "victory": {
-  "preset": "88",
-  "frames": 117,
-  "seconds": 3.9,
-  "rate": 1.95
+  "preset": "255",
+  "frames": 43,
+  "seconds": 1.43,
+  "rate": 0.71,
+  "by_role": {
+   "Head": "neck"
+  },
+  "root_motion": "kept",
+  "rebase": {
+   "idle": "fenrir_idle.usdz",
+   "arms": "gesture",
+   "ease": [
+    6,
+    10
+   ],
+   "problems": []
+  },
+  "plant": {
+   "runs": 8,
+   "spots": "natural idle",
+   "moved_mm": 29.5,
+   "drop_mm": 0.0,
+   "missed_mm": 0.0,
+   "slide_before_mm": 27.44,
+   "slide_after_mm": 0.0,
+   "problems": []
+  },
+  "value": "255",
+  "tool": "tools/motion_palette.py victories (2026-09-25)",
+  "replaced": "88",
+  "measured": {
+   "over3": 510,
+   "old_over3": 684,
+   "worst": 33.3,
+   "old_worst": 33.2,
+   "slide_mm": 0.0,
+   "old_slide_mm": 117.32,
+   "sink_mm": 0.28,
+   "arm_in": 0,
+   "hips_travel_cm": 11.3,
+   "seconds": 1.4
+  }
  },
  "idle": {
   "preset": "natural (tools/natural_idle.py)",
@@ -58,8 +96,13 @@
   "hung": null
  },
  "idle_alt": {
-  "made": null,
-  "why": "no shift passed (travel 0.90 roll 0.75: tears 22 edges past 3x against 21; travel 0.60 roll 1.00: 24 edges past 3x against 21; travel 0.80 roll 0.75: tears 22 edges past 3x against 21)"
+  "made": "tools/natural_idle.py --alt (the widened rule, 2026-09-25)",
+  "rule": "3mm",
+  "blend_drift_mm": 1.36,
+  "blend_slide_mm": 1.58,
+  "blend_sink_mm": 1.15,
+  "hip_shift": 0.0414,
+  "blend_over3": 19
  },
  "break": {
   "preset": "2",

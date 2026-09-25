@@ -157,11 +157,25 @@ PRESET_CUTS = {
     # stances (loop)
     377: dict(loop=True),                        # Relax Arms, Then Strike Battle Pose: the battle pose turned 40-60 degrees (f0-24), the arms relaxed (f36-48), the pose struck again (f60-120); f0 = f120, so it closes whole - the champion's stance, for step 4
     231: dict(loop=True),                        # Archery Aim with Lateral Scan: at full draw (f0-24), the bow lowered and a scan 100 degrees left and 56 right (f36-108), the draw again (f120); f0 = f150 - the archers' stance, for step 4
-    # victories
-    306: dict(),                                 # Cheer with One Hand Up: a crouch, a hop with the right arm up (the feet 37 cm off the floor at f16), back at f40 (1.7 s)
-    403: dict(),                                 # Victory Fist Pump: both fists pumped at f12, settled by f40 (1.6 s)
-    255: dict(),                                 # Angry Ground Stomp: the arms flung out and the left foot stamped (up 11 cm at f4 and f36), back at f42 (1.4 s); a lifted foot, so never a break (a break plants the feet)
-    41:  dict(window=(30, 150)),                 # Formal Bow: stands (f0-40), a deep bow (f50-120), up by f140 (4.0 s); the stand after it is 3 s of nothing
+    # victories (2026-09-25, lane V: dealt as each archetype's VICTORY, VICTORY_DEAL).
+    # Each window starts and ends standing, read per frame on the donor (the
+    # hips' height, the arms' angle from straight down, the mean joint turn
+    # off the bind). `roles`: the donor's joints matched to the family's by
+    # the part each is (by_role), not by name - the eleven rigs that call
+    # the joint over the hips `neck` took the donor's neck turn in the lower
+    # back through the name match. `root`: the hips' travel KEPT (mesh.py
+    # --keep-root-motion) - these are motion capture of a body shifting its
+    # weight over planted feet (306's hips travel 10 cm in its landing, 41's
+    # 5 cm in the bow), and the root lock pins the hips and slides the feet
+    # instead. `plant`: every foot in contact with the floor pinned where it
+    # stands (plant_contacts), so the retarget's leg-length error slides
+    # nothing either. Their lengths (1.667, 1.533, 1.4, 3.6 s) are distinct
+    # from each other and from 298's, 412's and 88's, so RevealEntrance can
+    # key a cut on each (VICTORY_CUTS says what each should be).
+    306: dict(window=(0, 50), roles=True, root=True, rebase=True, plant=True),    # (not dealt: judged on the boards, VICTORY_DEAL) Cheer with One Hand Up: a crouch (f6), a hop with the right arm up (the feet 37 cm off the floor at f16), landed at f25, the arm down and settled by f42, standing again at f50 as at f0 (1.67 s)
+    403: dict(window=(0, 46), roles=True, root=True, rebase=True, plant=True),    # Victory Fist Pump: both fists up (the sword hand 6 cm the higher) at f12, up on the toes, down by f17, settled back into f0's stance at f46 (1.53 s)
+    255: dict(window=(0, 42), roles=True, root=True, rebase=True, plant=True),    # Angry Ground Stomp: from a stance turned 17 degrees, the arms flung out and the left foot stamped three times (up 11 cm at f5, 8 at f22, 11 at f36), back in f0's stance at f42 (1.4 s); a lifted foot, so never a break (a break plants the feet)
+    41:  dict(window=(36, 144), roles=True, root=True, rebase=True, plant=True, arms="delta"),  # Formal Bow: the feet drawn together (f21-27), then from f36 the arms settle and the body bows 65 degrees (f60-110), up and standing by f144 (3.6 s); the step in before it and the step out after (f159-177) are left out, so the feet never move
 }
 
 
@@ -588,15 +602,28 @@ def post_fixes(family, bundle, assign, report):
     mirror = [c for c, r in report.items() if r.get("mirrored")]
     base = None
     done = []
+    # a gesture laid over the family's own idle (PRESET_CUTS' `rebase`),
+    # first, so the snout and the feet below are fixed on what ships
+    for clip, value in assign.items():
+        pid = str(value).split("@")[0]
+        path = bundle / f"{family}_{clip}.usdz"
+        if not (pid.isdigit() and PRESET_CUTS.get(int(pid), {}).get("rebase") and path.exists()):
+            continue
+        if report.get(clip, {}).get("absolute"):
+            continue
+        facts = rebase_on_idle(path, family, bundle, arms=PRESET_CUTS[int(pid)].get("arms", "gesture"))
+        report.setdefault(clip, {})["rebase"] = facts
+        done.append(f"{clip} laid over the idle ({facts.get('idle') or facts.get('skipped')})")
     for clip in dict.fromkeys(LATERAL_CLIPS + SNOUT_CLIPS):
         path = bundle / f"{family}_{clip}.usdz"
         if clip not in assign or not path.exists():
             continue
         if clip in mirror:
-            done.append(f"{clip} mirrored to the {'left' if weapon_hand(family) == 'L' else 'right'} hand")
+            done.append(f"{clip} mirrored" + (f" to the {'left' if weapon_hand(family) == 'L' else 'right'} hand"
+                                              if report.get(clip, {}).get("mirrored", {}).get("weapon_hand") else ""))
         pid = str(assign.get(clip, "")).split("@")[0]
         do_pose = pid.isdigit() and (family, int(pid)) in POSE_MIRROR
-        do_wrist = clip in mirror and family in BOW_WRIST
+        do_wrist = clip in mirror and family in BOW_WRIST and clip != "victory"
         do_snout = family in SNOUT and clip in SNOUT_CLIPS
         if not (do_pose or do_wrist or do_snout):
             continue
@@ -629,6 +656,17 @@ def post_fixes(family, bundle, assign, report):
         if probs:
             facts["problems"] = probs
         report.setdefault(clip, {}).update(facts)
+    # the feet pinned where they stand on the floor (PRESET_CUTS' `plant`),
+    # last, on the carrier as every fix above has left it
+    for clip, value in assign.items():
+        pid = str(value).split("@")[0]
+        path = bundle / f"{family}_{clip}.usdz"
+        if not (pid.isdigit() and PRESET_CUTS.get(int(pid), {}).get("plant") and path.exists()):
+            continue
+        facts = plant_contacts(path, family, bundle)
+        report.setdefault(clip, {})["plant"] = facts
+        done.append(f"{clip} feet planted ({facts['runs']} contacts, the largest correction {facts['moved_mm']} mm, "
+                    f"the pelvis lowered {facts['drop_mm']} mm)")
     return done
 
 
@@ -683,10 +721,14 @@ def cmd_ship(a):
     # A preset that carries its weapon in the other hand from the family's is
     # mirrored before the retarget (PRESET_SIDE, WEAPON_HAND).
     mirror = [] if a.no_mirror else mirrored_clips(a.family, assign)
-    assign = {clip: value[:-len(NO_MIRROR)] if value.endswith(NO_MIRROR) else value for clip, value in assign.items()}
+    assign = {clip: strip_side(value) for clip, value in assign.items()}
+    # `+abs`: a gesture shipped as the retarget leaves it, not laid over the idle (VICTORY_SIDE)
+    absolute = {clip for clip, value in assign.items() if ABSOLUTE in value}
+    assign = {clip: value.replace(ABSOLUTE, "") for clip, value in assign.items()}
     prep_dir = WORK / "prepared"
     prep_dir.mkdir(parents=True, exist_ok=True)
     report = {}
+    rooted = []                                 # clips shipped with the hips' travel kept (PRESET_CUTS' `root`)
     for clip, value in assign.items():
         pid, _, opts = value.partition("@")
         source = motion_source(pid)
@@ -703,9 +745,18 @@ def cmd_ship(a):
         raw = Motion.load(source)
         if clip in mirror:
             raw, err = mirror_motion(raw)
+        if cut.get("roles"):
+            raw, renamed = motion_by_role(raw, int(pid), a.family, bundle)
         motion, facts = prepare(raw, clip, cut.get("window"), cut.get("blow"), loop, cut.get("recover", 0))
         if clip in mirror:
             facts["mirrored"] = dict(mode="delta, on the donor", weapon_hand=weapon_hand(a.family), round_trip=float(f"{err:.1e}"))
+        if cut.get("roles"):
+            facts["by_role"] = renamed or "the names match"
+        if cut.get("root"):
+            facts["root_motion"] = "kept"
+            rooted.append(clip)
+        if clip in absolute:
+            facts["absolute"] = True
         prepared = prep_dir / f"{a.family}_{clip}.motion.npz"
         motion.save(prepared)
         report[clip] = dict(preset=pid, **facts)
@@ -716,21 +767,31 @@ def cmd_ship(a):
         print("\n".join(l for l in r.stdout.splitlines() if l.startswith("  ")))
         if r.returncode:
             sys.exit(r.stderr[-800:] or r.stdout[-800:])
-    clips = ",".join(assign)
-    extra = ["--no-weapon"] + (["--lod", "0"] if a.with_base else ["--only-clips", clips])
-    if a.height:
-        extra += ["--height", str(a.height)]
-    code = (
-        "import sys; from pathlib import Path; sys.path.insert(0, %r); import mesh; "
-        "mesh.SOURCE_DIR = Path(%r); mesh.BUNDLE_DIR = Path(%r); mesh.REPO = Path('/'); "
-        "sys.argv = ['mesh.py', %r, '--as', %r] + %r; sys.exit(mesh.main())"
-    ) % (str(REPO / "tools"), str(src_dir), str(bundle), a.asset, a.family, extra)
-    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=str(REPO))
-    tail = [l for l in r.stdout.splitlines() if "PROBLEM" in l or "verified" in l or "problem" in l or "bundle folder" in l]
-    print("\n".join(tail) or r.stdout[-1500:])
-    if r.returncode:
-        print(r.stderr[-1500:])
-        sys.exit(f"mesh.py failed for {a.family}")
+    def run_mesh(clips, keep_root=False, with_base=False):
+        extra = ["--no-weapon"] + (["--lod", "0"] if with_base else ["--only-clips", ",".join(clips)])
+        if keep_root:
+            extra += ["--keep-root-motion"]
+        if a.height:
+            extra += ["--height", str(a.height)]
+        code = (
+            "import sys; from pathlib import Path; sys.path.insert(0, %r); import mesh; "
+            "mesh.SOURCE_DIR = Path(%r); mesh.BUNDLE_DIR = Path(%r); mesh.REPO = Path('/'); "
+            "sys.argv = ['mesh.py', %r, '--as', %r] + %r; sys.exit(mesh.main())"
+        ) % (str(REPO / "tools"), str(src_dir), str(bundle), a.asset, a.family, extra)
+        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=str(REPO))
+        tail = [l for l in r.stdout.splitlines() if "PROBLEM" in l or "verified" in l or "problem" in l or "bundle folder" in l]
+        print("\n".join(tail) or r.stdout[-1500:])
+        if r.returncode:
+            print(r.stderr[-1500:])
+            sys.exit(f"mesh.py failed for {a.family}")
+
+    # the clips whose hips' travel is kept (PRESET_CUTS' `root`) go through
+    # mesh.py on their own run: --keep-root-motion is the whole run's
+    locked = [c for c in assign if c not in rooted]
+    if locked or a.with_base:
+        run_mesh(locked, with_base=a.with_base)
+    if rooted:
+        run_mesh(rooted, keep_root=True)
     # Every carrier just written must bind as the SHIPPED base does (the one in
     # this bundle, else the app's): the game plays a clip's tracks on the
     # figure's joints by name, bone lengths and all, so a rig canonicalised at
@@ -1236,7 +1297,12 @@ POSE_MIRROR = {("hephaestus", 128)}
 # named (91's two blades, the casts, the stances but 226, the victories) is
 # not lateral: it is never mirrored.
 PRESET_SIDE = {219: "R", 97: "R", 242: "R", 221: "R", 105: "R", 102: "R", 86: "R", 237: "R", 238: "R",
-               127: "R", 206: "R", 220: "R", 224: "L", 222: "L", 226: "L"}
+               127: "R", 206: "R", 220: "R", 224: "L", 222: "L", 226: "L",
+               # the victories of 2026-09-25: the sword hand goes up in the
+               # cheer (the left comes to 65 degrees), and leads the fist pump
+               # by 6 cm; the stomp (both arms flung, a foot stamped) and the
+               # bow are not lateral
+               306: "R", 403: "R"}
 # The hand each family holds its weapon (an archer: its bow) in, measured on
 # the shipped base: the mass the forearm and hand own OUTSIDE the arm's own
 # layer (a blade, a haft, a bow), its elongation and its reach past the
@@ -1258,8 +1324,18 @@ WEAPON_HAND = {
 # and a long snout kept `limit` degrees off the torso's line.
 BOW_WRIST = {"skadi"}
 SNOUT = {"sobek": 75.0}
-LATERAL_CLIPS = ("attack_basic", "attack_heavy", "ultimate", "idle_combat")
+LATERAL_CLIPS = ("attack_basic", "attack_heavy", "ultimate", "idle_combat", "victory")
 NO_MIRROR = "~nm"      # a value's suffix: this clip is NOT mirrored to the family's weapon hand (JUDGED)
+FORCE_MIRROR = "~m"    # ... and this one IS mirrored whatever the hand: the free hand leads (VICTORY_SIDE)
+ABSOLUTE = "+abs"      # before the side suffix: a `rebase` preset shipped as retargeted, not over the idle (VICTORY_SIDE)
+
+
+def strip_side(value):
+    """A plan value without its mirror suffix (NO_MIRROR, FORCE_MIRROR)."""
+    for suffix in (NO_MIRROR, FORCE_MIRROR):
+        if value.endswith(suffix):
+            return value[:-len(suffix)]
+    return value
 
 
 def weapon_hand(family):
@@ -1275,7 +1351,10 @@ def mirrored_clips(family, assign):
         v = str(assign.get(clip, ""))
         if v.endswith(NO_MIRROR):                # judged: this clip stays as the preset swings it
             continue
-        v = v.split("@")[0]
+        if v.endswith(FORCE_MIRROR):             # judged: the other hand from the weapon's leads
+            out.append(clip)
+            continue
+        v = v.replace(ABSOLUTE, "").split("@")[0]
         if not v.isdigit() or hand is None:
             continue
         side = PRESET_SIDE.get(int(v))
@@ -1413,6 +1492,12 @@ def make_plan():
             p["guard"] = str(p["clips"]["idle_combat"])
             p["clips"]["idle_combat"] = "ready"
     for f, p in plan.items():
+        # the victories from the bought presets, where the rule and the board
+        # passed them (VICTORY_DEAL, VICTORY_SIDE, VICTORY_KEPT)
+        dealt = victory_for(f)
+        if dealt is not None:
+            p["clips"]["victory"] = dealt
+    for f, p in plan.items():
         p["hand"] = weapon_hand(f)
         p["mirror"] = mirrored_clips(f, p["clips"])
     return plan, taken
@@ -1420,8 +1505,8 @@ def make_plan():
 
 def plan_label(v):
     v = str(v)
-    if v.endswith(NO_MIRROR):
-        return v[:-len(NO_MIRROR)].split("@")[0]
+    if v.endswith(NO_MIRROR) or v.endswith(FORCE_MIRROR) or ABSOLUTE in v:
+        return strip_side(v).replace(ABSOLUTE, "").split("@")[0]
     if v.endswith(".npz"):
         return "own:" + Path(v).name.split("_")[0]
     if v in ("stand", "half", "natural", "ready"):
@@ -1442,7 +1527,7 @@ def report_plan(a, plan, taken):
     label = plan_label
     tuples = [tuple(stance_word(p, k) for k in p["clips"]) for f, p in plan.items() if "_awakened" not in f]
     dupes = len(tuples) - len(set(tuples))
-    short = {"attack_basic": "basic", "attack_heavy": "heavy", "ultimate": "ult", "idle_combat": "stance"}
+    short = {"attack_basic": "basic", "attack_heavy": "heavy", "ultimate": "ult", "idle_combat": "stance", "victory": "victory"}
     if a.markdown:
         print("| family | grade | kind | hand | basic | heavy | ultimate | stance | victory | mirrored |")
         print("|---|---|---|---|---|---|---|---|---|---|")
@@ -2115,6 +2200,740 @@ def cmd_break_board(a):
     print(f"  board -> {a.out} {sheet.size}")
 
 
+# ---------------------------------------------------------------------------
+# Victories from the bought presets (Docs/PLAN.md, *Natural poses*, step 8.4;
+# 2026-09-25, lane V)
+# ---------------------------------------------------------------------------
+#
+# Four of the fifteen presets bought on 2026-09-24 are celebrations the idle
+# breaks could not use (306 hops, 255 lifts a foot): each archetype's VICTORY
+# now, the plan's table - the sovereign's one hand raised, the champion's fist
+# pump, the brute's stomp, the mystic's and the grace's bow. The soldier, the
+# hunter and the beast were offered one each "where it reads right" (boards);
+# the trickster keeps its own taunt and cheer, and so does the construct. The
+# STAGES' archetype deals (natural_idle.arch_for: Bastet stands as a grace,
+# Serqet as a champion), since a victory is a character's gesture - it plays
+# in the battle's triumph, on the reveal's entrance and as a stage's break.
+#
+# Each is shipped through `ship` (clips only) with the cut's `roles`, `root`
+# and `plant` (PRESET_CUTS), then held to MOTION.md section 10's rule
+# strictly (victory_guard): no more edges past 3x on the shipped base than the
+# victory it replaces, and no foot sliding while it is planted - plus the
+# floor and an arm through the body, as the breaks are. A lateral preset (306,
+# 403: PRESET_SIDE) is mirrored to a left-handed family's weapon hand; where
+# that side fails the rule the free hand's is tried, and a family neither
+# side passes KEEPS its victory (VICTORY_KEPT, with the numbers).
+#
+# As judged (2026-09-25, run 3 of `victories` and its boards, old beside new
+# at four instants; Docs/PLAN.md *Natural poses*, the victories as built):
+# 41 shipped - the champions' fist pump, the brutes' and beasts' stomp, the
+# mystics' and graces' bow (the robed and cloaked among them tearing a tenth
+# of what their old cheer did: Aphrodite 2,942 edges past 3x -> 15, Nuwa
+# 3,341 -> 633) - and the sovereigns keep theirs: 306 on our rigs reads as
+# flailing, not as a hand raised (the arm folds over the head through the
+# hop, and the landing swings the chest 30 degrees; Minerva, Poseidon and
+# the Unwrapped King on the boards), and the robed sovereigns tear in it.
+# The first run laid each joint's turn over the idle in its OWN frame and
+# broke every fist pump (two arms held out sideways, the head down): the
+# rebase is a world turn now, the arms of a gesture the donor's own
+# (rebase_on_idle).
+VICTORY_DEAL = {"champion": 403, "soldier": 403, "hunter": 403, "brute": 255, "beast": 255,
+                "mystic": 41, "grace": 41}
+# family -> plan value where the one that shipped is not the plain preset:
+# laid over the idle it failed the rule and as retargeted it passed (`+abs`),
+# or the other hand from the weapon's leads (`~m`, `~nm`)
+VICTORY_SIDE = {
+               'hephaestus': '255+abs',
+               'mars': '403+abs~m',
+               'sekhmet': '403+abs',
+               'sif': '403+abs',
+               'vidar': '403~m',
+}
+# family -> why it keeps the victory it had: the rule's first refusal (every
+# way it was tried failed), or the board's
+VICTORY_KEPT = {
+    'artemis': 'the board: the fist pump with a bow in hand reads as a hand to the hair (its cheer reads better)',
+    'atalanta': 'the board: the cloak tears at the shoulder in the pump',
+    'bellona': "the rule: 403: tears 1624 edges past 3x against the old victory's 1420; 403+abs: tears 1688 edges past 3x against the old victory's 1420; 403~nm: tears 1615 edges past 3x",
+    'bragi': 'the rule: 41: an arm through the body (26 points, the old 23); 41+abs: an arm through the body (86 points, the old 23)',
+    'centurion': "the rule: 403: tears 349 edges past 3x against the old victory's 181; 403+abs: tears 307 edges past 3x against the old victory's 181; 403~nm: tears 521 edges past 3x agai",
+    'cobra_priestess': 'the rule: 41: an arm through the body (118 points, the old 3); 41+abs: an arm through the body (88 points, the old 3)',
+    'cyclops': "the rule: 255: tears 92 edges past 3x against the old victory's 73; 255+abs: tears 82 edges past 3x against the old victory's 73",
+    'demeter': "the rule: 41: tears 780 edges past 3x against the old victory's 703; 41+abs: tears 886 edges past 3x against the old victory's 703",
+    'diana': "the rule: 403: tears 461 edges past 3x against the old victory's 353; 403+abs: tears 509 edges past 3x against the old victory's 353; 403~m: tears 467 edges past 3x again",
+    'dwarf_smith': "the rule: 255: tears 841 edges past 3x against the old victory's 710; 255+abs: tears 801 edges past 3x against the old victory's 710",
+    'einherjar': "the rule: 403: tears 53 edges past 3x against the old victory's 19; 403+abs: tears 52 edges past 3x against the old victory's 19; 403~m: tears 44 edges past 3x against th",
+    'frost_troll': 'the rule: 255: an arm through the body (38 points, the old 0); 255+abs: an arm through the body (27 points, the old 0)',
+    'gladiator': "the rule: 403: tears 28 edges past 3x against the old victory's 21; 403+abs: tears 28 edges past 3x against the old victory's 21; 403~m: tears 24 edges past 3x against th",
+    'harpy': "the rule: 255: tears 274 edges past 3x against the old victory's 188; 255+abs: tears 249 edges past 3x against the old victory's 188",
+    'heimdall': 'the board: the cloak flies up as a sheet with the pump (it tears in the old one too, less visibly at its apex)',
+    'heracles': "the board: the lion cloak spikes out in the stomp's flung arms",
+    'hoplite': "the rule: 403: tears 93 edges past 3x against the old victory's 40; 403+abs: tears 99 edges past 3x against the old victory's 40; 403~m: tears 75 edges past 3x against th",
+    'idunn': "the rule: 41: tears 1366 edges past 3x against the old victory's 1174; 41+abs: tears 1666 edges past 3x against the old victory's 1174",
+    'maat': 'the rule: 41: an arm through the body (42 points, the old 3); 41+abs: an arm through the body (30 points, the old 3)',
+    'mars_awakened': "the rule: 403: tears 1364 edges past 3x against the old victory's 1132; 403+abs: tears 1373 edges past 3x against the old victory's 1132; 403~m: tears 1354 edges past 3x ",
+    'medjay': 'the board: the bow held level at the chest reads as a draw, not a triumph (its cheer reads better)',
+    'medusa': "the rule: 41: tears 396 edges past 3x against the old victory's 45; 41+abs: tears 399 edges past 3x against the old victory's 45",
+    'nezha': 'the board: the pump reads as a stretch, the staff behind the head (its cheer reads better)',
+    'nike': "the rule: 403: tears 18 edges past 3x against the old victory's 2; 403+abs: tears 20 edges past 3x against the old victory's 2; 403~m: tears 12 edges past 3x against the ",
+    'njord': 'the board: the cloak tears with the pump as in the old',
+    'scarab_knight': "the rule: 403: tears 7 edges past 3x against the old victory's 0; 403+abs: tears 8 edges past 3x against the old victory's 0; 403~m: tears 7 edges past 3x against the old",
+    'serqet': 'the rule: 403: an arm through the body (36 points, the old 0); 403+abs: an arm through the body (24 points, the old 0); 403~m: an arm through the body (50 points, the old',
+    'skadi': 'the rule: 403: an arm through the body (84 points, the old 0); 403+abs: an arm through the body (69 points, the old 0); 403~m: an arm through the body (49 points, the old',
+    'sobek': "the rule: 255: tears 53 edges past 3x against the old victory's 13; 255+abs: tears 37 edges past 3x against the old victory's 13",
+    'surtr': "the rule: 255: tears 262 edges past 3x against the old victory's 117; 255+abs: tears 214 edges past 3x against the old victory's 117",
+    'tyr': 'the rule: 403: an arm through the body (17 points, the old 9); 403+abs: an arm through the body (18 points, the old 9); 403~m: an arm through the body (16 points, the old',
+}
+# Each victory's beats, in keys of its window at 30 a second, read off
+# strips of every third key on the donor: `apex` is the gesture's high point
+# (the sword or the fists highest, the arms flung widest as the foot comes
+# down, the bow deepest) - where RevealEntrance's name should slam - and
+# `board` the four keys a board shows.
+VICTORY_BEATS = {306: dict(apex=12, board=(6, 12, 17, 50)),
+                 403: dict(apex=12, board=(6, 12, 20, 46)),
+                 255: dict(apex=8, board=(5, 8, 24, 42)),
+                 41: dict(apex=60, board=(20, 60, 90, 108))}
+VICTORY_SAMPLES = 32          # frames of each clip the tear is summed over (the roll-out's re-measure)
+PLANT_TOL = 0.012             # m, for a 1.9 m figure (a giant in proportion): a foot point this near its floor is ON it
+PLANT_MIN = 3                 # keys: a shorter contact is a touch in passing, not a plant
+PLANT_GAP = 2                 # keys: a gap this short inside a contact is closed
+PLANT_WIDER = 1.5             # the planting's contact band over the measure's
+VICTORY_SLIDE = 0.001         # m: a planted foot point's travel within one contact (BREAK_SLIDE)
+VICTORY_ARM_EASE = (6, 10)    # keys (at 30 a second) a gesture's arms take to leave the idle's hang and to come back to it
+
+
+def victory_for(family):
+    """The plan's victory value for a family the deal reaches, or None
+    (its old victory stands: not dealt, or VICTORY_KEPT)."""
+    ni = _ni()
+    if family in VICTORY_KEPT:
+        return None
+    pid = VICTORY_DEAL.get(ni.arch_for(family) or "")
+    if pid is None:
+        return None
+    return VICTORY_SIDE.get(family, str(pid))
+
+
+def motion_by_role(raw, pid, family, bundle=None):
+    """The preset's joints renamed to the family's by the part each is
+    (by_role), so retarget.py's name match lands the donor's head on the
+    joint that carries the skull. -> (Motion, {donor name: family name} of
+    the renamed)."""
+    ni = _ni()
+    from retarget import Motion
+    c, _, bp = ni.carrier_for(family, bundle)
+    rig = ni.Rig(c, _quiet(character.read_usdz, str(bp)))
+    names = by_role(donor_rig(pid), rig)
+    leaf = lambda j: j.split("/")[-1]
+    m = Motion(["/".join(j.split("/")[:-1] + [names.get(leaf(j), "_unplaced_" + leaf(j))]) for j in raw.joints],
+               raw.parents, raw.rest_local, raw.anim, raw.source)
+    return m, {k: v for k, v in names.items() if k != v}
+
+
+def _runs(mask, min_len=PLANT_MIN, gap=PLANT_GAP):
+    """[(start, end inclusive)] of the True runs, gaps of `gap` keys closed,
+    short runs dropped - except at either end of the clip, where a foot on
+    the floor for one key is the stance the clip starts or ends in (255
+    lifts its foot from its second key)."""
+    m = np.asarray(mask, bool).copy()
+    idx = np.flatnonzero(m)
+    for a, b in zip(idx[:-1], idx[1:]):
+        if 1 < b - a <= gap + 1:
+            m[a:b] = True
+    out, i, n = [], 0, len(m)
+    while i < n:
+        if m[i]:
+            j = i
+            while j + 1 < n and m[j + 1]:
+                j += 1
+            if j - i + 1 >= min_len or i == 0 or j == n - 1:
+                out.append((i, j))
+            i = j + 1
+        else:
+            i += 1
+    return out
+
+
+def _feet_track(rig, T, R):
+    """Per key and side: the ankle's world position and rotation and the
+    ball's position (the first toe joint; the ankle where a rig has none)."""
+    n = len(T)
+    out = {s: dict(A=np.zeros((n, 3)), B=np.zeros((n, 3)), Rf=np.zeros((n, 3, 3))) for s in "LR"}
+    for i in range(n):
+        Rw, Pw = _fk(rig, T[i], R[i])
+        for s in "LR":
+            g = rig.leg[s]
+            out[s]["A"][i], out[s]["Rf"][i] = Pw[g["foot"]], Rw[g["foot"]]
+            out[s]["B"][i] = Pw[g["toes"][0]] if g["toes"] else Pw[g["foot"]]
+    return out
+
+
+def _contacts(rig, track, height, scale=1.0):
+    """Per side: the ball's and the ankle's contact runs - near its floor
+    (its bind height or the clip's lowest, whichever is higher, plus
+    PLANT_TOL scaled to the figure, and by `scale`: the planting reads a
+    wider band than the measure, so every key the measure calls planted was
+    pinned)."""
+    tol = PLANT_TOL * max(1.0, height / 1.9) * scale
+    out = {}
+    for s in "LR":
+        g = rig.leg[s]
+        ball = g["toes"][0] if g["toes"] else g["foot"]
+        yb0, ya0 = rig.pos0[ball][1], rig.pos0[g["foot"]][1]
+        B, A = track[s]["B"], track[s]["A"]
+        cb = B[:, 1] <= max(yb0, B[:, 1].min()) + tol
+        ca = A[:, 1] <= max(ya0, A[:, 1].min()) + tol
+        out[s] = dict(ball=_runs(cb), ankle=_runs(ca), yb0=yb0, ya0=ya0)
+    return out
+
+
+def foot_slide(rig, anim, height):
+    """The worst horizontal travel of a planted foot point: in every
+    contact run (_contacts), the ball's and the ankle's distance from where
+    they were planted, in m; and the contacts, per side."""
+    T, R = np.asarray(anim["T"], float), np.asarray(anim["R"], float)
+    track = _feet_track(rig, T, R)
+    runs = _contacts(rig, track, height)
+    worst, where = 0.0, None
+    for s in "LR":
+        for key, pts in (("ball", track[s]["B"]), ("ankle", track[s]["A"])):
+            for a, b in runs[s][key]:
+                d = np.linalg.norm(pts[a:b + 1][:, [0, 2]] - pts[a][[0, 2]], axis=1).max()
+                if d > worst:
+                    worst, where = float(d), f"{s} {key} f{a}-{b}"
+    return dict(slide_mm=round(worst * 1000, 2), at=where,
+                contacts={s: dict(ball=runs[s]["ball"], ankle=runs[s]["ankle"]) for s in "LR"})
+
+
+def _heading(v):
+    return float(np.degrees(np.arctan2(v[0], v[2])))
+
+
+def _arm_joints(rig, parents):
+    """Every joint of the two arms: the clavicle, the upper arm, the forearm
+    and the hand with everything it carries (the fingers, a weapon's own
+    joints)."""
+    kids = {}
+    for j, p in enumerate(parents):
+        kids.setdefault(int(p), []).append(j)
+    out = set()
+    for s in "LR":
+        g = rig.arm[s]
+        out |= {g[k] for k in ("clav", "upper", "fore") if g.get(k) is not None}
+        stack = [g["hand"]]
+        while stack:
+            j = stack.pop()
+            out.add(j)
+            stack += kids.get(j, [])
+    return out
+
+
+def _smooth(x):
+    x = min(max(x, 0.0), 1.0)
+    return x * x * (3 - 2 * x)
+
+
+def rebase_on_idle(path, family, bundle=None, arms="gesture", ease=VICTORY_ARM_EASE):
+    """A clip carrier laid over the family's natural idle, in place, so it
+    starts and ends where the stages' idle stands (the reveal's entrance
+    and PoseLayer's break blend into it and back). -> facts.
+
+    The body takes the clip's WORLD turn since its first key, joint by
+    joint, from the idle's MEAN pose (the retarget's own method: every bone
+    swung in the world as the donor's swings), and the root its travel. A
+    turn taken in each joint's own frame instead (this function's first
+    cut) carried the idle's weapon-hanging twist of the forearm into every
+    bend: Tyr's and Achilles's fist pumps came out as two arms held
+    straight out sideways, the head down (the boards of 2026-09-25).
+
+    `arms` "gesture" (the cheer, the fist pump, the stomp: a gesture IS
+    where the hands go): the arms are the clip's own, as retargeted, eased
+    in from the idle's hang over the first `ease[0]` keys and back over the
+    last `ease[1]`, so the fists reach the donor's height instead of the
+    idle's hang plus the donor's rise. "delta" (the bow: its gesture is the
+    spine's, and the donor's arms hang 10 degrees out where the families'
+    binds hang 22, which pressed Thoth's and the Vestal's staves into their
+    bodies in every key): the arms take the world turn as the body does,
+    round the family's own hang and rested weapon."""
+    import clip_fix
+    ni = _ni()
+    idle_path = Path(bundle) / f"{family}_idle.usdz" if bundle else None
+    idle_path = idle_path if idle_path is not None and idle_path.exists() else APP_BUNDLE / f"{family}_idle.usdz"
+    if not idle_path.exists():
+        return dict(skipped="no natural idle")
+    c = clip_fix.read(path)
+    ic = clip_fix.read(idle_path)
+    if list(ic.joints) != list(c.joints):
+        return dict(skipped="the idle's joints are not the carrier's")
+    rig = ni.Rig(c)
+    k = len(ic.anim["T"]) - 1                                # a loop's last key is its first
+    Ri = np.asarray(ic.anim["R"][:k], float)
+    Ri = Ri * np.where(np.sum(Ri * Ri[:1], axis=2, keepdims=True) < 0, -1.0, 1.0)
+    q = Ri.mean(axis=0)
+    mean_R = q / np.linalg.norm(q, axis=1, keepdims=True)
+    mean_T = np.asarray(ic.anim["T"][:k], float).mean(axis=0)
+    T = np.asarray(c.anim["T"], float).copy()
+    R = np.asarray(c.anim["R"], float).copy()
+    n, J = R.shape[:2]
+    par = np.asarray(c.parents)
+    B, _ = _fk(rig, mean_T, mean_R)                          # the idle's mean pose, in the world
+    W0, _ = _fk(rig, T[0], R[0])
+    T0 = T[0].copy()
+    roots = np.where(par < 0)[0]
+    gesture = _arm_joints(rig, par) if arms == "gesture" else set()
+    a_in, a_out = ease
+    env = np.array([min(_smooth(i / max(a_in, 1)), _smooth((n - 1 - i) / max(a_out, 1))) for i in range(n)])
+    out = R.copy()
+    for i in range(n):
+        Wi, _ = _fk(rig, T[i], R[i])
+        N = [B[j] @ W0[j].T @ Wi[j] for j in range(J)]
+        for j in range(J):
+            p = int(par[j])
+            qd = character.rot_to_quat(N[j] @ N[p].T if p >= 0 else N[j])
+            if j in gesture and env[i] > 0:
+                qa = R[i, j] if np.dot(R[i, j], qd) >= 0 else -R[i, j]
+                qd = character.rot_to_quat(character.quat_to_rot(qd) @ ni.slerp_rot(
+                    character.quat_to_rot(qd).T @ character.quat_to_rot(qa), env[i]))
+            out[i, j] = qd
+        for r in roots:
+            T[i, r] = mean_T[r] + (T[i, r] - T0[r])
+    for i in range(1, n):
+        out[i] *= np.where(np.sum(out[i] * out[i - 1], axis=1) < 0, -1.0, 1.0)[:, None]
+    c.anim = {"T": T.astype(np.float32), "R": out.astype(np.float32),
+              "S": np.asarray(c.anim["S"], np.float32), "fps": c.anim["fps"]}
+    c.name = family
+    probs = clip_fix.write_carrier(c, path)
+    return dict(idle=idle_path.name, arms=arms, ease=list(ease) if arms == "gesture" else None, problems=probs)
+
+
+def idle_feet(family, rig, bundle=None):
+    """Where the family's natural idle stands its feet (its first key: the
+    idle plants them to a thousandth of a millimetre): per side the ankle's
+    position and rotation and the ball's position; the bind's where the idle
+    cannot be read on this skeleton."""
+    import clip_fix
+    path = Path(bundle) / f"{family}_idle.usdz" if bundle else None
+    path = path if path is not None and path.exists() else APP_BUNDLE / f"{family}_idle.usdz"
+    out = {}
+    try:
+        ic = clip_fix.read(path)
+        ok = [j.split("/")[-1] for j in ic.joints] == rig.names
+    except Exception:  # noqa: BLE001
+        ok = False
+    if ok:
+        track = _feet_track(rig, np.asarray(ic.anim["T"][:1], float), np.asarray(ic.anim["R"][:1], float))
+        for s in "LR":
+            out[s] = dict(A=track[s]["A"][0], B=track[s]["B"][0], Rf=track[s]["Rf"][0], source="natural idle")
+        return out
+    for s in "LR":
+        g = rig.leg[s]
+        ball = g["toes"][0] if g["toes"] else g["foot"]
+        out[s] = dict(A=rig.pos0[g["foot"]].copy(), B=rig.pos0[ball].copy(), Rf=rig.rot0[g["foot"]].copy(), source="bind")
+    return out
+
+
+def plant_contacts(path, family, bundle=None):
+    """Every foot on the floor stood where the family's natural idle stands
+    it, on a shipped clip carrier, in place. The retarget copies the donor's
+    leg turns onto the family's bind, and the donor's bind stands its feet
+    40 cm apart where most families stand theirs 20-25: the donor's legs
+    closing from that A-pose into its stance crossed Hera's left foot over
+    her midline (a world-space delta cannot know a stance). So wherever
+    the ball or the ankle is near the floor (_contacts, PLANT_WIDER times
+    the measure's band) the whole foot stands on the idle's spot for it,
+    turned as the idle turns it - a first try held the ball and kept the
+    clip's own pitch, and a heel rising over a held ball still moved the
+    ankle 8 mm and put Heracles's toes 48 mm into the floor; in the air the
+    corrections are blended from one contact's to the next (a hop takes off
+    from the idle's spots and lands on them), and a foot still within the
+    band only rises, clearing the floor before it moves over it or turns.
+    The legs are solved by two-bone IK with each knee on its own animated
+    pole, the pelvis lowered (smoothed) only where a leg cannot reach. The
+    feet then start and end where the idle has them, so a stage's blend
+    into the victory and back (the reveal's entrance, PoseLayer's break)
+    slides nothing either. -> facts."""
+    import clip_fix
+    ni = _ni()
+    c = clip_fix.read(path)
+    rig = ni.Rig(c)
+    lo, hi = character.bounds(np.asarray(c.points, float))
+    height = float(hi[1] - lo[1])
+    T = np.asarray(c.anim["T"], float).copy()
+    R = np.asarray(c.anim["R"], float).copy()
+    n = len(T)
+    before = foot_slide(rig, c.anim, height)
+    track = _feet_track(rig, T, R)
+    runs = _contacts(rig, track, height)
+    spots = idle_feet(family, rig, bundle)
+    P0, R0 = rig.pos0, rig.rot0
+    Yax = np.array([0.0, 1.0, 0.0])
+
+    def smooth(x):
+        x = np.clip(x, 0.0, 1.0)
+        return x * x * (3 - 2 * x)
+
+    tol = PLANT_TOL * max(1.0, height / 1.9)
+    plant_runs = _contacts(rig, track, height, scale=PLANT_WIDER)
+    target = {}
+    moved = 0.0
+    for s in "LR":
+        g = rig.leg[s]
+        A, Rf = track[s]["A"], track[s]["Rf"]
+        ball = g["toes"][0] if g["toes"] else None
+        o = (P0[ball] - P0[g["foot"]]) @ R0[g["foot"]].T if ball is not None else np.zeros(3)
+        home = spots[s]
+        newA = A.copy()
+        newR = Rf.copy()
+        pinned = np.zeros(n, bool)
+        for a, b in plant_runs[s]["ball"] + plant_runs[s]["ankle"]:
+            pinned[a:b + 1] = True
+        # on the floor: the whole foot on the idle's spot, as the idle stands it
+        newA[pinned] = home["A"]
+        newR[pinned] = home["Rf"]
+        # in the air: the correction blended from the contact before to the contact after
+        dA = newA - A
+        C = np.array([Rf[i].T @ newR[i] for i in range(n)])        # the world turn taking the clip's foot to the planted one
+        idx = np.flatnonzero(pinned)
+        for i in np.flatnonzero(~pinned):
+            prev, nxt = idx[idx < i], idx[idx > i]
+            if len(prev) and len(nxt):
+                p, q = prev[-1], nxt[0]
+                w = smooth((i - p) / (q - p))
+                dA[i] = dA[p] * (1 - w) + dA[q] * w
+                C[i] = C[p] @ ni.slerp_rot(C[p].T @ C[q], w)
+            elif len(prev) or len(nxt):
+                k = prev[-1] if len(prev) else nxt[0]
+                dA[i], C[i] = dA[k], C[k]
+            newA[i] = A[i] + dA[i]
+            newR[i] = Rf[i] @ C[i]
+            # a foot still near the floor only rises: it moves over the floor
+            # and turns as it clears it (else it scuffs, which is a slide);
+            # its floor is the measure's (_contacts: the bind's height, or the
+            # planted one where that is higher), cleared by PLANT_WIDER bands
+            if len(idx):
+                lift = min(newA[i][1] - max(runs[s]["ya0"], home["A"][1]),
+                           (newA[i] + o @ newR[i])[1] - max(runs[s]["yb0"], home["B"][1]))
+                w = smooth((lift - PLANT_WIDER * tol) / tol)
+                if w < 1:
+                    newA[i][[0, 2]] = home["A"][[0, 2]] + w * (newA[i][[0, 2]] - home["A"][[0, 2]])
+                    newR[i] = home["Rf"] @ ni.slerp_rot(home["Rf"].T @ newR[i], w)
+        moved = max(moved, float(np.linalg.norm(newA - A, axis=1).max()))
+        target[s] = dict(A=newA, Rf=newR)
+    # the pelvis lowered where a leg cannot reach its spot
+    drops = np.zeros(n)
+    for i in range(n):
+        _, Pw = _fk(rig, T[i], R[i])
+        for s in "LR":
+            g = rig.leg[s]
+            a = np.linalg.norm(P0[g["knee"]] - P0[g["upleg"]])
+            b = np.linalg.norm(P0[g["foot"]] - P0[g["knee"]])
+            br = rig.bind_reach[s]
+            rm = (min(0.995, br + 0.01) if br < 0.985 else 0.995) * (a + b)
+            reach_now = np.linalg.norm(track[s]["A"][i] - Pw[g["upleg"]])
+            rm = max(rm, min(reach_now, (a + b) * 0.9995))     # never asked to stand straighter than the clip already does
+            v = target[s]["A"][i] - Pw[g["upleg"]]
+            drops[i] = max(drops[i], -v[1] - np.sqrt(max(rm * rm - v[0] ** 2 - v[2] ** 2, 0.0)))
+    drops = np.maximum(drops, 0.0)
+    if drops.max() > 0:
+        pad = np.pad(drops, 3, mode="edge")
+        wide = np.array([pad[i:i + 7].max() for i in range(n)])
+        gk = np.exp(-0.5 * (np.arange(-4, 5) / 1.5) ** 2)
+        drops = np.convolve(np.pad(wide, 4, mode="edge"), gk / gk.sum(), mode="valid")
+        for r in np.where(rig.parents < 0)[0]:
+            T[:, r, 1] -= drops
+    for i in range(n):
+        Rw, Pw = _fk(rig, T[i], R[i])
+        for s in "LR":
+            g = rig.leg[s]
+            u, k, f = g["upleg"], g["knee"], g["foot"]
+            a, b = np.linalg.norm(P0[k] - P0[u]), np.linalg.norm(P0[f] - P0[k])
+            H, F = Pw[u], target[s]["A"][i]
+            K0 = Pw[k]
+            d = min(max(np.linalg.norm(F - H), abs(a - b) + 1e-4), (a + b) * 0.9995)
+            axis = ni.unit(F - H)
+            old = ni.unit(Pw[f] - H)
+            pole = (K0 - H) - ((K0 - H) @ old) * old
+            pole = pole if np.linalg.norm(pole) > 1e-5 else rig.knee_pole[s]
+            pole = pole - (pole @ axis) * axis
+            pole = ni.unit(pole) if np.linalg.norm(pole) > 1e-6 else rig.knee_pole[s]
+            x = (a * a - b * b + d * d) / (2 * d)
+            K = H + axis * x + pole * np.sqrt(max(a * a - x * x, 0.0))
+            pole0 = rig.knee_pole[s]
+            Rw[u] = R0[u] @ ni.frame_rotation(P0[k] - P0[u], pole0, K - H, pole)
+            Pw[k] = H + (P0[k] - P0[u]) @ R0[u].T @ Rw[u]
+            Rw[k] = R0[k] @ ni.frame_rotation(P0[f] - P0[k], pole0, F - Pw[k], pole)
+            Rw[f] = target[s]["Rf"][i]
+            for j in (u, k, f):
+                p = int(rig.parents[j])
+                q = character.rot_to_quat(Rw[j] @ Rw[p].T if p >= 0 else Rw[j])
+                R[i, j] = -q if np.dot(q, R[i, j]) < 0 else q
+    for i in range(1, n):
+        R[i] *= np.where(np.sum(R[i] * R[i - 1], axis=1) < 0, -1.0, 1.0)[:, None]
+    c.anim = {"T": T.astype(np.float32), "R": R.astype(np.float32),
+              "S": np.asarray(c.anim["S"], np.float32), "fps": c.anim["fps"]}
+    after = foot_slide(rig, c.anim, height)
+    reach = 0.0
+    tr2 = _feet_track(rig, T, R)
+    for s in "LR":
+        reach = max(reach, float(np.linalg.norm(tr2[s]["A"] - target[s]["A"], axis=1).max()))
+    c.name = family
+    probs = clip_fix.write_carrier(c, path)
+    return dict(runs=sum(len(runs[s]["ball"]) + len(runs[s]["ankle"]) for s in "LR"), spots=spots["L"]["source"],
+                moved_mm=round(moved * 1000, 1), drop_mm=round(float(drops.max()) * 1000, 1),
+                missed_mm=round(reach * 1000, 2), slide_before_mm=before["slide_mm"],
+                slide_after_mm=after["slide_mm"], contacts=after["contacts"], problems=probs)
+
+
+def victory_measure(family, path, base=None, rig=None):
+    """The rule's measures of one victory carrier on the family's shipped
+    base: the tear (edges past 3x, VICTORY_SAMPLES frames), the floor, an
+    arm through the body, the feet's slide in contact, the length."""
+    ni = _ni()
+    import clip_fix
+    base = base or ni.Base(APP_BUNDLE / f"{family}.usdz")
+    c = clip_fix.read(path)
+    rig = rig or ni.Rig(c, base.c)
+    m = base.measure(c.anim, c.joints, rig, samples=VICTORY_SAMPLES)
+    lo, hi = character.bounds(np.asarray(base.c.points, float))
+    sl = foot_slide(ni.Rig(c, base.c), c.anim, float(hi[1] - lo[1]))
+    n = len(c.anim["T"])
+    hips = np.asarray(c.anim["T"], float)[:, rig.hips]
+    return dict(over3=m["over3"], max=m["max"], over2=m["over2"], sink_mm=m["sink_mm"], floor_mm=m["floor_mm"],
+                through=m["through"] + m["through_held"], slide_mm=sl["slide_mm"], slide_at=sl["at"],
+                frames=n, seconds=round((n - 1) / float(c.anim["fps"]), 3),
+                hips_travel_cm=round(float(np.linalg.norm(hips[:, [0, 2]] - hips[0, [0, 2]], axis=1).max()) * 100, 1))
+
+
+def victory_guard(new, old, height):
+    """The lines that refuse a new victory against the one it replaces."""
+    ni = _ni()
+    fails = []
+    if new["over3"] > old["over3"]:
+        fails.append(f"tears {new['over3']} edges past 3x against the old victory's {old['over3']}")
+    if new["slide_mm"] > VICTORY_SLIDE * 1000:
+        fails.append(f"a planted foot slides {new['slide_mm']} mm ({new['slide_at']})")
+    sink_ok = 1000 * ni.FLOOR_SINK * max(1.0, height / 1.9)
+    if new["sink_mm"] > max(sink_ok, old["sink_mm"] + 0.5):
+        fails.append(f"a sole {new['sink_mm']} mm into the floor (the old {old['sink_mm']})")
+    if new["through"] > max(ni.ARM_COUNT, old["through"]):
+        fails.append(f"an arm through the body ({new['through']} points, the old {old['through']})")
+    return fails
+
+
+def victory_tries(family, pid):
+    """The plan values to try, in order: on the weapon hand's side of a
+    lateral preset (mirrored to a left hand), laid over the idle and then as
+    retargeted (`+abs`); then the same on the free hand's side. Laid over
+    the idle comes first: it starts and ends where the stages' idle stands
+    and moves round the family's own hang; as retargeted it keeps the
+    donor's hang, and on some figures that clears the body where the idle's
+    wider hang does not (Ares's forearm by his hip in the fist pump, 18
+    points against 2)."""
+    side = PRESET_SIDE.get(int(pid))
+    hand = weapon_hand(family)
+    if not side:
+        sides = [""]
+    elif hand is None:
+        sides = ["", FORCE_MIRROR]
+    else:
+        sides = ["", NO_MIRROR if hand != side else FORCE_MIRROR]
+    return [f"{pid}{way}{side_}" for side_ in sides for way in ("", ABSOLUTE)]
+
+
+def victory_for_family(family, out, plan_entry, pid=None, old_bundle=None):
+    """Ship the family's dealt victory into a scratch folder side by side,
+    measure it against the victory it replaces, and copy the first that
+    passes the rule into `out` as <family>_victory.usdz. -> the report."""
+    import shutil
+    ni = _ni()
+    t0 = time.time()
+    arch = ni.arch_for(family)
+    pid = pid or VICTORY_DEAL.get(arch or "")
+    rep = dict(family=family, archetype=arch, preset=pid, tries=[])
+    if pid is None:
+        rep.update(deal="kept", why="the archetype keeps its own")
+        return rep
+    old_path = Path(old_bundle or APP_BUNDLE) / f"{family}_victory.usdz"
+    base = ni.Base(APP_BUNDLE / f"{family}.usdz")
+    old_rig = ni.Rig(_quiet(character.read_usdz, str(old_path)), base.c)
+    old = victory_measure(family, old_path, base, old_rig)
+    shipped = MOTIONS / "shipped" / f"{family}.json"
+    was = json.loads(shipped.read_text()).get("victory", {}).get("preset") if shipped.exists() else None
+    rep["old"] = dict(old, preset=str(was or "?"))
+    h = base.h
+    out = Path(out)
+    for k, value in enumerate(victory_tries(family, pid)):
+        tmp = out / ".tries" / f"{family}_{k}"
+        shutil.rmtree(tmp, ignore_errors=True)
+        tmp.mkdir(parents=True)
+        argv = [sys.executable, str(Path(__file__).resolve()), "ship", plan_entry["asset"], family,
+                f"victory={value}", "--bundle", str(tmp)]
+        if plan_entry.get("height"):
+            argv += ["--height", str(plan_entry["height"])]
+        r = subprocess.run(argv, capture_output=True, text=True, cwd=str(REPO))
+        made = tmp / f"{family}_victory.usdz"
+        if r.returncode or not made.exists():
+            rep["tries"].append(dict(value=value, fails=[f"ship failed: {(r.stdout + r.stderr).strip()[-300:]}"]))
+            continue
+        palette = json.loads((tmp / f"{family}.palette.json").read_text()).get("victory", {})
+        new = victory_measure(family, made, base, old_rig)
+        fails = victory_guard(new, old, h)
+        rep["tries"].append(dict(value=value, mirrored=bool(palette.get("mirrored")), plant=palette.get("plant", {}),
+                                 by_role=palette.get("by_role"), fails=fails, **new))
+        if fails:
+            continue
+        shutil.copyfile(made, out / made.name)
+        (out / f"{family}.victory.json").write_text(json.dumps(palette, indent=1) + "\n")
+        rep.update(deal=value, new=new, mirrored=bool(palette.get("mirrored")), secs=round(time.time() - t0, 1))
+        break
+    else:
+        rep["deal"] = "kept"
+        (out / f"{family}_victory.usdz").unlink(missing_ok=True)
+    if not os.environ.get("VICTORY_KEEP_TRIES"):
+        for k in range(4):
+            shutil.rmtree(out / ".tries" / f"{family}_{k}", ignore_errors=True)
+    rep["secs"] = round(time.time() - t0, 1)
+    return rep
+
+
+def _victory_job(args):
+    family, out, entry, pid = args
+    try:
+        return victory_for_family(family, out, entry, pid)
+    except Exception as e:  # noqa: BLE001 - one family's fault is reported, the roster goes on
+        import traceback
+        return dict(family=family, deal="error", error=f"{type(e).__name__}: {e}", trace=traceback.format_exc()[-600:])
+
+
+def victory_line(r):
+    if r.get("deal") in ("kept", "error"):
+        why = r.get("error") or r.get("why") or "; ".join(f"{t['value']}: {t['fails'][0]}" for t in r.get("tries", []))
+        old = r.get("old", {})
+        return (f"{r['family']:22s} {r.get('archetype') or '':9s} KEPT {old.get('preset', '?'):>4} "
+                f"(past 3x {old.get('over3', '?')})  {why}")
+    n, o = r["new"], r["old"]
+    t = next(t for t in r["tries"] if t["value"] == r["deal"])
+    return (f"{r['family']:22s} {r['archetype']:9s} {r['deal']:>6} <- {o['preset']:>4}  past 3x {n['over3']} (old {o['over3']}), "
+            f"worst {n['max']}x (old {o['max']}x), slide {n['slide_mm']} mm (old {o['slide_mm']}), "
+            f"plant moved {t['plant'].get('moved_mm')} mm, pelvis -{t['plant'].get('drop_mm')} mm, "
+            f"sink {n['sink_mm']} mm, arm in {n['through']}, hips travel {n['hips_travel_cm']} cm, {n['seconds']} s, {r['secs']} s")
+
+
+def cmd_victories(a):
+    """Every dealt family's victory (or the ones named) into --out, --jobs at
+    a time, a line each and the reports as JSON. Never the app's bundle."""
+    from concurrent.futures import ProcessPoolExecutor
+    out = Path(a.out).resolve()
+    if out == APP_BUNDLE.resolve():
+        sys.exit("the victories are made into a scratch bundle and judged on their boards first")
+    out.mkdir(parents=True, exist_ok=True)
+    ni = _ni()
+    plan, _ = make_plan()
+    fams = a.families or sorted(f for f in plan if VICTORY_DEAL.get(ni.arch_for(f) or "") is not None)
+    jobs = [(f, str(out), plan[f], a.preset) for f in fams]
+    reports = []
+    with ProcessPoolExecutor(max_workers=max(1, a.jobs)) as pool:
+        for r in pool.map(_victory_job, jobs):
+            reports.append(r)
+            print(victory_line(r), flush=True)
+    dealt = [r for r in reports if r.get("deal") not in ("kept", "error")]
+    print(f"{len(dealt)} victories written, {sum(r.get('deal') == 'kept' for r in reports)} kept, "
+          f"{sum(r.get('deal') == 'error' for r in reports)} errors")
+    if a.json:
+        before = json.loads(Path(a.json).read_text()) if Path(a.json).exists() else {}
+        before.update({r["family"]: r for r in reports})
+        Path(a.json).write_text(json.dumps(before, indent=1) + "\n")
+
+
+def victory_frames(anim, rig):
+    """Four instants of a victory worth seeing: a quarter of the way to its
+    high point, the high point (the key farthest from the first by the mean
+    joint turn), halfway down, and the last key."""
+    n = len(anim["T"])
+    Rw0, _ = _fk(rig, anim["T"][0], anim["R"][0])
+    body = [rig.hips] + rig.spine + rig.neck + [rig.head] + [rig.arm[s][k] for s in "LR" for k in ("upper", "fore", "hand")]
+    far = []
+    for i in range(n):
+        Rw, _ = _fk(rig, anim["T"][i], anim["R"][i])
+        far.append(np.mean([np.degrees(np.arccos(np.clip((np.trace(Rw[j].T @ Rw0[j]) - 1) / 2, -1, 1))) for j in body]))
+    apex = int(np.argmax(far))
+    return sorted({max(1, apex // 2), apex, min(n - 1, (apex + n - 1) // 2), n - 1})
+
+
+def cmd_victory_board(a):
+    """Each family's old victory at its high point, then the new one at four
+    instants (victory_frames), front, three-quarter and side, on the shipped
+    base, with the rule's numbers from --json."""
+    from PIL import Image, ImageDraw
+    import preview
+    import clip_fix
+    ni = _ni()
+    ni.views_setup()
+    views = a.views.split(",")
+    reps = json.loads(Path(a.json).read_text()) if a.json and Path(a.json).exists() else {}
+    size = a.size
+    rows = []
+    for fam in a.families:
+        path = Path(a.bundle) / f"{fam}_victory.usdz"
+        if not path.exists():
+            print(f"{fam}: no victory in {a.bundle}")
+            continue
+        base = ni.Base(APP_BUNDLE / f"{fam}.usdz")
+        new = clip_fix.read(path)
+        old = clip_fix.read(APP_BUNDLE / f"{fam}_victory.usdz")
+        rig = ni.Rig(new, base.c)
+        tex = preview.base_colour(base.c)
+        width = int(round(size * 0.66))
+        scale = 0.62 * size / max(base.h, 1e-6)             # headroom for a raised arm and a 37 cm hop
+        baseline = 0.05 * size
+
+        def cells(c, frames, tag):
+            out = []
+            for f, w in base.worlds(c.anim, c.joints, frames):
+                Q = base.skin(w)
+                normals = character.vertex_normals(Q.astype(np.float32), base.faces).astype(np.float64)
+                col = []
+                for v in views:
+                    img = preview.render_view(Q, normals, base.faces, base.c.uvs, tex, v, scale, baseline, width, size, True)
+                    ImageDraw.Draw(img).line([(0, size - baseline), (width, size - baseline)], fill=(200, 60, 60), width=1)
+                    col.append(img)
+                out.append((f"{tag} {f / c.anim['fps']:.2f} s", col))
+            return out
+        old_rig = ni.Rig(old, base.c)
+        old_apex = victory_frames(old.anim, old_rig)[1]
+        r = reps.get(fam, {})
+        val = strip_side(str(r.get("deal") or "")).replace(ABSOLUTE, "").split("@")[0]
+        val = val if val.isdigit() else str(a.preset or r.get("preset") or 0)
+        beats = VICTORY_BEATS.get(int(val), {})
+        n_new = len(new.anim["T"])
+        frames = [min(f, n_new - 1) for f in beats["board"]] if beats else victory_frames(new.anim, rig)
+        row = cells(old, [old_apex], "old") + cells(new, frames, "new")
+        o, nn = r.get("old", {}), r.get("new", {})
+        note = (f"{fam} ({r.get('archetype', ni.arch_for(fam))})  {o.get('preset', '?')} -> {r.get('deal', '?')}"
+                f"{' mirrored' if r.get('mirrored') else ''}   edges past 3x {o.get('over3', '?')} -> {nn.get('over3', '?')}, "
+                f"worst {o.get('max', '?')}x -> {nn.get('max', '?')}x, planted feet slide {o.get('slide_mm', '?')} -> "
+                f"{nn.get('slide_mm', '?')} mm")
+        rows.append((note, row, width))
+    if not rows:
+        sys.exit("nothing to board")
+    width = rows[0][2]
+    cols = max(len(r[1]) for r in rows)
+    head, lab = 22, 18
+    rh = head + len(views) * size + lab + 8
+    sheet = Image.new("RGB", (cols * width + 40, rh * len(rows) + 6), (24, 24, 28))
+    d = ImageDraw.Draw(sheet)
+    for ri, (note, row, width) in enumerate(rows):
+        y0 = 4 + ri * rh
+        d.text((8, y0), note, fill=(160, 230, 160), font=preview.font(14))
+        for ci, (label, col) in enumerate(row):
+            x = 10 + ci * width + (16 if ci else 0)
+            for vi, img in enumerate(col):
+                sheet.paste(img, (x, y0 + head + vi * size))
+            d.text((x + 4, y0 + head + len(views) * size + 1), label, fill=(240, 220, 150), font=preview.font(13))
+    sheet.save(a.out, quality=86)
+    print(f"  board -> {a.out} {sheet.size}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -2148,10 +2967,19 @@ def main():
     p.add_argument("families", nargs="+"); p.add_argument("--bundle", required=True, help="where the breaks are")
     p.add_argument("--idle-bundle"); p.add_argument("--out", required=True); p.add_argument("--size", type=int, default=260)
     p.add_argument("--views", default="front,q3,side"); p.set_defaults(notes={})
+    p = sub.add_parser("victories", help="the dealt families' victories from the bought presets into --out (VICTORY_DEAL)")
+    p.add_argument("families", nargs="*"); p.add_argument("--out", required=True)
+    p.add_argument("--preset", type=int, help="try this preset instead of the archetype's (a board's candidate)")
+    p.add_argument("--jobs", type=int, default=2); p.add_argument("--json")
+    p = sub.add_parser("victory-board", help="families' old victory, then the new at four instants")
+    p.add_argument("families", nargs="+"); p.add_argument("--bundle", required=True, help="where the new victories are")
+    p.add_argument("--json", help="the victories run's reports, for the numbers"); p.add_argument("--out", required=True)
+    p.add_argument("--size", type=int, default=230); p.add_argument("--views", default="front,q3,side")
+    p.add_argument("--preset", type=int, help="the preset the files wear, where no report says")
     a = ap.parse_args()
     {"buy": cmd_buy, "archive": cmd_archive, "free": cmd_free, "list": cmd_list, "ship": cmd_ship,
      "board": cmd_board, "board-archive": cmd_board_archive, "compare": cmd_compare, "plan": cmd_plan, "roll": cmd_roll,
-     "breaks": cmd_breaks, "break-board": cmd_break_board}[a.cmd](a)
+     "breaks": cmd_breaks, "break-board": cmd_break_board, "victories": cmd_victories, "victory-board": cmd_victory_board}[a.cmd](a)
 
 
 if __name__ == "__main__":

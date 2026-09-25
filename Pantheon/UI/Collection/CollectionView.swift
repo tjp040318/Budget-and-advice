@@ -1372,6 +1372,8 @@ struct CollectionStageView: UIViewRepresentable {
         let pose = PoseLayer.startIdle(on: node, clips: assetName, label: framing.name)
         pose.isHeld = !playing
         coordinator.pose = pose
+        // Its head toward the lens over the idle (`Gaze`, build step 6).
+        pose.lens = coordinator.cameraNode
         coordinator.lastSpin = spin
         node.runAction(.fadeIn(duration: 0.35))
         // The figure is the scene's one shadow caster; the ring, the shadow

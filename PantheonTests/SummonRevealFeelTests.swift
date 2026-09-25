@@ -26,14 +26,20 @@ final class SummonRevealFeelTests: XCTestCase {
         XCTAssertEqual(nearVictory, RevealEntrance.victory)
     }
 
-    /// The shipped clips of three families, one per preset, are read as
+    /// The shipped clips of six families, one per preset, are read as
     /// their preset: if SceneKit ever reports a clip's length another way,
     /// this fails before the reveal plays the wrong seconds of it.
     func testTheShippedVictoriesAreReadAsTheirPresets() throws {
+        // One family per preset a shipped victory is cut from (2026-09-25:
+        // Sekhmet and Ares took the fist pump from the bought four; the
+        // sovereigns kept theirs, Docs/PLAN.md *Natural poses, phase 3*).
         let families: [(asset: String, preset: RevealEntranceCut)] = [
-            ("sekhmet", RevealEntrance.cheer),
-            ("ares", RevealEntrance.victory),
+            ("heracles", RevealEntrance.cheer),
+            ("athena", RevealEntrance.victory),
             ("anubis", RevealEntrance.chestPound),
+            ("sekhmet", RevealEntrance.fistPump),
+            ("minotaur", RevealEntrance.stomp),
+            ("hathor", RevealEntrance.bow),
         ]
         for family in families {
             let clip = try XCTUnwrap(ModelLibrary.shared.animation(.victory, for: family.asset),
