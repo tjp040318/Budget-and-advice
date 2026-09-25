@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "97",
-  "frames": 67,
-  "seconds": 2.23,
-  "blow_source": 0.318,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.76,
-  "follow_speed": 1.18,
-  "rate": 1.72
+  "preset": "Art/Motions/aimed/mummy_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "242",

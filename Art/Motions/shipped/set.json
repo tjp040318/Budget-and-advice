@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "206",
-  "frames": 44,
-  "seconds": 1.47,
-  "blow_source": 0.372,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.89,
-  "follow_speed": 1.08,
-  "rate": 1.13
+  "preset": "Art/Motions/aimed/set_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "221",

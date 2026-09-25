@@ -32,19 +32,14 @@
   }
  },
  "ultimate": {
-  "preset": "105",
-  "frames": 101,
-  "seconds": 3.37,
-  "blow_source": 0.74,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 1.19,
-  "follow_speed": 0.68,
-  "rate": 1.4,
+  "preset": "Art/Motions/aimed/njord_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88,
   "mirrored": {
    "mode": "delta, on the donor",
    "weapon_hand": "L",
-   "round_trip": 7.9e-08
+   "round_trip": 7.6e-08
   }
  },
  "idle_combat": {
@@ -89,5 +84,16 @@
    -0.0
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_blade_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "L",
+   "round_trip": 7.6e-08
+  }
  }
 }

@@ -137,9 +137,10 @@ enum ClipTimings {
     /// The seconds the clip is played in (its contract): the clip's own
     /// length, sped up to its ceiling when longer — basic 2.0, attackHeavy
     /// 2.0, skillX2 2.4, skillX3 2.8, skillX4 3.2, skillX5 3.6, skillArea
-    /// 2.6, castRelease 2.6, ultimate 3.4 — and never slowed; without an
-    /// entry, the clip's `fallbackDuration`. `UnitNode.play` retimes the clip
-    /// to exactly this, so a contact read here is a contact on screen.
+    /// 2.6, castRelease 2.8, ultimate 3.4 (`ceiling(for:)`) — and never
+    /// slowed; without an entry, the clip's `fallbackDuration`.
+    /// `UnitNode.play` retimes the clip to exactly this, so a contact read
+    /// here is a contact on screen.
     static func contract(asset: String, clip: AnimationClip) -> Double {
         playedLength(of: timing(asset: asset, clip: clip), clip: clip)
     }

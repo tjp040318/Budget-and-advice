@@ -30,15 +30,10 @@
   }
  },
  "ultimate": {
-  "preset": "127",
-  "frames": 91,
-  "seconds": 3.03,
-  "blow_source": 0.556,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 0.9,
-  "follow_speed": 1.17,
-  "rate": 1.26
+  "preset": "Art/Motions/aimed/hephaestus_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88
  },
  "idle_combat": {
   "preset": "85",
@@ -111,5 +106,11 @@
    23.4
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_heavy_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
  }
 }

@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "219",
-  "frames": 46,
-  "seconds": 1.53,
-  "blow_source": 0.333,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.79,
-  "follow_speed": 1.15,
-  "rate": 1.18
+  "preset": "Art/Motions/aimed/thor_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "128",
@@ -121,5 +116,17 @@
    16.2
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/style_heavy_x2.motion.npz",
+  "frames": 86,
+  "seconds": 2.87,
+  "rate": 1.2
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/style_heavy_x3.motion.npz",
+  "frames": 100,
+  "seconds": 3.33,
+  "rate": 1.19
  }
 }

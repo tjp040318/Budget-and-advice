@@ -105,5 +105,11 @@
    24.4
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_caster_area.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 0.96
  }
 }

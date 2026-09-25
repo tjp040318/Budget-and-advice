@@ -724,7 +724,7 @@ def blow_heading(motion, frame):
 AIM_TOLERANCE = 20.0          # degrees: a blow this close to the target is left as made
 
 
-def aim_blows(motion, contacts, heading=None):
+def aim_blows(motion, contacts, heading=None, release=None):
     """A signature motion turned so its blows land on the target: the mean
     heading of its blows at the judged contacts, if more than AIM_TOLERANCE
     off +Z, is taken off by a turn that grows from a quarter of the way to
@@ -746,9 +746,11 @@ def aim_blows(motion, contacts, heading=None):
     first, last = min(contacts), max(contacts)
     f = np.arange(F, dtype=float)
     a0, a1 = 0.25 * first, float(first)
-    b0 = last + 0.35 * (F - 1 - last)
+    b0, b1 = last + 0.35 * (F - 1 - last), float(F - 1)
+    if release:                        # a judge's frames for the turn to ease away over: the take's own unwind
+        b0, b1 = float(release[0]), float(release[1])
     rise = np.clip((f - a0) / max(a1 - a0, 1.0), 0, 1)
-    fall = 1 - np.clip((f - b0) / max(F - 1 - b0, 1.0), 0, 1)
+    fall = 1 - np.clip((f - b0) / max(b1 - b0, 1.0), 0, 1)
     w = np.minimum(rise * rise * (3 - 2 * rise), fall * fall * (3 - 2 * fall))
     return turned_over(motion, -mean, w), -mean
 
@@ -835,16 +837,22 @@ def aimed_blow(src, key):
     # hands mislead - a one-handed strike whose other hand hangs on the far
     # side reads as a spread (cobra priestess, Osiris) and was left unturned
     heading = rec.get("aim_heading")
+    release = rec.get("aim_release")
+    if not rec:                        # a composed move keeps its heading in its recipe (style_moves.json)
+        book = recipes().get(key, {})
+        heading, release = book.get("aim_heading"), book.get("aim_release")
     if note.exists() and json.loads(note.read_text()).get("frames") == frames \
             and json.loads(note.read_text()).get("heading") == heading \
+            and json.loads(note.read_text()).get("release") == release \
             and note.stat().st_mtime >= src.stat().st_mtime:
         return out if json.loads(note.read_text()).get("turned") else src
-    m, degrees = aim_blows(Motion.load(src), frames, heading)
+    m, degrees = aim_blows(Motion.load(src), frames, heading, release)
     AIMED.mkdir(parents=True, exist_ok=True)
     if degrees:
         m.save(out)
         print(f"  aimed {src.name}: its blows landed {-degrees:+.0f} deg off the target; turned {degrees:+.0f}")
-    note.write_text(json.dumps(dict(frames=frames, turned=round(degrees, 1), heading=heading), indent=1) + "\n")
+    note.write_text(json.dumps(dict(frames=frames, turned=round(degrees, 1), heading=heading, release=release),
+                               indent=1) + "\n")
     return out if degrees else src
 
 
@@ -919,8 +927,8 @@ def skill_assign(family, plan_row, shapes):
             src = cut_source(src, key, moves[key]["cut"])
         if archer:
             src = aimed(src, key)
-        elif blow:
-            src = aimed_blow(src, key)
+        elif blow or moves.get(key, {}).get("aim_heading") is not None:
+            src = aimed_blow(src, key)     # a sweep or a slam with a judge's heading is turned too
         # a take whose hands came out the wrong way round (judged: `flip`)
         flip = moves.get(key, {}).get("flip")
         sided = ("" if side else "~m") if flip else side

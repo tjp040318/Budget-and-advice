@@ -118,5 +118,11 @@
    29.4
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_heavy_area.motion.npz",
+  "frames": 94,
+  "seconds": 3.13,
+  "rate": 1.2
  }
 }

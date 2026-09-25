@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "206",
-  "frames": 44,
-  "seconds": 1.47,
-  "blow_source": 0.372,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.89,
-  "follow_speed": 1.08,
-  "rate": 1.13
+  "preset": "Art/Motions/aimed/shabti_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "238",
@@ -78,5 +73,11 @@
    11.6
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/aimed/style_unarmed_x2.motion.npz",
+  "frames": 72,
+  "seconds": 2.4,
+  "rate": 1.0
  }
 }

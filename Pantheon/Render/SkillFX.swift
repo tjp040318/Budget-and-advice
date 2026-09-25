@@ -222,7 +222,12 @@ enum SkillFX {
 
     // MARK: - The timing
 
-    /// How far ahead of a blow its swing is heard, in authored seconds.
+    /// How far ahead of a blow its swing is heard, in seconds of the wall
+    /// clock: a sound plays at its own speed whatever the fight's, and the
+    /// whoosh peaks about 85 ms into its file, so started this long before
+    /// the blow it peaks a breath ahead of it at every speed. Beaten with the
+    /// fight's, it began 47 ms before the blow at ×3 and peaked after it.
+    /// `tools/sfx.py` `SWING_LEAD`, which sums the cast at it.
     static let swingLead: TimeInterval = 0.14
     /// How far ahead of the queue's number a hit's impact is drawn, in
     /// authored seconds: two frames, so the burst is already on the frame
@@ -254,6 +259,11 @@ enum SkillFX {
     static let shortestFlight: TimeInterval = 0.12
     /// The shortest wind-up worth an ultimate's gathering swell.
     static let chargeWorth: TimeInterval = 0.5
+    /// Seconds the first of a volley's arrows drawn in code (the signature
+    /// until `vfx_volley_sheet` ships) takes to fall from the sky; each one
+    /// after it falls 50 ms longer. The volley is started this far ahead of
+    /// its hit, so its first arrow lands on the number (`lead(of:element:)`).
+    static let volleyFlight: TimeInterval = 0.28
 
     // MARK: - Playing a cast
 
@@ -278,6 +288,23 @@ enum SkillFX {
             steps.append(step(after: seconds, work))
         }
         let clipStart: TimeInterval = beat(cast.walkUp)
+
+        // An ultimate's gathering swell, a rite's as well as a blow's,
+        // started so that it crests a breath before the first blow and has
+        // let go as the blow lands (`SkillSound.chargeLead`, the file's own
+        // shape, at which `tools/sfx.py` sums the cast). A sound plays at its
+        // own speed, so the lead is the wall clock's and never beaten.
+        // Started with the wind-up, as it was, the swell had died a second
+        // before the blow of a 3.4 s ultimate at ×1. A wind-up too short for
+        // the swell to mean anything (`chargeWorth`) has none.
+        if cast.isUltimate, let first = cast.hits.first {
+            let blow: TimeInterval = beat(first.time)
+            if blow >= chargeWorth {
+                at(max(0, blow - SkillSound.chargeLead)) {
+                    AudioLibrary.shared.play(.charge, volume: 0.7)
+                }
+            }
+        }
 
         // A RITE: a release lifting off its caster on its contact, and a
         // named look of its own over its targets (the golden script of a
@@ -326,10 +353,11 @@ enum SkillFX {
             let contact: TimeInterval = beat(hit.time)
             let ids: [UUID] = hit.victims
 
-            // The swing, heard as each blow comes.
+            // The swing, heard as each blow comes (its lead the wall
+            // clock's: `swingLead`).
             if !cast.ranged, !hushed {
                 let heavy = !early && (cast.isUltimate || cast.isArea || count > 1 || cast.clip == .attackHeavy)
-                at(max(clipStart, contact - beat(swingLead))) {
+                at(max(clipStart, contact - swingLead)) {
                     AudioLibrary.shared.play(.swing(heavy: heavy), volume: early ? 0.5 : 0.8)
                 }
             }
@@ -365,7 +393,7 @@ enum SkillFX {
 
             // The signature, landing on the first hit.
             if index == 0, let look = signed {
-                let ahead: TimeInterval = hasPainting(look, element: cast.element) ? look.landsAhead : 0
+                let ahead: TimeInterval = lead(of: look, element: cast.element)
                 let start: TimeInterval = max(clipStart, contact - ahead)
                 let line = cast.isArea && ids.count > 1
                 if line, look.fallsOnEach {
@@ -413,17 +441,33 @@ enum SkillFX {
     /// skip's, a forfeit's and a new run's. What is already on the field
     /// plays out and retires itself.
     static func cancel(in scene: SCNScene) {
+        scriptSerial &+= 1
         scene.rootNode.removeAction(forKey: actionKey)
     }
 
+    /// Which script the pieces waiting on the main thread belong to: moved
+    /// on by every `cancel` (and so by every `play`, which cancels first).
+    /// Taking the action off stops every wait still running, but a piece
+    /// whose block SceneKit had just run on its render thread has its hop
+    /// to the main thread already queued — behind a skip that is running
+    /// there, say — and would draw its burst over the field the skip had
+    /// jumped to, or into the next run's stage. Such a piece finds the
+    /// serial moved on and draws nothing. Main thread.
+    private static var scriptSerial = 0
+
     /// One piece of a cast's script: `work` on the main thread `seconds` of
-    /// scene time from now. SceneKit runs an action's block on its render
-    /// thread, so the block only hops.
+    /// scene time from now, unless the script has been taken back by then.
+    /// SceneKit runs an action's block on its render thread, so the block
+    /// only hops.
     private static func step(after seconds: TimeInterval, _ work: @escaping () -> Void) -> SCNAction {
-        .sequence([
+        let serial = scriptSerial
+        return .sequence([
             .wait(duration: max(0, seconds)),
             SCNAction.run { _ in
-                DispatchQueue.main.async { work() }
+                DispatchQueue.main.async {
+                    guard SkillFX.scriptSerial == serial else { return }
+                    work()
+                }
             },
         ])
     }
@@ -434,9 +478,9 @@ enum SkillFX {
     /// the element's painted circle (the dais's rune ring until it ships)
     /// under a spell, a rite or an ultimate for the length of its clip; an
     /// ultimate's aura round its caster until the first contact (its
-    /// gathering motes until the aura ships) and the swell of its charge;
-    /// and a blade's trail through a melee clip — in steel, in the element
-    /// for an ultimate.
+    /// gathering motes until the aura ships); and a blade's trail through a
+    /// melee clip — in steel, in the element for an ultimate. The swell of
+    /// an ultimate's charge is timed to its blow instead (`play`).
     private static func windUp(_ cast: CastFX, colours: CastColours, in scene: SCNScene,
                                beat: (TimeInterval) -> TimeInterval) {
         let caster = cast.caster
@@ -459,7 +503,6 @@ enum SkillFX {
                 VFXLibrary.charge(on: caster, tint: colours.element, duration: gather,
                                   scale: BattleSceneController.effectScale(for: caster))
             }
-            if gather >= chargeWorth { AudioLibrary.shared.play(.charge, volume: 0.7) }
         }
         if !cast.ranged, !cast.isRite, !caster.isBoss {
             let steel = UIColor(hex: "#D9E4F2") ?? .white
@@ -653,6 +696,17 @@ enum SkillFX {
 
     // MARK: - The signature
 
+    /// How far ahead of its hit a look is started so that it LANDS on the
+    /// number: its painting's own lead (`landsAhead`) when the painting, or
+    /// the first painted sheet it falls back to, has shipped; the first
+    /// arrow's fall for a volley drawn in code (`volleyFlight`), whose
+    /// arrows are thrown from the sky and would otherwise land a third of a
+    /// second after the numbers; nothing for a look that lands as it begins.
+    private static func lead(of look: SignatureFX, element: Element) -> TimeInterval {
+        if hasPainting(look, element: element) { return look.landsAhead }
+        return look == .volley ? volleyFlight : 0
+    }
+
     /// Whether a look's own painting, or the first painted sheet it falls
     /// back to, has shipped — so it is worth starting ahead of its hit.
     private static func hasPainting(_ look: SignatureFX, element: Element) -> Bool {
@@ -793,7 +847,8 @@ enum SkillFX {
             if !VFXLibrary.anchoredSheet("volley", feet: feet, in: scene, tint: neutral, size: big * 0.9, life: 1.0) {
                 // A rain of arrows out of the sky on each victim, landing one
                 // after another: launched together, each flying a little
-                // longer than the last.
+                // longer than the last — started `volleyFlight` ahead of the
+                // hit (`lead(of:element:)`), so the first lands on it.
                 for victim in victims {
                     let ground = victim.position
                     let height = BattleSceneController.effectScale(for: victim)
@@ -801,7 +856,7 @@ enum SkillFX {
                         let spread = Float(arrow - 2) * 0.22
                         let landing = SCNVector3(ground.x + spread, 0.35 * height, ground.z + spread * 0.5)
                         let sky = SCNVector3(landing.x - 2.4, landing.y + 7.5, landing.z - 0.8)
-                        let flight: TimeInterval = 0.28 + 0.05 * Double(arrow)
+                        let flight: TimeInterval = volleyFlight + 0.05 * Double(arrow)
                         VFXLibrary.arrow(from: sky, to: landing, in: scene, element: element, tint: colours.aura,
                                          duration: flight, scale: height, arc: 0)
                     }

@@ -553,5 +553,18 @@
   ],
   "blend": 4,
   "recover": 12
+ },
+ "style_heavy_area": {
+  "note": "Charged Ground Slam (127) whole: overhead and slammed to the floor in front, one blow for the line. The sentence bought for it leapt 1.9 m (a heavy never leaps) and is kept in Art/Motions/history/. Cut from frame 4 with an 8-frame recovery (3.13 s) so the 2.6 s area contract plays it at 1.2x, under the 1.25x every other clip keeps",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_127.motion.npz",
+    "from": 4,
+    "to": 89,
+    "blow": 50
+   }
+  ],
+  "blend": 6,
+  "recover": 8
  }
 }

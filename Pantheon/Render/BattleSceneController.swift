@@ -1272,6 +1272,15 @@ final class BattleSceneController: NSObject {
         director?.shaker.stop()
         hitLedger = MultiHitLedger()
         sync(combatants: combatants)
+        // And the field comes to rest as a drained queue leaves it
+        // (`playNext`): the units back on their marks first, then the camera
+        // home (2026-09-25). An ultimate's push now holds on its caster until
+        // its first contact (`CameraDirector.perform`'s `holdUntil`), up to
+        // three seconds at ×1, and a skip in its wind-up left the camera
+        // pushed in on a caster whose blow would never come, beside a striker
+        // still standing in the enemy line.
+        returnEveryoneHome()
+        director?.returnHome()
         delegate?.battleSceneDidFinishPlayback(self)
     }
 

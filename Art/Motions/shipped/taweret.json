@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "220",
-  "frames": 59,
-  "seconds": 1.97,
-  "blow_source": 0.483,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 1.15,
-  "follow_speed": 0.89,
-  "rate": 1.52
+  "preset": "Art/Motions/aimed/taweret_attack_basic.motion.npz",
+  "frames": 38,
+  "seconds": 1.27,
+  "rate": 0.64
  },
  "attack_heavy": {
   "preset": "242",
@@ -22,15 +17,10 @@
   "rate": 1.34
  },
  "ultimate": {
-  "preset": "105",
-  "frames": 101,
-  "seconds": 3.37,
-  "blow_source": 0.74,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 1.19,
-  "follow_speed": 0.68,
-  "rate": 1.4
+  "preset": "Art/Motions/aimed/taweret_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88
  },
  "idle_combat": {
   "preset": "ready (a) over the 89 guard",
@@ -116,5 +106,11 @@
    16.3
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_polearm_area.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 0.96
  }
 }

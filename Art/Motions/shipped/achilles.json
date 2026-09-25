@@ -1,18 +1,13 @@
 {
  "attack_basic": {
-  "preset": "219",
-  "frames": 46,
-  "seconds": 1.53,
-  "blow_source": 0.333,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.79,
-  "follow_speed": 1.15,
-  "rate": 1.18,
+  "preset": "Art/Motions/aimed/achilles_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0,
   "mirrored": {
    "mode": "delta, on the donor",
    "weapon_hand": "L",
-   "round_trip": 8.1e-08
+   "round_trip": 7.1e-08
   }
  },
  "attack_heavy": {
@@ -124,5 +119,27 @@
    2.4
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/style_blade_x2.motion.npz",
+  "frames": 70,
+  "seconds": 2.33,
+  "rate": 0.97,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "L",
+   "round_trip": 8.3e-08
+  }
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/aimed/style_blade_x3.motion.npz",
+  "frames": 92,
+  "seconds": 3.07,
+  "rate": 1.1,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "L",
+   "round_trip": 6.9e-08
+  }
  }
 }

@@ -27,15 +27,15 @@
   "rate": 1.34
  },
  "ultimate": {
-  "preset": "102",
-  "frames": 132,
-  "seconds": 4.4,
-  "blow_source": 0.29,
-  "blow": 0.58,
-  "target": 0.62,
-  "windup_speed": 0.5,
-  "follow_speed": 1.69,
-  "rate": 1.83
+  "preset": "Art/Motions/aimed/surtr_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "L",
+   "round_trip": 6.2e-08
+  }
  },
  "idle_combat": {
   "preset": "ready (a) over the 89 guard stand",
@@ -81,5 +81,27 @@
    25.6
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/style_blade_x2.motion.npz",
+  "frames": 70,
+  "seconds": 2.33,
+  "rate": 0.97,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "L",
+   "round_trip": 8.3e-08
+  }
+ },
+ "skill_x3": {
+  "preset": "Art/Motions/aimed/style_blade_x3.motion.npz",
+  "frames": 92,
+  "seconds": 3.07,
+  "rate": 1.1,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "L",
+   "round_trip": 6.9e-08
+  }
  }
 }

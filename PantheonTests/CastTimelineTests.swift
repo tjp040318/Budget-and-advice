@@ -5,8 +5,9 @@ import XCTest
 /// like themselves*, 2026-09-25): the queue read ahead to the cast's own
 /// hits (`CastReading`), the hold each of the cast's events is given so
 /// each hit lands where its clip strikes (`CastTimeline`), the finisher of a
-/// flurry landing heavy (`BattleSceneController.landsHeavy`) and an
-/// ultimate's signature kept to its element (`SkillFX.signature`). Every
+/// flurry landing heavy (`BattleSceneController.landsHeavy`), an
+/// ultimate's signature kept to its element (`SkillFX.signature`) and the
+/// sounds a cast asks for all shipping (`SkillSound`). Every
 /// one is pure, so the arithmetic is pinned here on hand-built events, and
 /// every expected number is a typed let (CLAUDE.md: no arithmetic inside an
 /// assert's parentheses).
@@ -249,5 +250,29 @@ final class CastTimelineTests: XCTestCase {
         XCTAssertEqual(SkillFX.signature(for: "surtr", element: .tide), .eruption, "a tide Surtr is never a fire meteor")
         XCTAssertEqual(SkillFX.signature(for: "zeus", element: .tide), .lightning, "a neutral look is every form's")
         XCTAssertEqual(SkillFX.signature(for: "nobody_at_all", element: .gale), .eruption)
+    }
+
+    // MARK: - The sounds a cast asks for
+
+    /// Every sound `SkillFX` asks for by what it is (`SkillSound`) ships as
+    /// its own file, and so does the sound it falls back to when a build has
+    /// none, which is never played louder than the cast asked. A missing
+    /// file is silent rather than a crash (`AudioLibrary`), so without this
+    /// a cast that lost its sound would pass every other check.
+    func testEverySkillSoundShipsAndSoDoesItsFallback() {
+        var sounds: [SkillSound] = [.swing(heavy: false), .swing(heavy: true), .charge, .loose, .arrowHit, .rite]
+        for element in Element.allCases {
+            sounds += [.hit(element), .cast(element), .boom(element)]
+        }
+        for sound in sounds {
+            for file in [sound.file, sound.fallback] {
+                let url: URL? = Bundle.main.url(forResource: file.rawValue, withExtension: "wav", subdirectory: "Audio")
+                    ?? Bundle.main.url(forResource: file.rawValue, withExtension: "wav")
+                XCTAssertNotNil(url, "\(file.rawValue).wav: python3 tools/sfx.py elements skills")
+            }
+            let gain: Float = sound.fallbackGain
+            XCTAssertGreaterThan(gain, 0, "\(sound)")
+            XCTAssertLessThanOrEqual(gain, 1, "\(sound): a fallback is never louder than the cast asked")
+        }
     }
 }

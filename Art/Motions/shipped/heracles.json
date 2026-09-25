@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "219",
-  "frames": 46,
-  "seconds": 1.53,
-  "blow_source": 0.333,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.79,
-  "follow_speed": 1.15,
-  "rate": 1.18
+  "preset": "Art/Motions/aimed/heracles_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "237",
@@ -22,15 +17,10 @@
   "rate": 1.59
  },
  "ultimate": {
-  "preset": "102",
-  "frames": 132,
-  "seconds": 4.4,
-  "blow_source": 0.29,
-  "blow": 0.58,
-  "target": 0.62,
-  "windup_speed": 0.5,
-  "follow_speed": 1.69,
-  "rate": 1.83
+  "preset": "Art/Motions/aimed/heracles_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88
  },
  "idle_combat": {
   "preset": "ready (b) over the 89 guard",
@@ -76,5 +66,17 @@
    14.7
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_heavy_area.motion.npz",
+  "frames": 94,
+  "seconds": 3.13,
+  "rate": 1.2
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_heavy_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
  }
 }
