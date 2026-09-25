@@ -552,8 +552,11 @@ final class ModelLibrary {
             found = firstAnimation(in: scene.rootNode)
         }
 
-        // Layout B: one file, many animation players.
-        if found == nil, let url = bundleURL(for: assetName) {
+        // Layout B: one file, many animation players. Never for a clip that
+        // only ships as its own file (`AnimationClip.shipsAsItsOwnFile`): a
+        // family without one would open its whole mesh to find nothing, on
+        // every ask, since a miss is not cached.
+        if found == nil, !clip.shipsAsItsOwnFile, let url = bundleURL(for: assetName) {
             found = Self.withImporter { () -> CAAnimation? in
                 guard let source = SCNSceneSource(url: url, options: nil) else { return nil }
                 let identifiers = source.identifiersOfEntries(withClass: CAAnimation.self)
@@ -589,6 +592,27 @@ final class ModelLibrary {
     /// Whether a model file of this name is in the bundle. The unit node asks
     /// so an awakened mesh, when one has shipped, plays its own clips.
     func hasModel(_ name: String) -> Bool { bundleURL(for: name) != nil }
+
+    /// A clip already in the cache, or nil: never a parse. `PoseLayer` seats
+    /// the idle's second variant at once when it is here, and otherwise
+    /// parses it off the main thread (`animation(_:for:)`) and seats it on
+    /// the idle's beat a moment later.
+    func cachedAnimation(_ clip: AnimationClip, for assetName: String) -> CAAnimation? {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        guard let hit = animationCache[assetName]?[clip] else { return nil }
+        useClock &+= 1
+        animationUse[assetName] = useClock
+        return hit
+    }
+
+    /// Whether a clip ships as its own file for this asset
+    /// (`<asset>_<clip>.usdz`): a bundle lookup, nothing parsed. `PoseLayer`
+    /// asks before it reaches for a clip a family may not have — the second
+    /// idle, the break — so a missing one costs no parse and no miss.
+    func hasClipFile(_ clip: AnimationClip, for assetName: String) -> Bool {
+        bundleURL(for: "\(assetName)_\(clip.rawValue)") != nil
+    }
 
     /// The asset whose CLIPS a figure plays: the awakened export when it
     /// shipped and the unit is awakened, else the base one, else the
@@ -677,8 +701,13 @@ final class ModelLibrary {
                 if loadOrCached(name) != nil { loaded += 1 }
             }
             if clips {
+                // Never the stage-only clips (`shipsAsItsOwnFile`: the idle's
+                // second variant and the break). A fight plays neither, and
+                // a stage that does parses its own off the main thread once
+                // its figure stands (`PoseLayer`), so a warm pass never holds
+                // the importer for them.
                 for name in clipAssets {
-                    for clip in AnimationClip.allCases { _ = animation(clip, for: name) }
+                    for clip in AnimationClip.allCases where !clip.shipsAsItsOwnFile { _ = animation(clip, for: name) }
                 }
             }
             Perf.end(started, "warmed \(loaded) meshes, \(clips ? "clips of \(clipAssets.count)" : "no clips")", over: 1)
@@ -1295,14 +1324,23 @@ extension SCNNode {
     /// figures started together do not breathe in step and a stage does not
     /// open on the clip's first frame every time it appears (Docs/PLAN.md
     /// *Natural poses*, build step 3).
-    func startLoop(_ clip: CAAnimation, key: String) {
+    ///
+    /// `phase`, a share of the cycle in 0..<1, starts it at a chosen point
+    /// instead, and `blend` sets its player's `blendFactor` before it plays
+    /// (build step 5): `PoseLayer` starts the idle's second variant on the
+    /// idle's own beat, over it at the blend it is easing between.
+    @discardableResult
+    func startLoop(_ clip: CAAnimation, key: String, phase: Double? = nil, blend: CGFloat = 1) -> SCNAnimationPlayer {
         let animation = SCNAnimation(caAnimation: clip)
         animation.usesSceneTimeBase = false
         let cycle: TimeInterval = max(0.05, animation.duration)
-        animation.timeOffset = TimeInterval.random(in: 0..<cycle)
+        let share: Double = min(0.999, max(0, phase ?? Double.random(in: 0..<1)))
+        animation.timeOffset = cycle * share
         let player = SCNAnimationPlayer(animation: animation)
+        player.blendFactor = blend
         addAnimationPlayer(player, forKey: key)
         player.play()
+        return player
     }
 }
 
@@ -1852,6 +1890,16 @@ final class StageDoctor: NSObject, SCNSceneRendererDelegate {
             if let key = keys.first, let player = figure.animationPlayer(forKey: key) {
                 line += String(format: " player(paused=%@ speed=%.2f blend=%.2f duration=%.2f)",
                                player.paused ? "yes" : "no", player.speed, player.blendFactor, player.animation.duration)
+            }
+            // Every player with its blend (Docs/PLAN.md *Natural poses*,
+            // build steps 5 and 7): the idle, its second variant and a
+            // break over them, so a line says how many the figure carries.
+            if keys.count > 1 {
+                let players: [String] = keys.compactMap { key in
+                    guard let player = figure.animationPlayer(forKey: key) else { return nil }
+                    return String(format: "%@ %.2f%@", key, player.blendFactor, player.paused ? " paused" : "")
+                }
+                line += " players=[\(players.joined(separator: ", "))]"
             }
             for name in ["Hips", "Hand"] {
                 let matches = figure.childNodes { node, _ in node.name?.localizedCaseInsensitiveContains(name) == true }

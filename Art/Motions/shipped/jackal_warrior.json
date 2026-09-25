@@ -33,15 +33,52 @@
   "rate": 1.83
  },
  "idle_combat": {
-  "preset": "89",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (a) over the 89 guard",
+  "guard": "89",
+  "recipe": "a",
+  "arm_keep": 0.7,
+  "level": 0,
+  "over3": 1,
+  "today_over3": 8,
+  "why": "tears least (a 1 against b 1)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "412",
   "frames": 119,
   "seconds": 3.97,
   "rate": 1.99
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "beast",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": {
+   "R": "hang -30 deg"
+  }
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 1.0,
+  "roll_share": 1.0,
+  "over3": 0,
+  "blend_drift_mm": 1.74
+ },
+ "break": {
+  "preset": "2",
+  "name": "Alert",
+  "rung": 1,
+  "mirrored": false,
+  "seconds": 4.0,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -56.6,
+   34.2
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

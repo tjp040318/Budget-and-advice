@@ -33,15 +33,46 @@
   "rate": 1.8
  },
  "idle_combat": {
-  "preset": "89 half",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (b) over the 89 guard half",
+  "guard": "half",
+  "recipe": "b",
+  "arm_keep": 0.45,
+  "level": 0,
+  "over3": 0,
+  "today_over3": 40,
+  "why": "tears least (b 0 against a 1)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "412",
   "frames": 119,
   "seconds": 3.97,
   "rate": 1.99
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "grace",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": null,
+  "why": "no shift keeps the feet within 3 mm (roll 1.00, travel 0.12: the blend's feet 3.8 mm; roll 0.75, travel 0.12: the blend's feet 3.6 mm; roll 0.50, travel 0.12: the blend's feet 3.4 mm)"
+ },
+ "break": {
+  "preset": "336",
+  "name": "Long Breathe and Look Around",
+  "rung": 0,
+  "mirrored": false,
+  "seconds": 5.05,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -23.3,
+   28.8
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

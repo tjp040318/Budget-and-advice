@@ -33,15 +33,48 @@
   "rate": 1.18
  },
  "idle_combat": {
-  "preset": "89",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (a) over the 89 guard",
+  "guard": "89",
+  "recipe": "a",
+  "arm_keep": 0.315,
+  "level": 1,
+  "over3": 57,
+  "today_over3": 423,
+  "why": "within the slack of the least, and the champion's stance (the guard crouch) (a 57 against b 52)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "412",
   "frames": 119,
   "seconds": 3.97,
   "rate": 1.99
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "champion",
+  "stand": "L",
+  "level": "partial",
+  "over3": 4,
+  "hung": {
+   "R": "hang -30 deg"
+  }
+ },
+ "idle_alt": {
+  "made": null,
+  "why": "no shift passed (travel 0.50 roll 0.75: 14 edges past 3x against 4; travel 0.25 roll 1.00: 19 edges past 3x against 4; travel 0.70 roll 0.50: 14 edges past 3x against 4)"
+ },
+ "break": {
+  "preset": "338",
+  "name": "Short Breathe and Look Around",
+  "rung": 3,
+  "mirrored": false,
+  "seconds": 4.55,
+  "over3": 2,
+  "idle_over3": 4,
+  "look": [
+   -23.8,
+   3.9
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

@@ -23,6 +23,8 @@ family takes its own combination from the archive (Docs/MOTION.md).
     python3 tools/motion_palette.py plan --markdown          # the deal as shipped (Docs/MOTION.md section 9)
     python3 tools/motion_palette.py roll --bundle Pantheon/Resources/Models --real --jobs 2   # ship the plan
     python3 tools/motion_palette.py roll loki surtr --bundle Pantheon/Resources/Models --real # a few families
+    python3 tools/motion_palette.py breaks --out DIR [--idle-bundle DIR] --jobs 2 --json r.json  # every family's idle break
+    python3 tools/motion_palette.py break-board hera ares --bundle DIR --out board.jpg       # the idle, then the break
 
 The roll-out of 2026-09-24 (Docs/MOTION.md section 10): `plan` deals the pools,
 then lays the board judgments over the deal (JUDGED, KEPT); `ship` mirrors a
@@ -40,9 +42,26 @@ clip). `idle=natural` is the stages' standing idle, built by
 tools/natural_idle.py from the rig's own bind pose after the clips are in
 (2026-09-25; `roll` passes it for every family), and `idle_combat=natural`
 makes that same file the battle stance - the plan's calm families (CALM).
-`idle=stand` (tools/stand_idle.py's derivation of the idle_combat just
-shipped, the guard stood up) is kept for the record; `stand` and `half` as a
-STANCE still stand the guard up for the battle.
+`idle=natural` also makes the weight-shift alt (<family>_idle_alt.usdz,
+natural_idle.py --alt) and, beside the idle just made, the idle break
+(`breaks` below); a refused idle takes both with it, since each was made
+beside another idle. `idle_combat=ready:<guard>` (2026-09-25; the 73 the deal
+left in the guard, READY_OVER) ships the guard - 89 raw, `half` or `stand` -
+as the stance first, then tools/ready_stance.py writes the battle's ready
+stance over it; refused, the guard stays, loudly. `idle=stand`
+(tools/stand_idle.py's derivation of the idle_combat just shipped, the guard
+stood up) is kept for the record; `stand` and `half` as a STANCE still stand
+the guard up for the battle.
+
+`breaks` (2026-09-25; Docs/PLAN.md, *Natural poses*, steps 7 and 8.3-8.4)
+makes each family's idle break, <family>_break.usdz, from the bought presets'
+calm windows (PRESET_CUTS' `brk`), dealt by archetype (BREAKS): laid over the
+natural idle's mean pose rather than the donor's, its ends eased into that
+pose, its feet planted on the idle's spots, quietened down a ladder where it
+tears more than the idle (BREAK_LADDER); see make_break and break_for. A
+break is made beside ONE idle (its report keeps the idle's hash): a re-shipped
+idle wants its break made again, which `ship` (idle=natural), build_asset.sh
+and proportions.sh do. BREAK_HOLD names the breaks a judge held (Nephthys).
 """
 import argparse
 import json
@@ -114,6 +133,35 @@ PRESET_CUTS = {
     412: dict(window=(40, 158)),                 # Victory: arms spread, then raised again and again
     298: dict(),                                 # Cheer with Both Hands Up: a hop with both arms up
     88:  dict(window=(0, 116)),                  # Chest Pound Taunt: fists to the chest, a roar
+    # The fifteen bought for the natural poses (2026-09-24, Docs/PLAN.md,
+    # *Natural poses*), cut 2026-09-25 off `board-archive` and a per-frame
+    # read of each on the donor's shipped carrier (head, chest and pelvis
+    # yaw, the hands over the hips, the mean joint angle to the natural
+    # idle's mean pose, the speed). A BREAK is a one-shot laid over the
+    # running idle (PoseLayer: in over 0.4 s, out over 0.5 s), so its window
+    # starts and ends where the preset stands at rest - the pose `breaks`
+    # measures every turn from (make_break, additive) - and holds the one
+    # gesture between. `brk` marks an idle break's kind (BREAKS deals them): a
+    # "look" may be quieted down to the head alone, a "gesture" keeps its arms.
+    # breaks: the look-arounds (the content is the head's look)
+    336: dict(window=(0, 152), brk="look"),      # Long Breathe and Look Around: a look left (f32-64), a look right with the hips (f104-136), back to the centre at f152 (5.1 s); the other 6 s repeat it
+    338: dict(window=(0, 136), brk="look"),      # Short Breathe and Look Around: a look 31 degrees right (f40-80) and back, calm at f136 (4.5 s); f152-192 repeats the look
+    335: dict(window=(0, 160), brk="look"),      # Axe Breathe and Look Around: a bladed, knees-bent axe stance throughout (feet 32 cm apart, the pelvis 50 degrees round); a look left (f36-60), then right (f84-120), back at f160 (5.3 s). It starts and ends in the axe stance, so only its turns are laid over the idle
+    0:   dict(brk="look"),                       # Idle: stands, turns to look over the left shoulder (the head 104 degrees), then the right (134, the right heel up 5 cm, f24-60), back at f108 (4.0 s); f0 = f120
+    2:   dict(brk="look"),                       # Alert: the weapon forward, a look 70 degrees right (f12-48), a crouch, a look 50 left (f84-96), back (4.0 s); f0 = f120
+    334: dict(window=(84, 140), brk="look"),     # Lower Weapon, Look, Raise: from the guard, a turn to look back (f24-72), front with the weapon lowered (f84), a look about 60 degrees left (f96-132), the guard again from f144; the window is the lowered look (1.9 s) - the guard at both ends is the battle's
+    # breaks: the gestures (the content is the arms)
+    318: dict(brk="gesture"),                    # Scheming Hand Rub: a hunch over the hands rubbed at the waist (f14-66), up again, calm at f96 (3.3 s)
+    12:  dict(brk="gesture"),                    # Idle 2: a stretch - the arms overhead (f24-72, the hands 57% of the height over the idle's), flung wide, a shoulder rolled - back in the stance at f156 (5.3 s)
+    11:  dict(),                                 # Idle 1: the weapon held forward in the right hand, still (2.4 s): no gesture a break could carry (on Aphrodite it read as the idle); not dealt
+    # stances (loop)
+    377: dict(loop=True),                        # Relax Arms, Then Strike Battle Pose: the battle pose turned 40-60 degrees (f0-24), the arms relaxed (f36-48), the pose struck again (f60-120); f0 = f120, so it closes whole - the champion's stance, for step 4
+    231: dict(loop=True),                        # Archery Aim with Lateral Scan: at full draw (f0-24), the bow lowered and a scan 100 degrees left and 56 right (f36-108), the draw again (f120); f0 = f150 - the archers' stance, for step 4
+    # victories
+    306: dict(),                                 # Cheer with One Hand Up: a crouch, a hop with the right arm up (the feet 37 cm off the floor at f16), back at f40 (1.7 s)
+    403: dict(),                                 # Victory Fist Pump: both fists pumped at f12, settled by f40 (1.6 s)
+    255: dict(),                                 # Angry Ground Stomp: the arms flung out and the left foot stamped (up 11 cm at f4 and f36), back at f42 (1.4 s); a lifted foot, so never a break (a break plants the feet)
+    41:  dict(window=(30, 150)),                 # Formal Bow: stands (f0-40), a deep bow (f50-120), up by f140 (4.0 s); the stand after it is 3 s of nothing
 }
 
 
@@ -605,6 +653,16 @@ def cmd_ship(a):
     natural = idle_mode == "natural"
     stand = idle_mode == "stand"
     stance = assign.get("idle_combat")
+    ready_guard = None
+    if stance is not None and stance.split(":")[0] == "ready":
+        # the battle's ready stance (tools/ready_stance.py): its guard (89 raw,
+        # half or stand) is shipped first as the stance - the carrier the
+        # ready stance is read from, and the fallback where it is refused
+        ready_guard = stance.partition(":")[2] or "89"
+        if ready_guard not in READY_OVER:
+            sys.exit(f"idle_combat={stance}: a ready stance is made over 89, half or stand")
+        stance = ready_guard
+        assign["idle_combat"] = ready_guard
     natural_stance = stance == "natural"
     if natural_stance:
         # the stance IS the natural idle: the guard is retargeted only as the
@@ -710,11 +768,16 @@ def cmd_ship(a):
         # on the carrier just shipped, so it binds as they do
         import shutil
         cmd = [sys.executable, str(REPO / "tools/natural_idle.py"), "ship", a.family, "--bundle", str(bundle),
-               "--jobs", "1"] + (["--also-combat"] if natural_stance else [])
+               "--jobs", "1", "--alt"] + (["--also-combat"] if natural_stance else [])
         r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO))
         line = next((l for l in r.stdout.splitlines() if l.startswith(a.family)), "")
         print(f"  natural idle: {' '.join(line.split()[1:])[:400]}")
         held = " HELD (" in line
+        natural_made = not held and not r.returncode
+        alt_made = natural_made and (bundle / f"{a.family}_idle_alt.usdz").exists() and "[written" in line
+        report["idle_alt"] = (dict(made="tools/natural_idle.py --alt") if alt_made else
+                              dict(made=None, why=(line.split("ALT", 1)[1].strip()[:300] if "ALT" in line
+                                                   else "no natural idle")))
         report["idle"] = dict(preset="89 stood: held by tools/natural_idle.py's OVERRIDES" if held
                               else "natural (tools/natural_idle.py)")
         if natural_stance and not held:
@@ -733,12 +796,46 @@ def cmd_ship(a):
             if natural_stance:
                 shutil.copyfile(bundle / f"{a.family}_idle.usdz", bundle / f"{a.family}_idle_combat.usdz")
                 report["idle_combat"]["preset"] = "89 stand (the natural idle was refused)"
+        if not natural_made:
+            # the alt and the break were made beside another idle: gone with it
+            # (PoseLayer then stands the figure on one idle and breaks with the victory)
+            for stale in (f"{a.family}_idle_alt.usdz", f"{a.family}_break.usdz"):
+                (bundle / stale).unlink(missing_ok=True)
+        else:
+            # the idle break, made beside the idle just written (a re-shipped idle
+            # wants its break made again); none passing, PoseLayer breaks with the victory
+            b = break_for(a.family, bundle, idle_bundle=bundle)
+            if b.get("deal") in ("victory", "held"):
+                report["break"] = dict(preset=b["deal"], why=b.get("reason") or "; ".join(
+                    f"{t['preset']}/{t['rung']}: {t['fails'][0]}" for t in b.get("tries", [])[-2:]))
+            else:
+                report["break"] = dict(preset=str(b["deal"]), name=b.get("name"), rung=b["rung"],
+                                       mirrored=b["mirrored"], seconds=b["seconds"], over3=b["over3"],
+                                       idle_over3=b["idle_over3"])
+            print(f"  idle break: {break_line(b)[23:][:300]}")
     elif rest_from_guard:
         stand_in_place(bundle, a.family, "idle")
         report["idle"]["preset"] = "89 stood (the stance is not at rest)"
         print(f"  the standing idle is the guard stood up ({a.family}_idle.usdz), not the {stance} stance")
     elif stand and stance != "stand":
         stand_idle(1.0)                       # the stages' standing idle, from whatever stance shipped
+    if ready_guard is not None:
+        # the battle's ready stance over the guard just shipped; refused, the guard stays, loudly
+        cmd = [sys.executable, str(REPO / "tools/ready_stance.py"), "ship", a.family, "--bundle", str(bundle),
+               "--guard", ready_guard]
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO))
+        line = next((l for l in r.stdout.splitlines() if l.startswith(a.family)), "")
+        guard_word = "89" + ("" if ready_guard == "89" else f" {ready_guard}")
+        if r.returncode:
+            why = [l for l in (r.stdout + r.stderr).splitlines() if "REFUSED" in l or "Error" in l]
+            print(f"  PROBLEM: no ready stance for {a.family}, the guard ({guard_word}) stays: {'; '.join(why[:2])[:400]}")
+            report["idle_combat"]["preset"] = f"{guard_word} (the ready stance was refused)"
+        else:
+            import re
+            recipe = (re.search(r"-> (a|b)\b", line) or [None, "?"])[1]
+            print(f"  ready stance: {' '.join(line.split()[1:])[:300]}")
+            report["idle_combat"] = dict(preset=f"ready ({recipe}) over the {guard_word} guard",
+                                         tool="tools/ready_stance.py", guard=report["idle_combat"])
     rp = report_path(bundle, a.family)
     rp.parent.mkdir(parents=True, exist_ok=True)
     before = json.loads(rp.read_text()) if rp.exists() else {}
@@ -1009,6 +1106,13 @@ def archetype(family):
 # past 3x on them, the natural idle a few hundred. The other ten `stand`
 # families keep the stood guard until step 4's ready stances.
 CALM = ("sovereign", "grace", "mystic")
+# The battle's ready stances (Docs/PLAN.md, *Natural poses*, step 4;
+# tools/ready_stance.py): every family the deal still stood in the guard -
+# raw (89), 70% up (`half`) or fully up (`stand`), 73 of them - stands in its
+# ready stance instead, made over that guard (the plan keeps it as `guard`,
+# which is also the fallback where the ready stance is refused). The six on
+# 85's calm tail, Skadi's 226 and the calm 35's natural idle keep theirs.
+READY_OVER = ("89", "half", "stand")
 
 
 def natural_stances():
@@ -1305,6 +1409,9 @@ def make_plan():
         # after the deal and the judgments, so no other family's deal moves
         if str(p["clips"].get("idle_combat")) == "stand" and archetype(f) in CALM:
             p["clips"]["idle_combat"] = "natural"
+        elif str(p["clips"].get("idle_combat")) in READY_OVER:
+            p["guard"] = str(p["clips"]["idle_combat"])
+            p["clips"]["idle_combat"] = "ready"
     for f, p in plan.items():
         p["hand"] = weapon_hand(f)
         p["mirror"] = mirrored_clips(f, p["clips"])
@@ -1317,27 +1424,34 @@ def plan_label(v):
         return v[:-len(NO_MIRROR)].split("@")[0]
     if v.endswith(".npz"):
         return "own:" + Path(v).name.split("_")[0]
-    if v in ("stand", "half", "natural"):
+    if v in ("stand", "half", "natural", "ready"):
         return v
     return v.split("@")[0]
+
+
+def stance_word(p, clip):
+    """A plan slot's label; a ready stance names the guard it is made over."""
+    v = p["clips"][clip]
+    if clip == "idle_combat" and v == "ready":
+        return f"ready ({p['guard']})"
+    return plan_label(v)
 
 
 def report_plan(a, plan, taken):
     slots = ("attack_basic", "attack_heavy", "ultimate", "idle_combat", "victory")
     label = plan_label
-    tuples = [tuple(label(v) for v in p["clips"].values()) for f, p in plan.items() if "_awakened" not in f]
+    tuples = [tuple(stance_word(p, k) for k in p["clips"]) for f, p in plan.items() if "_awakened" not in f]
     dupes = len(tuples) - len(set(tuples))
     short = {"attack_basic": "basic", "attack_heavy": "heavy", "ultimate": "ult", "idle_combat": "stance"}
     if a.markdown:
         print("| family | grade | kind | hand | basic | heavy | ultimate | stance | victory | mirrored |")
         print("|---|---|---|---|---|---|---|---|---|---|")
         for f, p in sorted(plan.items(), key=lambda kv: (-kv[1]["grade"], kv[1]["kind"], kv[0])):
-            c = p["clips"]
-            print(f"| {f} | {p['grade']}★ | {p['kind']} | {p['hand'] or '-'} | " + " | ".join(label(c[k]) for k in slots)
+            print(f"| {f} | {p['grade']}★ | {p['kind']} | {p['hand'] or '-'} | " + " | ".join(stance_word(p, k) for k in slots)
                   + f" | {', '.join(short[x] for x in p['mirror']) or ''} |")
     else:
         for f, p in sorted(plan.items()):
-            print(f"{f:24s} {p['grade']} {p['kind']:8s} {p['hand'] or '-'} " + "  ".join(f"{k.split('_')[-1]}={label(v)}" for k, v in p["clips"].items())
+            print(f"{f:24s} {p['grade']} {p['kind']:8s} {p['hand'] or '-'} " + "  ".join(f"{k.split('_')[-1]}={stance_word(p, k)}" for k in p["clips"])
                   + (f"  mirror={','.join(p['mirror'])}" if p["mirror"] else ""))
     from collections import Counter
     print(f"\n{len(plan)} families ({len(tuples)} base); identical five-clip sets: {dupes}", file=sys.stderr)
@@ -1358,7 +1472,9 @@ def ship_argv(family, p, bundle, real=False):
     are its bespoke motions, already on its rig and its awakened rig and
     timed by BattleSceneController.contactFraction's own row, so only its
     stance and victory are dealt; every family takes the natural idle
-    (tools/natural_idle.py), and a calm one wears it as its stance too."""
+    (tools/natural_idle.py) with its weight-shift alt and its idle break,
+    a calm one wears the idle as its stance too, and a family in the guard
+    stands in its ready stance (`ready:<guard>`, tools/ready_stance.py)."""
     base = family.replace("_awakened", "")
     argv = [p["asset"], family]
     for clip, value in p["clips"].items():
@@ -1366,6 +1482,8 @@ def ship_argv(family, p, bundle, real=False):
             continue
         if clip in p.get("kept", ()):
             continue                            # the pre-palette file stays (KEPT)
+        if clip == "idle_combat" and value == "ready":
+            value = f"ready:{p['guard']}"       # the guard shipped first, the ready stance made over it
         argv.append(f"{clip}={value}")
     argv += ["idle=natural", "--bundle", str(bundle)] + (["--real"] if real else [])
     if p.get("height"):
@@ -1412,6 +1530,591 @@ def cmd_roll(a):
         sys.exit(1)
 
 
+# ---------------------------------------------------------------------------
+# Idle breaks (Docs/PLAN.md, *Natural poses*, steps 7 and 8.3-8.4; 2026-09-25)
+# ---------------------------------------------------------------------------
+#
+# A break is the family's <family>_break.usdz: a one-shot PoseLayer lays over
+# the running natural idle after 12-18 s untouched on a stage, and on the
+# island for most stirs (in over 0.4 s from its first key, let go 0.5 s
+# before its last). Made here from a bought preset's calm window (PRESET_CUTS'
+# `brk`), onto the family's own carrier, straight - no mesh.py, so no root
+# lock:
+#   additive  every joint's turn since the window's first key, in the joint's
+#             own frame, laid over the natural idle's MEAN pose, and the
+#             pelvis's travel since then turned to the idle's facing. The
+#             preset's absolute pose puts the donor's arms on the figure, and
+#             an arm away from the bind drags the cloth welded to it (Hera's
+#             robe 753 edges past 3x on 336 absolute); laid over the idle, a
+#             look moves the head and the body round the family's own safe
+#             hang (Aphrodite on 11: 137 -> 4).
+#   ends      eased into the idle's mean pose over BREAK_EASE, so the first and
+#             last keys ARE the idle's (the runtime's blend then crosses
+#             nothing).
+#   feet      planted on the idle's own spots every key by two-bone IK, the
+#             knees on the idle's poles, both feet pivoting on the spot with
+#             BREAK_PIVOT of the pelvis's turn, the pelvis lowered (smoothed)
+#             where a leg could not reach - so nothing slides, in the break or
+#             in the blend (the idle and its alt plant the same spots). A
+#             preset that lifts a foot (255's stamp, 306's hop) is never a
+#             break.
+# The ladder (BREAK_LADDER): where the whole break tears more than the idle
+# it plays over, the pelvis's turn and travel, the spine and (for a look) the
+# arms are quietened in steps, down to the head alone for a look; a gesture
+# keeps its arms and goes to the next candidate instead. Guards (the natural
+# idle's, measured on the shipped base at every key): no more edges past 3x
+# than the idle's (clip_fix's sum; MOTION.md section 10's rule), no forearm or
+# hand through the body past the idle's own count or ARM_COUNT, a foot joint
+# within a millimetre of its spot and the soles within the floor guard, and
+# for a robed family (the plan's `robed`) hands that stay low (BREAK_HANDS_LOW
+# of the height over where the idle holds them - the dress is welded to
+# them). A family whose every candidate fails gets no file: PoseLayer then
+# breaks with its victory's measured window (`victory` in the report).
+
+# Each archetype's candidates, the first preferred (Docs/PLAN.md, the palette
+# table): the sovereign's slow survey, the champion's short look, the
+# brute's axe look, the mystic's turn, the trickster's hand rub, the hunter's
+# and the beast's alert scan - and the construct's, a sentry's; the soldier's
+# weapon lowered and a look. 11 (a still guard) carries no gesture and 12
+# (the stretch) only a grace's; 377 and 231 are stances, the four victories
+# victories. The awakened form takes its family's row (natural_idle.arch_for,
+# the stages' archetype: Bastet in the grace row, Serqet the champion's).
+BREAKS = {
+    "sovereign": [336, 338, 0],
+    "champion": [338, 334, 336],
+    "soldier": [334, 338, 2],
+    "brute": [335, 338, 336],
+    "mystic": [0, 336, 338],
+    "grace": [12, 336, 338],
+    "trickster": [318, 338, 0],
+    "hunter": [2, 338, 334],
+    "beast": [2, 338, 336],
+    "construct": [2, 338, 0],
+}
+# The weapon's side of a lateral preset (as PRESET_SIDE): mirrored on the
+# donor to a left-handed family. A look that is not lateral is mirrored for
+# half the roster by a hash of the family, so the looks go both ways.
+BREAK_SIDE = {2: "R", 334: "R", 335: "R", 12: "R"}
+# (pelvis turn, pelvis travel, spine, arms, neck and head): each rung's share
+# of the preset's own; a look may go down to the head alone and then to half
+# the head's turn (a glance), a gesture keeps its arms.
+BREAK_LADDER = {
+    "look": [(1.0, 1.0, 1.0, 1.0, 1.0), (0.6, 0.6, 0.6, 0.6, 1.0), (0.3, 0.3, 0.35, 0.35, 1.0),
+             (0.1, 0.1, 0.15, 0.15, 1.0), (0.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 0.0, 0.0, 0.5)],
+    "gesture": [(1.0, 1.0, 1.0, 1.0, 1.0), (0.5, 0.5, 0.6, 1.0, 1.0), (0.2, 0.2, 0.3, 1.0, 1.0)],
+}
+# Breaks the judge held (2026-09-25): no file is written for these (a stale
+# one is removed), so PoseLayer breaks with the victory's window until the
+# `retry` passes a judge; `breaks --retry-held` makes the retry into --out
+# for its board. The trickster's hand rub (318) is not held here: MOTION.md
+# section 10's rule refused it on all ten (Dionysus 3 edges past 3x against
+# the look-around's 0, the Satyr 7), and relaxing that rule is the owner's.
+BREAK_HOLD = {
+    "nephthys": dict(reason="preset 0 whole turns her head 131 degrees left and 104 right: her body goes to profile "
+                            "twice in 1.2 s while her feet swivel 27 degrees on the spot, so she reads as spinning "
+                            "(on the donor the same turns are stepped)",
+                     retry=dict(rung=2)),        # further down the ladder, as Ptah's 83 degrees
+}
+BREAK_EASE = (0.5, 0.6)      # s: out of the idle's mean pose, and back into it
+BREAK_PIVOT = (0.5, 30.0)    # the share of the pelvis's turn the planted feet pivot with, and its cap (degrees)
+BREAK_FPS = 20.0             # keys a second, as the natural idle (tools/natural_idle.py FPS)
+BREAK_HANDS_LOW = 0.10       # a robed family's hands may rise this share of the height over the idle's, no more
+BREAK_SLIDE = 0.001          # m: a foot joint off its spot
+
+
+def _ni():
+    import natural_idle
+    return natural_idle
+
+
+def _quiet(fn, *a, **k):
+    import io
+    import contextlib
+    with contextlib.redirect_stdout(io.StringIO()):
+        return fn(*a, **k)
+
+
+def _fk(rig, T, R):
+    """World rotations (J,3,3) and positions (J,3) of one key."""
+    ni = _ni()
+    J = len(rig.names)
+    local = np.array([character.trs(T[j], R[j], rig.parts[j][2]) for j in range(J)])
+    W = character.world_from_local(local, rig.parents)
+    return np.array([ni.rotation_part(m) for m in W]), W[:, 3, :3].copy()
+
+
+def _yaw(rig, Rw, j):
+    """Degrees the joint has turned about the vertical since the bind (+: toward the figure's left)."""
+    v = np.array([0.0, 0.0, 1.0]) @ (rig.rot0[j].T @ Rw[j])
+    return float(np.degrees(np.arctan2(v[0], v[2])))
+
+
+class BreakFamily:
+    """A family's carrier (the skeleton the break is written on), rig,
+    shipped base, and the natural idle the break plays over: its mean pose
+    and where it plants the feet."""
+
+    def __init__(self, family, idle_bundle=None):
+        ni = _ni()
+        self.family = family
+        self.carrier, self.cpath, self.bpath = ni.carrier_for(family)
+        self.base = ni.Base(self.bpath)
+        self.rig = rig = ni.Rig(self.carrier, self.base.c)
+        path = Path(idle_bundle) / f"{family}_idle.usdz" if idle_bundle else None
+        self.idle_path = path if path is not None and path.exists() else APP_BUNDLE / f"{family}_idle.usdz"
+        ic = _quiet(character.read_usdz, str(self.idle_path))
+        if list(ic.joints) != list(self.carrier.joints):
+            raise ValueError(f"{family}: the idle's joints are not its carrier's")
+        self.idle, self.joints = ic.anim, ic.joints
+        n = len(self.idle["T"]) - 1                       # a loop's last key is its first
+        R = np.asarray(self.idle["R"][:n], float)
+        R = R * np.where(np.sum(R * R[:1], axis=2, keepdims=True) < 0, -1.0, 1.0)
+        q = R.mean(axis=0)
+        self.mean_R = q / np.linalg.norm(q, axis=1, keepdims=True)
+        self.mean_T = np.asarray(self.idle["T"][:n], float).mean(axis=0)
+        self.Rw_mean, self.Pw_mean = _fk(rig, self.mean_T, self.mean_R)
+        Rw0, Pw0 = _fk(rig, np.asarray(self.idle["T"][0], float), np.asarray(self.idle["R"][0], float))
+        self.foot = {}
+        for s in "LR":
+            g = rig.leg[s]
+            H, K, F = Pw0[g["upleg"]], Pw0[g["knee"]], Pw0[g["foot"]]
+            axis = ni.unit(F - H)
+            off = (K - H) - ((K - H) @ axis) * axis
+            pole = ni.unit(off) if np.linalg.norm(off) > 1e-6 else rig.knee_pole[s]
+            self.foot[s] = dict(pos=F.copy(), rot=Rw0[g["foot"]].copy(), pole=pole)
+        self.pelvis_yaw = _yaw(rig, self.Rw_mean, rig.hips)
+        self.body = [rig.hips] + rig.spine + rig.neck + [rig.head] + [rig.arm[s][k] for s in "LR"
+                                                                       for k in ("upper", "fore", "hand")]
+        self._idle_m = None
+
+    def idle_measure(self):
+        """The guards' measures of the idle itself, at every key: the bar."""
+        if self._idle_m is None:
+            n = len(self.idle["T"])
+            self._idle_m = self.base.measure(self.idle, self.joints, self.rig, frames=np.arange(n))
+        return self._idle_m
+
+
+def _plant(bf, T, R):
+    """Every key's legs solved onto the idle's foot spots (in place): the
+    pelvis lowered (smoothed) where a leg cannot reach, the feet pivoting on
+    the spot with the pelvis's turn, the knees on the idle's poles."""
+    ni = _ni()
+    rig = bf.rig
+    n = len(R)
+    P0, R0 = rig.pos0, rig.rot0
+    Yax = np.array([0.0, 1.0, 0.0])
+
+    def reach(side):
+        br = rig.bind_reach[side]
+        return min(0.995, br + 0.01) if br < 0.985 else 0.995
+    drops = np.zeros(n)
+    for i in range(n):
+        _, Pw = _fk(rig, T[i], R[i])
+        for s in "LR":
+            g = rig.leg[s]
+            a = np.linalg.norm(P0[g["knee"]] - P0[g["upleg"]])
+            b = np.linalg.norm(P0[g["foot"]] - P0[g["knee"]])
+            v = bf.foot[s]["pos"] - Pw[g["upleg"]]
+            rm = reach(s) * (a + b)
+            drops[i] = max(drops[i], -v[1] - np.sqrt(max(rm * rm - v[0] ** 2 - v[2] ** 2, 0.0)))
+    drops = np.maximum(drops, 0.0)
+    if drops.max() > 0:
+        pad = np.pad(drops, 4, mode="edge")
+        wide = np.array([pad[i:i + 9].max() for i in range(n)])
+        g = np.exp(-0.5 * (np.arange(-6, 7) / 2.0) ** 2)
+        drops = np.convolve(np.pad(wide, 6, mode="edge"), g / g.sum(), mode="valid")
+    for r in np.where(rig.parents < 0)[0]:
+        T[:, r, 1] -= drops
+    pivot = 0.0
+    share, cap = BREAK_PIVOT
+    for i in range(n):
+        Rw, Pw = _fk(rig, T[i], R[i])
+        turn_by = float(np.clip(share * (((_yaw(rig, Rw, rig.hips) - bf.pelvis_yaw) + 180) % 360 - 180), -cap, cap))
+        pivot = max(pivot, abs(turn_by))
+        turn = ni.about(Yax, turn_by)
+        for s in "LR":
+            g = rig.leg[s]
+            u, k, f = g["upleg"], g["knee"], g["foot"]
+            a, b = np.linalg.norm(P0[k] - P0[u]), np.linalg.norm(P0[f] - P0[k])
+            H, F = Pw[u], bf.foot[s]["pos"]
+            d = min(max(np.linalg.norm(F - H), abs(a - b) + 1e-4), (a + b) * 0.9995)
+            axis = ni.unit(F - H)
+            pole = bf.foot[s]["pole"] @ turn
+            pole = ni.unit(pole - (pole @ axis) * axis)
+            x = (a * a - b * b + d * d) / (2 * d)
+            K = H + axis * x + pole * np.sqrt(max(a * a - x * x, 0.0))
+            pole0 = rig.knee_pole[s]
+            Rw[u] = R0[u] @ ni.frame_rotation(P0[k] - P0[u], pole0, K - H, pole)
+            Pw[k] = H + (P0[k] - P0[u]) @ R0[u].T @ Rw[u]
+            Rw[k] = R0[k] @ ni.frame_rotation(P0[f] - P0[k], pole0, F - Pw[k], pole)
+            Rw[f] = bf.foot[s]["rot"] @ turn
+            for j in (u, k, f):
+                p = int(rig.parents[j])
+                q = character.rot_to_quat(Rw[j] @ Rw[p].T if p >= 0 else Rw[j])
+                R[i, j] = -q if np.dot(q, R[i, j]) < 0 else q
+            for t in g["toes"]:
+                R[i, t] = bf.mean_R[t]
+    return dict(drop_cm=round(float(drops.max()) * 100, 1), pivot=round(pivot, 1))
+
+
+_DONOR_RIGS = {}
+
+
+def donor_rig(pid):
+    """The Rig of the family the preset was bought on (its shipped carrier:
+    the archive's own skeleton, names and all), cached."""
+    ni = _ni()
+    donor = load_manifest()["presets"].get(str(int(pid)), {}).get("donor", "shield_maiden_serious")
+    fam = donor[:-len("_serious")] if donor.endswith("_serious") else donor
+    if fam not in _DONOR_RIGS:
+        c, _, bp = ni.carrier_for(fam)
+        _DONOR_RIGS[fam] = ni.Rig(c, _quiet(character.read_usdz, str(bp)))
+    return _DONOR_RIGS[fam]
+
+
+def by_role(src_rig, tgt_rig):
+    """{source joint name: target joint name}, matched by the part each is
+    found to be (natural_idle.Rig: by position and by the skull's skin),
+    never by name. Eleven rigs call the joint over the hips `neck` and skin
+    the skull to Head1 or Spine1 (Zeus, Thor, the smith ...), and three skin
+    it to `neck` (Hephaestus, Fenrir, Ullr): matched by name, the donor's
+    neck turn went into Zeus's lower back and his skull never turned (the
+    retarget matches by name; `ship` still does). A chain of another length
+    maps its ends to the ends and spreads the middle; a source joint with no
+    place is left out (the world-space retarget still turns the joints above
+    it by their own)."""
+    out = {}
+
+    def chain(sl, tl):
+        if not sl or not tl:
+            return
+        for i, sj in enumerate(sl):
+            k = int(round(i * (len(tl) - 1) / max(len(sl) - 1, 1))) if len(sl) > 1 else len(tl) - 1
+            t = tgt_rig.names[tl[k]]
+            if t not in out.values():
+                out[src_rig.names[sj]] = t
+    chain([src_rig.hips], [tgt_rig.hips])
+    chain(src_rig.spine, tgt_rig.spine)
+    chain(src_rig.neck, tgt_rig.neck)
+    chain([src_rig.head], [tgt_rig.head])
+    for s in "LR":
+        chain([src_rig.leg[s][k] for k in ("upleg", "knee", "foot")] + list(src_rig.leg[s]["toes"][:1]),
+              [tgt_rig.leg[s][k] for k in ("upleg", "knee", "foot")] + list(tgt_rig.leg[s]["toes"][:1]))
+        chain([src_rig.arm[s][k] for k in ("clav", "upper", "fore", "hand") if src_rig.arm[s][k] is not None],
+              [tgt_rig.arm[s][k] for k in ("clav", "upper", "fore", "hand") if tgt_rig.arm[s][k] is not None])
+    return out
+
+
+def make_break(bf, pid, mirror=False, rung=(1.0, 1.0, 1.0, 1.0, 1.0), fps=BREAK_FPS):
+    """-> (anim on the family's carrier at `fps` keys a second, facts): the
+    preset's PRESET_CUTS window laid over the idle's mean pose (additive,
+    each part scaled by `rung`), its ends eased into that pose, its feet
+    planted on the idle's spots."""
+    ni = _ni()
+    from retarget import Motion, retarget
+    rig = bf.rig
+    J = len(rig.names)
+    roots = np.where(rig.parents < 0)[0]
+    raw = Motion.load(archive_path(pid))
+    if mirror:
+        raw, _ = mirror_motion(raw)
+    # the source's joints renamed to the target's by part (by_role), so the
+    # retarget's name match lands the donor's head on the skull's joint
+    names = by_role(donor_rig(pid), rig)
+    raw = Motion(["/".join(j.split("/")[:-1] + [names.get(j.split("/")[-1], "_unplaced_" + j.split("/")[-1])])
+                  for j in raw.joints], raw.parents, raw.rest_local, raw.anim, raw.source)
+    cut, _ = prepare(raw, "break", PRESET_CUTS.get(int(pid), {}).get("window"))
+    anim, _, _ = retarget(cut, Motion.from_char(bf.carrier))
+    F = len(anim["T"])
+    N = int(round((F - 1) * fps / float(anim["fps"]))) + 1
+    anim = resample(anim, np.linspace(0, F - 1, N))
+    T = np.asarray(anim["T"], float).copy()
+    R = np.asarray(anim["R"], float).copy()
+    Rw, _ = _fk(rig, T[0], R[0])
+    facing = ni.about([0.0, 1.0, 0.0], ((bf.pelvis_yaw - _yaw(rig, Rw, rig.hips)) + 180) % 360 - 180)
+    pelvis, travel, spine, arms, head = rung
+    share = {int(j): pelvis for j in roots}
+    share.update({j: spine for j in rig.spine})
+    share.update({j: head for j in list(rig.neck) + [rig.head]})
+    share.update({rig.arm[s][k]: arms for s in "LR" for k in ("clav", "upper", "fore", "hand")
+                  if rig.arm[s][k] is not None})
+    Mref = [character.quat_to_rot(R[0, j]) for j in range(J)]
+    Mbase = [character.quat_to_rot(bf.mean_R[j]) for j in range(J)]
+    T0 = T[0].copy()
+    for i in range(N):
+        for j in range(J):
+            D = character.quat_to_rot(R[i, j]) @ Mref[j].T          # the joint's turn since the window's first key
+            if share.get(j, 1.0) != 1.0:
+                D = ni.slerp_rot(D, share[j])
+            R[i, j] = character.rot_to_quat(D @ Mbase[j])
+        for r in roots:
+            T[i, r] = bf.mean_T[r] + travel * ((T[i, r] - T0[r]) @ facing)
+    t = np.arange(N) / fps
+    dur = (N - 1) / fps
+    ease_in, ease_out = BREAK_EASE
+
+    def smooth(x):
+        x = np.clip(x, 0.0, 1.0)
+        return x * x * (3 - 2 * x)
+    e = smooth(t / ease_in) * smooth((dur - t) / ease_out)
+    for i in range(N):
+        R[i] = slerp(bf.mean_R, R[i], np.full(J, e[i]))
+        for r in roots:
+            T[i, r] = bf.mean_T[r] * (1 - e[i]) + T[i, r] * e[i]
+    facts = _plant(bf, T, R)
+    for i in range(1, N):
+        R[i] *= np.where(np.sum(R[i] * R[i - 1], axis=1) < 0, -1.0, 1.0)[:, None]
+    scales = np.array([rig.parts[j][2] for j in range(J)])
+    out = {"T": T.astype(np.float32), "R": R.astype(np.float32),
+           "S": np.repeat(scales[None], N, 0).astype(np.float32), "fps": fps}
+    facts.update(keys=N, seconds=round(dur, 2))
+    return out, facts
+
+
+def break_measure(bf, anim):
+    """The guards' measures of a break at every key, and the break's own:
+    each foot joint's distance from its spot, the hands' rise over the
+    idle's (share of the height), the head's turn and the widest joint angle
+    off the idle's mean (what makes it a break at all)."""
+    rig = bf.rig
+    n = len(anim["T"])
+    m = bf.base.measure(anim, bf.joints, rig, frames=np.arange(n))
+    slide, hands, yaws, dist = 0.0, -1.0, [], 0.0
+    for i in range(n):
+        Rw, Pw = _fk(rig, anim["T"][i], anim["R"][i])
+        for s in "LR":
+            slide = max(slide, float(np.linalg.norm(Pw[rig.leg[s]["foot"]] - bf.foot[s]["pos"])))
+            hands = max(hands, float(Pw[rig.arm[s]["hand"], 1] - bf.Pw_mean[rig.arm[s]["hand"], 1]))
+        yaws.append(_yaw(rig, Rw, rig.head) - _yaw(rig, bf.Rw_mean, rig.head))
+        d = [np.degrees(np.arccos(np.clip((np.trace(Rw[j].T @ bf.Rw_mean[j]) - 1) / 2, -1, 1))) for j in bf.body]
+        dist = max(dist, float(np.mean(d)))
+    yaws = (np.array(yaws) + 180) % 360 - 180
+    m.update(slide_mm=round(slide * 1000, 2), hands=round(hands / rig.height, 3),
+             look=(round(float(yaws.min()), 1), round(float(yaws.max()), 1)), reach_deg=round(dist, 1))
+    return m
+
+
+def break_guard(bf, m, robed):
+    """The lines that refuse a break (MOTION.md section 10's rule and the natural idle's guards)."""
+    ni = _ni()
+    bar = bf.idle_measure()
+    fails = []
+    if m["over3"] > bar["over3"]:
+        fails.append(f"tears {m['over3']} edges past 3x against the idle's {bar['over3']}")
+    through = m["through"] + m["through_held"]
+    if through > max(ni.ARM_COUNT, bar["through"] + bar["through_held"]):
+        fails.append(f"an arm through the body ({m['through']} arm, {m['through_held']} held)")
+    if m["slide_mm"] > BREAK_SLIDE * 1000:
+        fails.append(f"a foot {m['slide_mm']} mm off its spot")
+    sink_ok = ni.override_for(bf.family).get("sink_ok", ni.FLOOR_SINK * max(1.0, bf.rig.height / 1.9))
+    if m["sink_mm"] > max(1000 * sink_ok, bar["sink_mm"] + 0.5):
+        fails.append(f"a sole {m['sink_mm']} mm into the floor")
+    if m["floor_mm"] > max(ni.FLOOR_DRIFT * 1000, bar["floor_mm"] + 0.5):
+        fails.append(f"a foot {m['floor_mm']} mm off the floor")
+    if robed and m["hands"] > BREAK_HANDS_LOW:
+        fails.append(f"the hands rise {m['hands'] * 100:.0f}% of the height (a robe is welded to them)")
+    return fails
+
+
+def break_mirror(family, pid):
+    """Whether the preset is mirrored for this family: a lateral one to a
+    left-handed family's weapon hand; a look by a hash of the family's key,
+    so half the roster looks the other way first."""
+    import hashlib
+    side = BREAK_SIDE.get(int(pid))
+    if side:
+        hand = weapon_hand(family)
+        return hand is not None and hand != side
+    return int(hashlib.sha256(f"{family}:break".encode()).hexdigest()[:8], 16) % 2 == 1
+
+
+def robed_families():
+    import io
+    import contextlib
+    with contextlib.redirect_stderr(io.StringIO()):
+        plan, _ = make_plan()
+    return {f for f, p in plan.items() if p["kind"] == "robed"}
+
+
+def break_for(family, out_dir, idle_bundle=None, robed=None, retry_held=False):
+    """The family's break: the archetype's candidates down their ladders,
+    the first that passes every guard written as <family>_break.usdz into
+    `out_dir` (made in a work folder, re-read by character.verify, bound as
+    the base). -> the report: the deal, every try, or `victory` when none
+    passed (PoseLayer then breaks with the victory's measured window). A
+    family in BREAK_HOLD gets no file (`held`, a stale one removed) unless
+    `retry_held`, which starts its ladders at the hold's `retry` rung."""
+    import shutil
+    import tempfile
+    import hashlib
+    ni = _ni()
+    t0 = time.time()
+    arch = ni.arch_for(family)
+    rep = dict(family=family, archetype=arch, tries=[])
+    hold = BREAK_HOLD.get(family)
+    if ni.hold_reason(family):                   # the idle itself is held on the stood guard: nothing to break over
+        hold, retry_held = dict(reason=f"its idle is held ({ni.hold_reason(family)})"), False
+    if hold and not retry_held:
+        stale = Path(out_dir) / f"{family}_break.usdz"
+        if stale.exists():
+            stale.unlink()
+        rep.update(deal="held", reason=hold["reason"], secs=0.0)
+        return rep
+    first_rung = (hold or {}).get("retry", {}).get("rung", 0) if retry_held else 0
+    if robed is None:
+        robed = family in robed_families()
+    rep["robed"] = bool(robed)
+    bf = BreakFamily(family, idle_bundle)
+    rep["idle"] = str(bf.idle_path)
+    rep["idle_sha"] = hashlib.sha256(bf.idle_path.read_bytes()).hexdigest()[:12]
+    bar = bf.idle_measure()
+    rep["idle_over3"] = bar["over3"]
+    for pid in BREAKS.get(arch, []):
+        kind = PRESET_CUTS.get(pid, {}).get("brk")
+        mirror = break_mirror(family, pid)
+        for k, rung in enumerate(BREAK_LADDER[kind]):
+            if k < first_rung:
+                continue
+            anim, facts = make_break(bf, pid, mirror, rung)
+            m = break_measure(bf, anim)
+            fails = break_guard(bf, m, robed)
+            rep["tries"].append(dict(preset=pid, rung=k, over3=m["over3"], fails=fails))
+            if fails and kind == "gesture" and any("hands rise" in x for x in fails):
+                break                                 # a robed figure's gesture: no rung lowers the hands
+            if fails:
+                continue
+            work = Path(tempfile.mkdtemp(prefix="break_"))
+            try:
+                c = copy_char(bf.carrier)
+                c.anim, c.name = anim, family
+                made = work / f"{family}_break.usdz"
+                character.write_usdz(c, made)
+                vf = _quiet(character.verify, made, check_bounds=False, quiet=True)
+                probs = [x for x in vf["problems"] if not x.startswith("feet at")]
+                probs += bind_against_base(work, family, ["break"])       # against the shipped base
+                if probs:
+                    rep["tries"][-1]["fails"] = probs
+                    continue
+                Path(out_dir).mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(made, Path(out_dir) / made.name)
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
+            rep.update(deal=pid, name=PRESET_NAMES.get(str(pid), ""), rung=k, share=list(rung), mirrored=mirror,
+                       seconds=facts["seconds"], keys=facts["keys"], pivot=facts["pivot"], drop_cm=facts["drop_cm"],
+                       over3=m["over3"], max=m["max"], through=[m["through"], m["through_held"]],
+                       slide_mm=m["slide_mm"], sink_mm=m["sink_mm"], floor_mm=m["floor_mm"], hands=m["hands"],
+                       look=m["look"], reach_deg=m["reach_deg"], bytes=(Path(out_dir) / f"{family}_break.usdz").stat().st_size)
+            rep["secs"] = round(time.time() - t0, 1)
+            return rep
+    rep["deal"] = "victory"
+    rep["secs"] = round(time.time() - t0, 1)
+    stale = Path(out_dir) / f"{family}_break.usdz"
+    if stale.exists():
+        stale.unlink()
+    return rep
+
+
+def copy_char(c):
+    import copy
+    return copy.copy(c)
+
+
+def _break_job(args):
+    family, out, idle_bundle, robed, retry_held = args
+    try:
+        return break_for(family, out, idle_bundle, robed, retry_held)
+    except Exception as e:  # noqa: BLE001 - one family's fault is reported, the roster goes on
+        return dict(family=family, deal="error", error=f"{type(e).__name__}: {e}")
+
+
+def break_line(r):
+    if r.get("deal") in ("victory", "error", "held"):
+        why = r.get("error") or r.get("reason") or "; ".join(f"{t['preset']}/{t['rung']}: {t['fails'][0]}"
+                                                              for t in r.get("tries", [])[-3:])
+        return f"{r['family']:22s} {r.get('archetype') or '':9s} {r['deal'].upper():8s} {why}"
+    share = "whole" if r["rung"] == 0 else "rung %d %s" % (r["rung"], "/".join(f"{x:g}" for x in r["share"]))
+    return (f"{r['family']:22s} {r['archetype']:9s} {r['deal']:>4} {r['name'][:30]:30s} {'mirrored ' if r['mirrored'] else ''}{share}; "
+            f"{r['seconds']} s, past 3x {r['over3']} (idle {r['idle_over3']}), look {r['look'][0]:+.0f}/{r['look'][1]:+.0f} deg, "
+            f"hands {r['hands'] * 100:+.0f}%, pivot {r['pivot']}, drop {r['drop_cm']} cm, {r['bytes'] // 1024} KB, {r['secs']} s")
+
+
+def cmd_breaks(a):
+    """Every family's break (or the ones named) into --out, --jobs at a
+    time, a line each and the reports as JSON. Never the app's bundle
+    without --real."""
+    from concurrent.futures import ProcessPoolExecutor
+    out = Path(a.out).resolve()
+    if out == APP_BUNDLE.resolve() and not a.real:
+        sys.exit("that is the app's bundle; pass --real to write it")
+    fams = a.families or sorted(p.name[:-len("_idle.usdz")] for p in APP_BUNDLE.glob("*_idle.usdz"))
+    robed = robed_families()
+    jobs = [(f, str(out), a.idle_bundle, f in robed, a.retry_held) for f in fams]
+    reports = []
+    with ProcessPoolExecutor(max_workers=max(1, a.jobs)) as pool:
+        for r in pool.map(_break_job, jobs):
+            reports.append(r)
+            print(break_line(r), flush=True)
+    dealt = [r for r in reports if r.get("deal") not in ("victory", "error", "held")]
+    size = sum(r["bytes"] for r in dealt)
+    print(f"{len(dealt)} breaks written ({size / 1048576:.1f} MB), {sum(r.get('deal') == 'victory' for r in reports)} "
+          f"on their victory, {sum(r.get('deal') == 'held' for r in reports)} held (BREAK_HOLD), "
+          f"{sum(r.get('deal') == 'error' for r in reports)} errors")
+    if a.json:
+        before = json.loads(Path(a.json).read_text()) if Path(a.json).exists() else {}
+        before.update({r["family"]: r for r in reports})
+        Path(a.json).write_text(json.dumps(before, indent=1) + "\n")
+
+
+def cmd_break_board(a):
+    """A family's natural idle, then its break at three instants - the one
+    farthest from the idle and the two halfway to either end - front,
+    three-quarter and side, on the shipped base."""
+    from PIL import Image, ImageDraw
+    import preview
+    ni = _ni()
+    ni.views_setup()
+    views = a.views.split(",")
+    rows = []
+    for fam in a.families:
+        path = Path(a.bundle) / f"{fam}_break.usdz"
+        if not path.exists():
+            print(f"{fam}: no break in {a.bundle}")
+            continue
+        bf = BreakFamily(fam, a.idle_bundle)
+        c = _quiet(character.read_usdz, str(path))
+        n = len(c.anim["T"])
+        far = []
+        for i in range(n):
+            Rw, _ = _fk(bf.rig, c.anim["T"][i], c.anim["R"][i])
+            far.append(np.mean([np.degrees(np.arccos(np.clip((np.trace(Rw[j].T @ bf.Rw_mean[j]) - 1) / 2, -1, 1)))
+                                for j in bf.body]))
+        apex = int(np.argmax(far))
+        frames = sorted({max(1, apex // 2), apex, min(n - 2, (apex + n - 1) // 2)})
+        idle_cells, width = ni.render_cells(bf.base, bf.idle, bf.joints, [0], views, a.size)
+        cells, _ = ni.render_cells(bf.base, c.anim, c.joints, frames, views, a.size)
+        rows.append((fam, ni.arch_for(fam), idle_cells + cells, width, n, c.anim["fps"], a.notes.get(fam, "")))
+    if not rows:
+        sys.exit("nothing to board")
+    width = rows[0][3]
+    cols = max(len(r[2]) for r in rows)
+    head, lab = 22, 18
+    rh = head + len(views) * a.size + lab + 8
+    sheet = Image.new("RGB", (cols * width + 30, rh * len(rows) + 6), (24, 24, 28))
+    d = ImageDraw.Draw(sheet)
+    for ri, (fam, arch, cells, width, n, fps, note) in enumerate(rows):
+        y0 = 4 + ri * rh
+        d.text((8, y0), f"{fam} ({arch}) {note}", fill=(160, 230, 160), font=preview.font(14))
+        for ci, (f, col) in enumerate(cells):
+            x = 10 + ci * width + (10 if ci else 0)
+            for vi, img in enumerate(col):
+                sheet.paste(img, (x, y0 + head + vi * a.size))
+            label = "the natural idle" if ci == 0 else f"break {f / fps:.1f} s of {(n - 1) / fps:.1f}"
+            d.text((x + 4, y0 + head + len(views) * a.size + 1), label, fill=(240, 220, 150), font=preview.font(13))
+    sheet.save(a.out, quality=86)
+    print(f"  board -> {a.out} {sheet.size}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1436,9 +2139,19 @@ def main():
     p.add_argument("--jobs", type=int, default=2); p.add_argument("--skip-done", action="store_true"); p.add_argument("--dry-run", action="store_true")
     p = sub.add_parser("plan", help="deal every family its own five clips from the archived palette")
     p.add_argument("--markdown", action="store_true"); p.add_argument("--json")
+    p = sub.add_parser("breaks", help="every family's idle break (<family>_break.usdz) into --out (BREAKS, make_break)")
+    p.add_argument("families", nargs="*"); p.add_argument("--out", required=True); p.add_argument("--real", action="store_true")
+    p.add_argument("--idle-bundle", help="the natural idles the breaks play over (default: the app's bundle)")
+    p.add_argument("--jobs", type=int, default=2); p.add_argument("--json")
+    p.add_argument("--retry-held", action="store_true", help="make a BREAK_HOLD family's retry (for its board)")
+    p = sub.add_parser("break-board", help="families' natural idle, then the break at three instants")
+    p.add_argument("families", nargs="+"); p.add_argument("--bundle", required=True, help="where the breaks are")
+    p.add_argument("--idle-bundle"); p.add_argument("--out", required=True); p.add_argument("--size", type=int, default=260)
+    p.add_argument("--views", default="front,q3,side"); p.set_defaults(notes={})
     a = ap.parse_args()
     {"buy": cmd_buy, "archive": cmd_archive, "free": cmd_free, "list": cmd_list, "ship": cmd_ship,
-     "board": cmd_board, "board-archive": cmd_board_archive, "compare": cmd_compare, "plan": cmd_plan, "roll": cmd_roll}[a.cmd](a)
+     "board": cmd_board, "board-archive": cmd_board_archive, "compare": cmd_compare, "plan": cmd_plan, "roll": cmd_roll,
+     "breaks": cmd_breaks, "break-board": cmd_break_board}[a.cmd](a)
 
 
 if __name__ == "__main__":

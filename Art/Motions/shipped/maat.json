@@ -33,15 +33,43 @@
   "rate": 1.8
  },
  "idle_combat": {
-  "preset": "89 stand",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "natural (tools/natural_idle.py): the stages' idle, the same file",
+  "carrier": "89"
  },
  "victory": {
   "preset": "298",
   "frames": 58,
   "seconds": 1.93,
   "rate": 0.96
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "grace",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 0.12,
+  "roll_share": 0.5,
+  "over3": 0,
+  "blend_drift_mm": 2.58
+ },
+ "break": {
+  "preset": "336",
+  "name": "Long Breathe and Look Around",
+  "rung": 3,
+  "mirrored": true,
+  "seconds": 5.05,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -18.6,
+   23.0
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

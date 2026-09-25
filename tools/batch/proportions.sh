@@ -44,12 +44,22 @@ for name in "${names[@]}"; do
   [ -z "$src" ] && { echo "$name: no source; skipped"; continue; }
   echo "$(date -u +%T) $name <- $src"
   # the stages' idle after the ship, from the rig's own bind (tools/natural_idle.py
-  # since 2026-09-25; the guard stood up by tools/stand_idle.py only where it refuses)
+  # since 2026-09-25; the guard stood up by tools/stand_idle.py only where it refuses),
+  # with its weight-shift alt and its idle break (a refused idle takes both with it),
+  # and the battle's ready stance over the guard mesh.py shipped (build_asset.sh's order)
+  M=Pantheon/Resources/Models
   if python3 tools/mesh.py "$src" --as "$name" --tris 16000 --lod 6000 --lod-texture 2048 --proportions "$RECIPE" ${GRADE[$name]:-} > "$S/$name.log" 2>&1 && {
-       python3 tools/natural_idle.py ship "$name" --bundle Pantheon/Resources/Models --calm-stances --jobs 1 >> "$S/$name.log" 2>&1 || {
+       if python3 tools/natural_idle.py ship "$name" --bundle $M --calm-stances --alt --jobs 1 >> "$S/$name.log" 2>&1; then
+         python3 tools/motion_palette.py breaks "$name" --out $M --idle-bundle $M --real --jobs 1 >> "$S/$name.log" 2>&1 ||
+           echo "IDLE BREAK FAILED for $name" >> "$S/$name.log"
+       else
          echo "NATURAL IDLE REFUSED for $name: the guard stood up instead" >> "$S/$name.log"
-         python3 tools/stand_idle.py "$name" >> "$S/$name.log" 2>&1; }; }; then
-    touch "$S/$name.done"; done_n=$((done_n + 1)); grep -E "proportions:|cape:|every file verified|NATURAL IDLE REFUSED" "$S/$name.log" | tail -4
+         python3 tools/stand_idle.py "$name" >> "$S/$name.log" 2>&1
+         rm -f "$M/${name}_idle_alt.usdz" "$M/${name}_break.usdz"
+       fi
+       python3 tools/ready_stance.py ship "$name" --bundle $M --guard 89 >> "$S/$name.log" 2>&1 ||
+         echo "READY STANCE REFUSED for $name: the guard kept" >> "$S/$name.log"; }; then
+    touch "$S/$name.done"; done_n=$((done_n + 1)); grep -E "proportions:|cape:|every file verified|NATURAL IDLE REFUSED|READY STANCE REFUSED" "$S/$name.log" | tail -5
   else
     echo "  FAILED: $(grep -E 'PROBLEM|Error|Traceback' "$S/$name.log" | head -2 | tr '\n' ' ')"
   fi

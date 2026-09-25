@@ -44,5 +44,33 @@
   "frames": 117,
   "seconds": 3.9,
   "rate": 1.95
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "sovereign",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": {
+   "R": "stand +65 deg"
+  }
+ },
+ "idle_alt": {
+  "made": null,
+  "why": "no shift keeps the feet within 3 mm (roll 1.00, travel 0.17: the blend's feet 3.7 mm; roll 0.75, travel 0.17: the blend's feet 3.4 mm; roll 0.50, travel 0.17: the blend's feet 2.9 mm)"
+ },
+ "break": {
+  "preset": "336",
+  "name": "Long Breathe and Look Around",
+  "rung": 0,
+  "mirrored": true,
+  "seconds": 5.05,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -27.8,
+   24.0
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

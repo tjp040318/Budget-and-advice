@@ -34,15 +34,50 @@
   "rate": 1.83
  },
  "idle_combat": {
-  "preset": "89 half",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (a) over the 89 guard half",
+  "guard": "half",
+  "recipe": "a",
+  "arm_keep": 0.0,
+  "level": 0,
+  "over3": 25,
+  "today_over3": 486,
+  "why": "within the slack of the least, and the brute's stance (the guard crouch) (a 25 against b 23)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "298",
   "frames": 58,
   "seconds": 1.93,
   "rate": 0.96
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "brute",
+  "stand": "L",
+  "level": "partial",
+  "over3": 6,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 1.0,
+  "roll_share": 0.75,
+  "over3": 6,
+  "blend_drift_mm": 2.69
+ },
+ "break": {
+  "preset": "335",
+  "name": "Axe Breathe and Look Around",
+  "rung": 4,
+  "mirrored": false,
+  "seconds": 5.35,
+  "over3": 6,
+  "idle_over3": 6,
+  "look": [
+   -20.6,
+   14.8
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

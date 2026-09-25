@@ -10048,7 +10048,8 @@ wrongly. What was applied (lane T2, 2026-09-25):
 - **HOLD: Bastet and Serqet** keep today's idle (`OVERRIDES`' `hold`, with
   the reason): the beast row's crouch read as a squat on a slim goddess and
   as the combat guard on the scorpion queen. Their `retry` (the row's plain
-  values as the whole style) is what the re-run tries.
+  values as the whole style) is what the re-run tries. (Phase 2 moved them
+  to the grace and champion rows and shipped both; below.)
 - **The arms of three square stances brought in:** Horus 22° → 14° and the
   awakened Ra 23° → 13-14°, tearing no more (`arm_in` 13-15); Diana by 2°
   only, since further in tore her (9-12 edges against 5).
@@ -10065,7 +10066,8 @@ wrongly. What was applied (lane T2, 2026-09-25):
   the lens, Hades's bident, Poseidon's and Neptune's tridents, Guan Yu,
   Baldr, the awakened Ares, Mars and the awakened Mars, Anhur, the Jötunn's
   axe) needs a pitch at the weapon wrist, a tool change of its own; the
-  breath waits on the phone's `[StageDoctor]` lines.
+  breath waits on the phone's `[StageDoctor]` lines. (Phase 2 rests the
+  weapon on 27 families, eight of these eleven among them; below.)
 
 **Step 2, shipped.** `natural_idle.py ship --all --bundle
 Pantheon/Resources/Models --calm-stances`: 115 `<family>_idle.usdz` and 35
@@ -10124,3 +10126,158 @@ Hand (raise the breath to 1.5-2.5° if they read still); `[Mem]` (15 keys a
 second if it climbs); the `[Reveal] facing` line, now that the free foot
 turns out; `0-island-rebuild`'s figures standing; and the lab's verdict,
 which decides step 6.
+
+### As built (steps 4, 5, 7 and 8)
+
+Built on 2026-09-25 by four lanes (W1 the idles' weapons, Bastet, Serqet and
+the weight shift; W2 the ready stances; B the breaks; P the Swift), read by a
+judge and a reviewer, and shipped by a fifth. No credits, no Gemini, nothing
+compiled here and nothing pushed: the CI run on the commit is the first
+compile of lane P's Swift and the first frames of any of it.
+
+**What the judge held.** Two files:
+- **Poseidon's ready stance (b)**: it held the trident out LEVEL to the
+  side, the fault the idles' weapon rest had just mended. Recorded in
+  `tools/ready_stance.py`'s `JUDGED` (`prefer: a`, "trident lowered, not
+  level") and re-made: (a) lowers it and tears 2 edges past 3x against (b)'s
+  5 and today's 20; its board was looked at before it shipped.
+- **Nephthys's break**: preset 0 whole turns her head 131° left and 104°
+  right, her body goes to profile twice in 1.2 s while her feet swivel 27° on
+  the spot, and she reads as spinning. Recorded in `motion_palette.py`'s
+  `BREAK_HOLD` with a `retry` from rung 2 (`breaks nephthys --retry-held`, to
+  be judged on its board); `break_for` writes nothing for her and removes a
+  stale file, so `PoseLayer` breaks her with her victory.
+- **Not a file, and the owner's call:** the trickster's hand rub (318) reads
+  well but tears 3 edges on Dionysus and 7 on the Satyr against the
+  look-around's 0; MOTION.md §10's rule refused it, and no slack was allowed.
+
+**Step 1's weapons, and Bastet and Serqet (lane W1, `tools/natural_idle.py`).**
+A long weapon whose head the idle held within 25° of level is rested: a
+headed pole stood up 60–75°, anything else hung 30–40° head down by the
+thigh, forward and turned up to 40° out, by a turn at the wrist, the elbow or
+half at each (Thor's wrist tore taking all 37°), the twist capped at 100°,
+twenty rests tried cheapest first; refused if it still lies within 25° of
+level, comes within 5% of the height of the floor or goes deeper into the
+body than in the bind. Pointing the head straight out and trailing it back
+were tried and taken out after the boards. **27 families rest a weapon**,
+eight of the eleven above (Athena at −30°, since her spear stood up tore her
+robe; Poseidon's trident at +60°, Guan Yu's guandao at +65°). Left as they
+are: Neptune's trident, the Jötunn's axe and Baldr's spear (skinned to a leg
+or a cloak: the weapon pass on the base first, a re-ship), the smith's
+hammer, Nezha's spear, Osiris's crook and the sentinel's khopesh (no rest
+passes), and Bes, the Light Elf and the awakened Thoth (held up in front).
+Bastet stands in the grace row (1 → 0 edges past 3x, the arms 19°, the hips
+6.3° over the right leg) and Serqet in the champion's (86 → 0, the daggers
+low), on the stages only. Of the 117 idles W1 re-derived, 88 came out key for
+key what ships (under 0.05°) and were not copied; 29 changed and shipped.
+The idles now tear 488 edges past 3x (599 after step 2), 71 of 117 none, the
+median worst stretch 2.0x.
+
+**Step 4, the ready stances (lane W2, `tools/ready_stance.py`, new).** The 73
+families still in the guard (26 raw, 37 `half`, the ten `stand`) were given
+both recipes of the plan, and the one that tears less kept:
+- (a) the guard's motion capture kept (its 3.4 cm bounce, its 6° chest turn)
+  with its MEAN pose moved: the arms toward the bind by kit (`ARM_KEEP`),
+  the spine partly up while the pelvis keeps its turn, the face turned back
+  to the enemy (the guard looked 32° right and 26° down), the knees bent,
+  the stagger narrowed, the feet planted by IK; a 1.23–1.60 s loop at 30
+  keys a second;
+- (b) synthesised like the stage idle, bladed about 20° with the weight on
+  the back leg, the knees bent and a quick breath, the guard's arms per kit
+  laid over it; 4.85–8.65 s at 20 keys a second.
+
+Within a tie (a tenth of today's count, 5–30 edges) the archetype decides:
+the fighters the guard's crouch, the kings, graces, mystics and constructs
+standing tall. **(a) on 45, (b) on 28.** On the 73: 17,600 → 2,029 edges past
+3x on the base, 6,677 → 656 on the battle's LOD, 7 → 22 families with none,
+the median worst stretch 7.3x → 3.6x; the feet drift at most 0.001 mm (the
+guard's slid 12 mm), rise at most 0.97 mm (the guard lifted one 36 mm at the
+median, 35 cm on three) and sink at most 3.25 mm; every loop closes. All 117
+battle stances: 27,884 before step 2, 18,088 after it, **2,510 now**, 42 with
+none (measured on the shipped files). The smith and Thor pass only as (b);
+Sun Wukong needed the straighter-knee fallback; Serqet's pick prefers arms
+clear of the body. The judge's notes: twelve (b) fighters (Bellona, the
+awakened Mars, the smith, Heracles, Thor, Fenrir, Heimdall, Njord, Mercury,
+Diana, Horus and the awakened Horus) bob about 1 cm with 0.1° of chest turn
+and may read still at battle distance — give (b)'s fighters a 2–3 cm bounce
+on a 1.3–1.6 s loop if they do; the Minotaur's (a) bounces 7.35 cm and
+Sekhmet's 5.4 (watch them); Surtr's (a) holds the sword level at the hip,
+a fair guard in battle; Atalanta keeps 225 edges, Heracles 395.
+
+**Step 5, the weight shift (lane W1 `--alt`, lane P `PoseLayer`).** 60 of 117
+families ship `<family>_idle_alt.usdz`: the same idle on the other leg on the
+same foot spots, of the same length, searched for the most visible shift
+whose blends at 25, 50 and 75% keep every foot joint within 3 mm. `blendcheck`
+passes all 60 pairs (the worst 2.70 mm, the median 2.56). Refused: 32 whose
+feet leave their spots mid-blend (a blend moves the pelvis in a straight line
+while the legs turn on arcs; the graces and tricksters lean too far over one
+foot for any shift to stay inside 3 mm), 23 that tear more than their main
+idle, Hel and Surtr. The judge kept the 3 mm rule; blending through a middle
+pose, or 5 mm of sink with the slide under 3 mm, is the follow-up.
+
+**Steps 7 and 8, the breaks (lane B, `motion_palette.py breaks`).** The
+bought presets cut to their calm windows (`PRESET_CUTS`' `brk`: 336, 338, 335,
+0, 2 and 334 as looks, 318 and 12 as gestures; 377 and 231 closed as stance
+loops for later; 11 not dealt; the victories 306, 403, 255 and 41 left as
+victories) and dealt by archetype (`BREAKS`), each laid ADDITIVELY over the
+natural idle's mean pose, its ends eased into it, its feet planted by IK on
+the idle's spots, its donor joints matched by role (`by_role`), quietened
+down `BREAK_LADDER` where it tears more than the idle. **114 ship**, every one
+a look-around: 41 whole, 12 / 13 / 21 / 22 / 5 on rungs 1–5 (the 27 on rungs
+4–5 a head-only glance); 43 mirrored so heads turn both ways. The hand rub
+was refused on all ten tricksters and the stretch on all fifteen graces;
+Odin and the Nymph break with their victory; Nephthys is held.
+
+**Step 5 and 7's Swift (lane P, reviewed).** `Pantheon/Render/PoseLayer.swift`
+(new) gives the reveal, the Hall of Ka's altar, the collection's Stage and
+the island a life: the alt eased over the idle every 8–20 s, a break after
+12–18 s untouched (in 0.4 s, out 0.5 s; the family's `_break` two times in
+three beside its victory), the island strolling on 35% of its stirs and
+breaking on the rest; `AnimationClip.idleAlt` and `.idleBreak`
+(Presentation.swift), `ModelLibrary.cachedAnimation`, `hasClipFile`, the warm
+pass skipping both stage-only clips, `startLoop` taking a phase and a blend;
+`-tour-pose-blend 0.5` and `-tour-fidget` relaunches of steps 3 and 21. The
+review found no compile fault; one thing it flagged for "once a family ships
+`_idle_alt`" became live with this ship and was mended in it: the reveal
+started its idle (and so the alt's background parse) at its build, in the
+charge, where the parse would hold the importer lock a lifted card's build
+waits on — the alt is now parsed only once the figure's life has begun
+(`armAlternateLoad`), which on the reveal is after the entrance.
+`PoseLayer.swift` is a new file: the commit must add it.
+
+**The ship.** Every file re-read by `character.verify`, bound against the
+shipped base, and every idle and stance held to the tear of the file it
+replaced, then copied into `Pantheon/Resources/Models`: 29 idles (+0.19 MB),
+6 calm stances (+0.00 MB), 60 alts (+16.63 MB), 73 ready stances (+1.56 MB)
+and 114 breaks (+25.35 MB) — **282 files, the bundle 43,733,797 bytes (43.7
+MB) larger**, under the 60 MB allowed, so no key rate was lowered. Each
+family's cut report (`Art/Motions/shipped/<family>.json`) now records its
+idle, stance, alt and break.
+
+**The derivations, so that no re-ship puts any of it back.**
+`motion_palette.make_plan` gives the 73 the stance `ready` and keeps their
+guard (`READY_OVER`; §9's table reads `ready (89|half|stand)`); `ship` takes
+`idle_combat=ready:<guard>` (the guard shipped first as the stance, then
+`ready_stance.py ship` over it; refused, the guard stays, loudly) and makes
+the alt (`natural_idle.py --alt`) and the break (`break_for`) with the
+natural idle, removing both where the idle is refused or held; `roll` passes
+all of it. `build_asset.sh` and `proportions.sh` run the idle with `--alt`,
+then `breaks`, then `ready_stance.py ship --guard 89` over the raw guard
+`mesh.py` shipped, with the same refusals. `ready_stance.py` reads the guard
+from a bundle (`--bundle`) and refuses one whose report says its stance is
+ready already; `clip_fix.py --rearm` leaves a made stance alone. Re-shipped
+through `roll` into scratch, Poseidon's idle, alt, break and stance came back
+within 0.05° of what ships.
+
+**Still to verify on the next CI run:** that the build compiles lane P's
+Swift; the frames of steps 0, 3, 5, 21 and 43 (the rested weapons, Bastet and
+Serqet, a break held by `-tour-fidget`, the alt at half by `-tour-pose-blend`,
+whose `[Pose]` line says `idle_alt seated at 0.50` where the figure's family
+ships an alt), and of the battles
+6, 8, 18 and 29 (the ready stances; the quiet (b) fighters, the Minotaur's
+and Sekhmet's bounce); `[Mem]` with two more clips per figure on a stage;
+Guan Yu's salute on the reveal. The review's other notes stand: the Hall of
+Ka's or the collection's second placement can catch the old figure's
+`fidget-held` cue, a victory used as a break blends out into its turn away,
+and a player's `blendFactor` mixing over the idle is Apple's documentation,
+not yet a frame.

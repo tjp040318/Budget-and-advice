@@ -1859,6 +1859,40 @@ private final class TourStressDriver: ObservableObject {
     }
 }
 
+// MARK: - The stages' life (Docs/PLAN.md *Natural poses*, build steps 5 and 7)
+
+/// The figure stages' life under the CI tour (`PoseLayer`), for the
+/// relaunches of the Hall of Ka (step 3) and the collection's Stage (step
+/// 21). `-tour-pose-blend 0.5` holds the idle's second variant at that blend
+/// for good, no shifts, so `3-training-pose-blend` and
+/// `21-collection_stage-pose-blend` show the figure halfway between its two
+/// legs — a family that ships no `_idle_alt` stands on its one idle and its
+/// `[Pose]` line says so. `-tour-fidget` fires a break as the figure's life
+/// begins — 0.8 s of the stage's own time later, so it starts in a scene
+/// that is drawing — and HOLDS it on its high point (`[TourCue]
+/// fidget-held`), so `3-training-fidget` and `21-collection_stage-fidget`
+/// are shot mid-break however late the screenshot lands. Every stage's
+/// layer prints `[Pose]` lines under `-tour`: what it did and every player
+/// on the figure with its blend.
+enum PoseTour {
+    /// Under the tour.
+    static let touring: Bool = ProcessInfo.processInfo.arguments.contains("-tour")
+
+    /// `-tour-pose-blend X`, clamped to 0…1; nil when absent or not a number.
+    static let pinnedBlend: CGFloat? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("-tour"), let at = args.firstIndex(of: "-tour-pose-blend"), at + 1 < args.count,
+              let value = Double(args[at + 1]) else { return nil }
+        return CGFloat(min(1, max(0, value)))
+    }()
+
+    /// `-tour-fidget`: a break as the life begins, held on its high point.
+    static let fidgetAtOnce: Bool = {
+        let args = ProcessInfo.processInfo.arguments
+        return args.contains("-tour") && args.contains("-tour-fidget")
+    }()
+}
+
 // MARK: - The pose lab (Docs/PLAN.md *Natural poses*, build step 3)
 
 /// Whether a layer laid over a PLAYING skeletal clip shows on today's iOS,

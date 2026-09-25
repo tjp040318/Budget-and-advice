@@ -59,7 +59,10 @@ jobs:
     # a half minutes against run 253's 81. The natural poses' lab (the
     # same day) adds three relaunches — step 0's -tour-island-rebuild, on a
     # cue of at most 20 s, and step 3's two -tour-pose-lab — about half a
-    # minute against run 256's 61.
+    # minute against run 256's 61. Its steps 5 and 7 (2026-09-25) add four
+    # more — steps 3 and 21 each with -tour-pose-blend 0.5 (a six- and a
+    # five-second sleep) and -tour-fidget (a cue of at most 20 s, then a
+    # second) — about half a minute, and a minute if both cues run out.
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
@@ -543,7 +546,21 @@ jobs:
                 done
                 for m in constraint write; do
                   again -tour-pose-lab $m; sleep 6; shoot_lit "$step-${names[$step]}-pose-$m"
-                done ;;
+                done
+                # The figure's life (Docs/PLAN.md "Natural poses", build steps
+                # 5 and 7): the idle's second variant held at half its blend,
+                # and a break fired as the figure's life begins (0.8 s of the
+                # stage's time in) and held on its high point, each
+                # beside 3-training; the console's [Pose] lines name the
+                # players on the figure and their blends.
+                again -tour-pose-blend 0.5; sleep 6; shoot_lit "$step-${names[$step]}-pose-blend"
+                again -tour-fidget; cue_again fidget-held 20; sleep 1; shoot_lit "$step-${names[$step]}-fidget" ;;
+              # The collection's Stage, then the same two relaunches of the
+              # figure's life as the Hall of Ka's (build steps 5 and 7).
+              collection_stage)
+                sleep 5; shoot_lit "$step-${names[$step]}"
+                again -tour-pose-blend 0.5; sleep 5; shoot_lit "$step-${names[$step]}-pose-blend"
+                again -tour-fidget; cue_again fidget-held 20; sleep 1; shoot_lit "$step-${names[$step]}-fidget" ;;
               # More's Diagnostics row, opened: where the model board and the
               # console went when they left More's front page.
               more)

@@ -51,5 +51,35 @@
   "frames": 119,
   "seconds": 3.97,
   "rate": 1.99
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "brute",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 0.6,
+  "roll_share": 1.0,
+  "over3": 0,
+  "blend_drift_mm": 2.51
+ },
+ "break": {
+  "preset": "335",
+  "name": "Axe Breathe and Look Around",
+  "rung": 1,
+  "mirrored": false,
+  "seconds": 5.35,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -21.3,
+   23.4
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

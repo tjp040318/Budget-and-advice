@@ -820,6 +820,19 @@ def do_mirror(family, clips, bundle, out, mode="pose", wrist=False):
         write_carrier(c, out / src.name)
 
 
+def shipped_stance(family):
+    """"ready" or "natural" when the family's battle stance is made by
+    tools/ready_stance.py or tools/natural_idle.py (its cut report,
+    Art/Motions/shipped), not a preset a re-arm could fit: a ready stance
+    (a) is the guard's own motion on a moved pose and can match 89's frame
+    count (2026-09-25)."""
+    rp = MOTIONS / "shipped" / f"{family}.json"
+    if not rp.exists():
+        return None
+    preset = str(json.loads(rp.read_text()).get("idle_combat", {}).get("preset", ""))
+    return next((w for w in ("ready", "natural") if preset.startswith(w)), None)
+
+
 def do_rearm(family, clips, bundle, out):
     from retarget import Motion
     ids = preset_ids(family)
@@ -829,6 +842,10 @@ def do_rearm(family, clips, bundle, out):
         arch = MOTIONS / f"preset_{pid}.motion.npz"
         if pid is None or not arch.exists():
             print(f"  {family}_{clip}: no archived preset ({pid}); left as shipped")
+            continue
+        made = shipped_stance(family) if clip == "idle_combat" else None
+        if made:
+            print(f"  {family}_{clip}: the {made} stance, not preset {pid}; left as shipped")
             continue
         src = Motion.load(arch)
         c = read(bundle / f"{family}_{clip}.usdz")

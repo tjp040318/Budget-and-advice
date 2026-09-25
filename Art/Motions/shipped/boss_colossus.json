@@ -44,5 +44,35 @@
   "frames": 117,
   "seconds": 3.9,
   "rate": 1.95
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "construct",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 0.436,
+  "roll_share": 1.0,
+  "over3": 0,
+  "blend_drift_mm": 2.58
+ },
+ "break": {
+  "preset": "2",
+  "name": "Alert",
+  "rung": 0,
+  "mirrored": false,
+  "seconds": 4.0,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -69.8,
+   44.4
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

@@ -447,6 +447,49 @@ final class UnitNode: SCNNode {
         ModelLibrary.shared.animation(.idle, for: clipAsset) != nil ? .idle : .idleCombat
     }
 
+    // MARK: - The stage's life (Docs/PLAN.md *Natural poses*, steps 5 and 7)
+
+    /// The figure's life at rest — the idle's second variant eased under
+    /// it, and a break when the island asks for one (`PoseLayer`) — or nil,
+    /// as in every battle, which keeps its one stance and never blends or
+    /// fidgets.
+    private var poseLayer: PoseLayer?
+
+    /// Gives this figure the stages' life. The island calls it once as it
+    /// builds the figure, BEFORE the resting idle plays, so the idle's start
+    /// seats the variant on top of it (`play` → `PoseLayer.idleStarted`).
+    /// The island times its own stirs, so the layer's clock of breaks stays
+    /// off; its weight shifts run.
+    func takeStageLife(label: String) {
+        guard poseLayer == nil else { return }
+        let layer = PoseLayer(figure: modelContainer, clips: clipAsset, label: label, fidgetsBySelf: false)
+        poseLayer = layer
+        layer.beginLife()
+    }
+
+    /// An idle break over the resting idle (the island's stir, build step
+    /// 7): false when the figure has no stage life, is not standing in its
+    /// resting idle (mid-stroll, mid-hop) or its family has nothing to break
+    /// with — the island then stirs it the old way.
+    @discardableResult
+    func fidget() -> Bool {
+        guard let poseLayer, !isDefeated, let loop = currentLoop, loop == currentClip, loop == restingIdle else { return false }
+        return poseLayer.fidget()
+    }
+
+    /// The stage out of sight (the island off screen): no weight shift is
+    /// begun and no break fired until it comes back.
+    func holdStageLife(_ held: Bool) {
+        poseLayer?.isHeld = held
+    }
+
+    /// The figure is leaving its stage (the island rebuilt or gone): every
+    /// clock of its life stops now rather than the first time it finds the
+    /// figure gone.
+    func endStageLife() {
+        poseLayer?.stop()
+    }
+
     // MARK: - The ground shadow
 
     /// The soft dark oval on the floor under the figure (2026-09-24), the
@@ -577,6 +620,9 @@ final class UnitNode: SCNNode {
         guard !isDefeated else { return }
         currentClip = nil
         currentLoop = nil
+        // A break in flight goes with the animations; the layer forgets it,
+        // and the idle's start below seats the variant again.
+        poseLayer?.interruptBreak()
         modelContainer.removeAllAnimations()
         modelContainer.removeAllActions()
         // A figure rebuilt into a live scene may carry nodes it did not have
@@ -618,6 +664,9 @@ final class UnitNode: SCNNode {
         // Restarting a looping clip every frame would reset its phase, so an
         // idle that is already running is left alone.
         guard clip != currentClip || !clip.loops else { completion?(); return }
+        // A stage's break (`PoseLayer.fidget`) gives way to any clip of the
+        // unit's own — the island's tap, its stroll — over 0.2 s.
+        poseLayer?.interruptBreak()
         currentClip = clip
         // The clip begins at the pace of the moment; `retimeRunningClip`
         // keeps it to the pace from here.
@@ -660,6 +709,9 @@ final class UnitNode: SCNNode {
             animation.fadeOutDuration = clip.loops ? 0.25 : 0.16
 
             var rate = playbackSpeed
+            // Where in its cycle a loop starts, as a share: the idle's
+            // second variant is started on the same beat (`PoseLayer`).
+            var phase: Double = 0
             if !clip.loops, clip != .death, animation.duration > 0.05 {
                 // EVERY one-shot is retimed to its contract now, not only the
                 // ones that run long. The fight is timed to `fallbackDuration`
@@ -678,13 +730,26 @@ final class UnitNode: SCNNode {
                 // same frame at the same rate for ever. A random phase and a
                 // few per cent of drift in the rate is the cheapest way to
                 // make a line of figures look like separate creatures.
-                animation.timeOffset = Double.random(in: 0..<max(0.05, animation.duration))
+                phase = Double.random(in: 0..<1)
+                animation.timeOffset = phase * max(0.05, animation.duration)
                 rate *= Double.random(in: 0.94...1.06)
             }
             animation.speed = Float(max(0.05, rate))
 
             modelContainer.addAnimation(animation, forKey: clip.rawValue)
             if clip.loops { handOver(to: clip) }
+            // A figure with a stage's life (the island's): its resting idle
+            // has just started, so the idle's second variant is seated on
+            // top of it again on its beat; any other loop (the stroll) takes
+            // the variant off until the idle comes back.
+            if clip.loops, let poseLayer {
+                if clip == restingIdle {
+                    poseLayer.idleStarted(phase: phase, speed: CGFloat(max(0.05, rate)),
+                                          cycle: max(0.05, animation.duration))
+                } else {
+                    poseLayer.idleLeft()
+                }
+            }
             if !clip.loops {
                 let played = animation.duration > 0
                     ? animation.duration / Double(max(0.05, animation.speed))
@@ -842,7 +907,7 @@ final class UnitNode: SCNNode {
 
         let action: SCNAction
         switch clip {
-        case .idle, .idleCombat, .walk:
+        case .idle, .idleCombat, .walk, .idleAlt:
             // A `moveBy` that is interrupted half way leaves the container
             // where it stood, and over a battle of interruptions the bob
             // drifts, so the rest height is restored before it starts again.
@@ -928,6 +993,16 @@ final class UnitNode: SCNNode {
                 .fadeOpacity(to: 1, duration: beat(0.6)),
                 .rotateBy(x: 0, y: .pi * 2, z: 0, duration: beat(1.6))
             ])
+
+        case .idleBreak:
+            // A break with no clip: a glance to one side and back. Nothing
+            // plays it today — the stages' breaks go through `PoseLayer`,
+            // which never reaches for a clip a family did not ship.
+            let glance = SCNAction.rotateBy(x: 0, y: 0.18, z: 0, duration: beat(0.5))
+            glance.timingMode = .easeInEaseOut
+            let back = glance.reversed()
+            back.timingMode = .easeInEaseOut
+            action = .sequence([glance, .wait(duration: beat(0.4)), back])
         }
 
         // SceneKit calls this on its rendering thread, part-way through the

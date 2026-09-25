@@ -33,15 +33,46 @@
   "rate": 1.68
  },
  "idle_combat": {
-  "preset": "89",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (a) over the 89 guard",
+  "guard": "89",
+  "recipe": "a",
+  "arm_keep": 0.11,
+  "level": 0,
+  "over3": 25,
+  "today_over3": 148,
+  "why": "tears least (a 25 against b 26)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "298",
   "frames": 58,
   "seconds": 1.93,
   "rate": 0.96
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "hunter",
+  "stand": "L",
+  "level": "full",
+  "over3": 3,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": null,
+  "why": "no shift passed (travel 0.50 roll 0.75: 13 edges past 3x against 3; travel 0.20 roll 1.00: 12 edges past 3x against 3; travel 0.18 roll 1.00: 12 edges past 3x against 3)"
+ },
+ "break": {
+  "preset": "2",
+  "name": "Alert",
+  "rung": 4,
+  "mirrored": true,
+  "seconds": 4.0,
+  "over3": 2,
+  "idle_over3": 3,
+  "look": [
+   -21.4,
+   43.8
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

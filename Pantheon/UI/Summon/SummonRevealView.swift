@@ -2614,6 +2614,12 @@ struct SummonStageView: UIViewRepresentable {
         /// player in `makeUIView`, the pull's grade (the hold's length), the
         /// flipbook planes on the dais, and the rig the camera kicks on.
         var entrance: RevealEntranceClip?
+        /// The figure's life (`PoseLayer`, Docs/PLAN.md *Natural poses*):
+        /// its idle and the idle's second variant from the build, the weight
+        /// shifts and the breaks only once the entrance has handed back to
+        /// the idle (`beginLife`, in `entranceDone` or, with no entrance,
+        /// `figureShown`).
+        var pose: PoseLayer?
         var stars = 3
         var flipbook: RevealFlipbookPlayer?
         var cameraRig: SCNNode?
@@ -2767,7 +2773,10 @@ struct SummonStageView: UIViewRepresentable {
         /// player from here too; one with an entrance turns once its victory
         /// has handed back to its idle (`entranceDone`).
         func figureShown() {
-            if entrance == nil, let figure { SummonStageView.settle(figure) }
+            if entrance == nil, let figure {
+                SummonStageView.settle(figure)
+                pose?.beginLife()
+            }
             onShown?(entrancePlan)
         }
 
@@ -2871,6 +2880,10 @@ struct SummonStageView: UIViewRepresentable {
             figure.removeAnimation(forKey: RevealEntrance.playerKey)
             SummonStageView.settle(figure)
             startPush()
+            // The hold: the figure's life begins over its idle — the weight
+            // shifting where the family ships a second variant, a break
+            // after 12-18 s (Docs/PLAN.md *Natural poses*, steps 5 and 7).
+            pose?.beginLife()
         }
 
         /// The kick: the camera's rig jumps back along the line of sight by
@@ -2904,6 +2917,7 @@ struct SummonStageView: UIViewRepresentable {
             tornDown = true
             holdGeneration += 1
             flipbook?.stop()
+            pose?.stop()
         }
 
         /// THE HOUSE GOES DOWN (2026-09-24, Docs/FEEL.md L1): after the flash
@@ -2933,6 +2947,8 @@ struct SummonStageView: UIViewRepresentable {
             flipbook?.stop()
             flipbook = nil
             entrance = nil
+            pose?.stop()
+            pose = nil
             figure = nil
             scene = nil
             contactShadow = nil
@@ -3084,11 +3100,11 @@ struct SummonStageView: UIViewRepresentable {
         // still only when there is nothing to play.
         // The clips of the mesh on the stage (`ModelLibrary.clipAsset`): an
         // awakened figure plays its own rig's idle, never the base rig's.
+        // Through its life (`PoseLayer`): the idle by `startLoop` and, where
+        // the family ships one, its second variant on top at blend 0, from
+        // the build; the life itself waits for the entrance.
         let assetName = ModelLibrary.shared.clipAsset(for: result.blueprint.model, awakened: awakened)
-        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
-            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
-            node.startLoop(idle, key: "idle")
-        }
+        context.coordinator.pose = PoseLayer.startIdle(on: node, clips: assetName, label: "reveal", lively: false)
         // THE ENTRANCE'S CLIP (Docs/FEEL.md W2.4): the family's victory,
         // wrapped in its player now so the flash only adds and plays it —
         // from the model cache the summon room's warm pass filled, or parsed

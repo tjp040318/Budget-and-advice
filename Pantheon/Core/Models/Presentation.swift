@@ -292,11 +292,38 @@ enum AnimationClip: String, Codable, CaseIterable, Sendable {
     /// figures stroll the sand on. Families rigged before 2026-09-17 have
     /// none — their rig tasks are gone from Meshy — and stand instead.
     case walk
+    /// The standing idle's second variant (Docs/PLAN.md *Natural poses*,
+    /// build step 5): the same figure at ease on the OTHER leg, on the same
+    /// foot spots, played under the idle by `PoseLayer`, which eases its
+    /// blend 0↔1 at random so the weight shifts and never repeats.
+    /// `<asset>_idle_alt.usdz`; a family without one simply stands on its
+    /// one idle.
+    case idleAlt = "idle_alt"
+    /// An idle BREAK (build step 7): a one-shot gesture laid over the
+    /// running idle on a stage untouched for a while — a look round, a
+    /// shoulder roll, a weight settled — and on the island for most of its
+    /// stirs (`PoseLayer.fidget`). `<asset>_break.usdz`; a family without one
+    /// breaks with its victory's measured window, and a family with neither
+    /// never fidgets. The battle never plays either.
+    case idleBreak = "break"
 
     /// Clips that must loop rather than play once.
     var loops: Bool {
         switch self {
-        case .idle, .idleCombat, .castLoop, .walk: return true
+        case .idle, .idleCombat, .castLoop, .walk, .idleAlt: return true
+        default: return false
+        }
+    }
+
+    /// Clips that only ever ship as a file of their own
+    /// (`<asset>_<clip>.usdz`), and only the stages play: the idle's second
+    /// variant and the break. `ModelLibrary.animation` does not go looking
+    /// for one inside the family's MESH file when that file is missing (the
+    /// search opens the whole model under the importer's lock), and the warm
+    /// pass leaves them out (`PoseLayer` parses its own off the main thread).
+    var shipsAsItsOwnFile: Bool {
+        switch self {
+        case .idleAlt, .idleBreak: return true
         default: return false
         }
     }

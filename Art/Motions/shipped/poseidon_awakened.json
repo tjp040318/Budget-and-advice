@@ -33,15 +33,46 @@
   "rate": 1.83
  },
  "idle_combat": {
-  "preset": "89 half",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (b) over the 89 guard half",
+  "guard": "half",
+  "recipe": "b",
+  "arm_keep": 0.65,
+  "level": 0,
+  "over3": 4,
+  "today_over3": 18,
+  "why": "within the slack of the least, and the sovereign's stance (standing tall) (b 4 against a 4)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "298",
   "frames": 58,
   "seconds": 1.93,
   "rate": 0.96
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "sovereign",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": null,
+  "why": "no shift keeps the feet within 3 mm (roll 1.00, travel 0.17: the blend's feet 4.1 mm; roll 0.75, travel 0.17: the blend's feet 3.3 mm; roll 0.50, travel 0.17: the blend's feet 3.0 mm)"
+ },
+ "break": {
+  "preset": "336",
+  "name": "Long Breathe and Look Around",
+  "rung": 0,
+  "mirrored": true,
+  "seconds": 5.05,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -28.0,
+   23.5
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

@@ -33,15 +33,52 @@
   "rate": 1.35
  },
  "idle_combat": {
-  "preset": "89 half",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (a) over the 89 guard half",
+  "guard": "half",
+  "recipe": "a",
+  "arm_keep": 0.7,
+  "level": 0,
+  "over3": 0,
+  "today_over3": 2,
+  "why": "tears least (a 0 against b 0)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "298",
   "frames": 58,
   "seconds": 1.93,
   "rate": 0.96
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "soldier",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": {
+   "R": "hang -40 deg"
+  }
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 1.0,
+  "roll_share": 1.0,
+  "over3": 0,
+  "blend_drift_mm": 1.35
+ },
+ "break": {
+  "preset": "334",
+  "name": "Lower Weapon, Look, Raise",
+  "rung": 0,
+  "mirrored": false,
+  "seconds": 1.85,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   0.0,
+   53.4
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

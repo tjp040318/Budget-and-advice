@@ -33,15 +33,33 @@
   "rate": 1.13
  },
  "idle_combat": {
-  "preset": "89 stand",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "natural (tools/natural_idle.py): the stages' idle, the same file",
+  "carrier": "89"
  },
  "victory": {
   "preset": "412",
   "frames": 119,
   "seconds": 3.97,
   "rate": 1.99
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "mystic",
+  "stand": "R",
+  "level": "full",
+  "over3": 0,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "L",
+  "travel": 1.0,
+  "roll_share": 1.0,
+  "over3": 0,
+  "blend_drift_mm": 0.53
+ },
+ "break": {
+  "preset": "held (BREAK_HOLD): the victory",
+  "why": "held by the judge: reads as spinning"
  }
 }

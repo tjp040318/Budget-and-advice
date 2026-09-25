@@ -33,15 +33,50 @@
   "rate": 1.83
  },
  "idle_combat": {
-  "preset": "89 stand",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (b) over the 89 guard stand",
+  "guard": "stand",
+  "recipe": "b",
+  "arm_keep": 0.65,
+  "level": 0,
+  "over3": 4,
+  "today_over3": 6,
+  "why": "within the slack of the least, and the construct's stance (standing tall) (b 4 against a 0)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "298",
   "frames": 58,
   "seconds": 1.93,
   "rate": 0.96
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "construct",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 1.0,
+  "roll_share": 1.0,
+  "over3": 0,
+  "blend_drift_mm": 0.53
+ },
+ "break": {
+  "preset": "2",
+  "name": "Alert",
+  "rung": 0,
+  "mirrored": false,
+  "seconds": 4.0,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -69.7,
+   44.7
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

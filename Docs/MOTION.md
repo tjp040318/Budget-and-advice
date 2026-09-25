@@ -302,9 +302,12 @@ if so). The half-guard stance (below) should read as a different pose from
 judgments of §10 (`JUDGED`, `KEPT`) laid over it. `hand` is the hand the
 family holds its weapon (an archer: its bow) in, `-` for none or one in each;
 `mirrored` names the clips reflected to it. `own:<god>` is the god's bespoke
-motion, untouched. `stand` and `half` are the guard stood fully or 70% up;
-`natural` is the family's natural idle worn as its stance (§11, since
-2026-09-25: the 35 sovereigns, graces and mystics the deal stood up). An
+motion, untouched. `ready (89)`, `ready (half)` and `ready (stand)` are the
+family's ready stance (§11, since 2026-09-25: `tools/ready_stance.py`, the 73
+the deal left in the guard) made over the guard the deal gave it — raw, stood
+70% up or fully up — which is also what a re-ship keeps where the ready
+stance is refused; `natural` is the family's natural idle worn as its stance
+(§11: the 35 sovereigns, graces and mystics the deal stood up). An
 unmirrored clip on a left-handed family (`242`, `102` on Loki, Surtr,
 Achilles and the Dark Elf) is a judgment of §10, not an omission. No two
 families share their five clips; the robed casters, the archers and four
@@ -312,35 +315,35 @@ left-handed blades share attack triples (§10, what is left).
 
 | family | grade | kind | hand | basic | heavy | ultimate | stance | victory | mirrored |
 |---|---|---|---|---|---|---|---|---|---|
-| ares | 5★ | blade | R | own:ares | own:ares | own:ares | 89 | 412 |  |
-| ares_awakened | 5★ | blade | R | own:ares | own:ares | own:ares | 89 | 412 |  |
-| horus | 5★ | blade | - | 219 | 242 | 102 | half | 412 |  |
-| horus_awakened | 5★ | blade | R | 219 | 242 | 102 | half | 412 |  |
-| loki | 5★ | blade | L | 220 | 242 | 102 | 89 | 88 | basic |
-| mars | 5★ | blade | R | 220 | 238 | 91 | 89 | 412 |  |
-| mars_awakened | 5★ | blade | R | 220 | 238 | 91 | 89 | 412 |  |
-| sekhmet | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | half | 298 |  |
-| sekhmet_awakened | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | half | 298 |  |
-| surtr | 5★ | blade | L | 220 | 242 | 102 | stand | 88 | basic |
+| ares | 5★ | blade | R | own:ares | own:ares | own:ares | ready (89) | 412 |  |
+| ares_awakened | 5★ | blade | R | own:ares | own:ares | own:ares | ready (89) | 412 |  |
+| horus | 5★ | blade | - | 219 | 242 | 102 | ready (half) | 412 |  |
+| horus_awakened | 5★ | blade | R | 219 | 242 | 102 | ready (half) | 412 |  |
+| loki | 5★ | blade | L | 220 | 242 | 102 | ready (89) | 88 | basic |
+| mars | 5★ | blade | R | 220 | 238 | 91 | ready (89) | 412 |  |
+| mars_awakened | 5★ | blade | R | 220 | 238 | 91 | ready (89) | 412 |  |
+| sekhmet | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | ready (half) | 298 |  |
+| sekhmet_awakened | 5★ | blade | R | own:sekhmet | own:sekhmet | own:sekhmet | ready (half) | 298 |  |
+| surtr | 5★ | blade | L | 220 | 242 | 102 | ready (stand) | 88 | basic |
 | baldr | 5★ | caster | R | 129 | 130 | 126 | natural | 412 |  |
-| boss_unwrapped_king | 5★ | caster | R | 136 | 125 | 130 | half | 298 |  |
+| boss_unwrapped_king | 5★ | caster | R | 136 | 125 | 130 | ready (half) | 298 |  |
 | hades | 5★ | caster | R | 133 | 136 | 125 | natural | 412 |  |
 | hades_awakened | 5★ | caster | R | 133 | 136 | 125 | natural | 412 |  |
-| minerva | 5★ | caster | - | 129 | 133 | 125 | half | 298 |  |
+| minerva | 5★ | caster | - | 129 | 133 | 125 | ready (half) | 298 |  |
 | odin | 5★ | caster | R | 136 | 133 | 126 | natural | 88 |  |
 | odin_awakened | 5★ | caster | R | 136 | 133 | 126 | natural | 88 |  |
-| ra | 5★ | caster | R | 133 | 125 | 126 | half | 412 |  |
-| ra_awakened | 5★ | caster | R | 133 | 125 | 126 | half | 412 |  |
+| ra | 5★ | caster | R | 133 | 125 | 126 | ready (half) | 412 |  |
+| ra_awakened | 5★ | caster | R | 133 | 125 | 126 | ready (half) | 412 |  |
 | zeus | 5★ | caster | R | own:zeus | own:zeus | own:zeus | natural | 412 |  |
 | zeus_awakened | 5★ | caster | R | own:zeus | own:zeus | own:zeus | natural | 412 |  |
 | boss_colossus | 5★ | heavy | - | 128 | 237 | 127 | 85 | 88 |  |
-| thor | 5★ | heavy | R | 219 | 128 | 238 | 89 | 412 |  |
-| thor_awakened | 5★ | heavy | R | 219 | 128 | 238 | 89 | 412 |  |
+| thor | 5★ | heavy | R | 219 | 128 | 238 | ready (89) | 412 |  |
+| thor_awakened | 5★ | heavy | R | 219 | 128 | 238 | ready (89) | 412 |  |
 | athena | 5★ | polearm | R | 219 | 242 | 105 | natural | 412 |  |
 | athena_awakened | 5★ | polearm | R | 219 | 242 | 105 | natural | 412 |  |
-| poseidon | 5★ | polearm | R | 97 | 242 | 102 | half | 298 |  |
-| poseidon_awakened | 5★ | polearm | R | 97 | 242 | 102 | half | 298 |  |
-| sun_wukong | 5★ | polearm | - | 220 | 238 | 86 | stand | 412 |  |
+| poseidon | 5★ | polearm | R | 97 | 242 | 102 | ready (half) | 298 |  |
+| poseidon_awakened | 5★ | polearm | R | 97 | 242 | 102 | ready (half) | 298 |  |
+| sun_wukong | 5★ | polearm | - | 220 | 238 | 86 | ready (stand) | 412 |  |
 | freya | 5★ | robed | R | 136 | 133 | 126 | natural | 412 |  |
 | freya_awakened | 5★ | robed | R | 136 | 133 | 126 | natural | 412 |  |
 | frigg | 5★ | robed | R | 129 | 136 | 126 | natural | 298 |  |
@@ -352,81 +355,81 @@ left-handed blades share attack triples (§10, what is left).
 | osiris_awakened | 5★ | robed | R | 129 | 136 | 126 | natural | 412 |  |
 | thoth | 5★ | robed | R | own:thoth | own:thoth | own:thoth | natural | 298 |  |
 | thoth_awakened | 5★ | robed | R | own:thoth | own:thoth | own:thoth | natural | 298 |  |
-| artemis | 4★ | archer | L | 224 | 224 | 222 | 89 | 298 |  |
-| diana | 4★ | archer | - | 224 | 224 | 222 | stand | 412 |  |
+| artemis | 4★ | archer | L | 224 | 224 | 222 | ready (89) | 298 |  |
+| diana | 4★ | archer | - | 224 | 224 | 222 | ready (stand) | 412 |  |
 | skadi | 4★ | archer | R | 224 | 224 | 222 | 226 | 412 | basic, heavy, ult, stance |
-| ullr | 4★ | archer | L | 224 | 224 | 222 | half | 412 |  |
-| achilles | 4★ | blade | L | 219 | 242 | 102 | 89 | 412 | basic |
-| anhur | 4★ | blade | R | 97 | 242 | 91 | half | 298 |  |
+| ullr | 4★ | archer | L | 224 | 224 | 222 | ready (half) | 412 |  |
+| achilles | 4★ | blade | L | 219 | 242 | 102 | ready (89) | 412 | basic |
+| anhur | 4★ | blade | R | 97 | 242 | 91 | ready (half) | 298 |  |
 | anubis | 4★ | blade | R | own:anubis | own:anubis | own:anubis | natural | 88 |  |
-| heimdall | 4★ | blade | R | 206 | 238 | 105 | 89 | 412 |  |
-| mercury | 4★ | blade | L | 220 | 105 | 86 | half | 298 | basic, heavy, ult |
-| nike | 4★ | blade | R | 97 | 238 | 102 | stand | 88 |  |
-| njord | 4★ | blade | L | 220 | 242 | 105 | 89 | 412 | basic, heavy, ult |
-| perseus | 4★ | blade | R | 219 | 105 | 91 | half | 298 |  |
-| set | 4★ | blade | R | 206 | 221 | 91 | stand | 88 |  |
-| sif | 4★ | blade | R | 220 | 221 | 102 | 89 | 412 |  |
-| apollo | 4★ | caster | R | 129 | 136 | 130 | half | 298 |  |
+| heimdall | 4★ | blade | R | 206 | 238 | 105 | ready (89) | 412 |  |
+| mercury | 4★ | blade | L | 220 | 105 | 86 | ready (half) | 298 | basic, heavy, ult |
+| nike | 4★ | blade | R | 97 | 238 | 102 | ready (stand) | 88 |  |
+| njord | 4★ | blade | L | 220 | 242 | 105 | ready (89) | 412 | basic, heavy, ult |
+| perseus | 4★ | blade | R | 219 | 105 | 91 | ready (half) | 298 |  |
+| set | 4★ | blade | R | 206 | 221 | 91 | ready (stand) | 88 |  |
+| sif | 4★ | blade | R | 220 | 221 | 102 | ready (89) | 412 |  |
+| apollo | 4★ | caster | R | 129 | 136 | 130 | ready (half) | 298 |  |
 | bragi | 4★ | caster | R | 136 | 130 | 126 | natural | 88 |  |
-| demeter | 4★ | caster | R | 133 | 125 | 130 | half | 412 |  |
-| dionysus | 4★ | caster | R | 129 | 130 | 125 | stand | 412 |  |
-| hermes | 4★ | caster | R | 136 | 133 | 130 | half | 298 |  |
-| bellona | 4★ | heavy | L | 219 | 221 | 102 | half | 88 | heavy, ult |
+| demeter | 4★ | caster | R | 133 | 125 | 130 | ready (half) | 412 |  |
+| dionysus | 4★ | caster | R | 129 | 130 | 125 | ready (stand) | 412 |  |
+| hermes | 4★ | caster | R | 136 | 133 | 130 | ready (half) | 298 |  |
+| bellona | 4★ | heavy | L | 219 | 221 | 102 | ready (half) | 88 | heavy, ult |
 | guan_yu | 4★ | heavy | R | 128 | 242 | 238 | 85 | 88 |  |
 | hephaestus | 4★ | heavy | R | 97 | 128 | 127 | 85 | 412 |  |
-| heracles | 4★ | heavy | R | 219 | 237 | 102 | 89 | 298 |  |
-| khnum | 4★ | heavy | R | 219 | 242 | 127 | half | 88 |  |
-| neptune | 4★ | polearm | R | 219 | 242 | 91 | 89 | 412 |  |
-| nezha | 4★ | polearm | L | 97 | 221 | 91 | half | 298 | basic, heavy |
-| sobek | 4★ | polearm | R | 219 | 238 | 102 | stand | 88 |  |
-| taweret | 4★ | polearm | R | 220 | 242 | 105 | 89 | 88 |  |
-| vidar | 4★ | polearm | R | 97 | 238 | 105 | half | 412 |  |
+| heracles | 4★ | heavy | R | 219 | 237 | 102 | ready (89) | 298 |  |
+| khnum | 4★ | heavy | R | 219 | 242 | 127 | ready (half) | 88 |  |
+| neptune | 4★ | polearm | R | 219 | 242 | 91 | ready (89) | 412 |  |
+| nezha | 4★ | polearm | L | 97 | 221 | 91 | ready (half) | 298 | basic, heavy |
+| sobek | 4★ | polearm | R | 219 | 238 | 102 | ready (stand) | 88 |  |
+| taweret | 4★ | polearm | R | 220 | 242 | 105 | ready (89) | 88 |  |
+| vidar | 4★ | polearm | R | 97 | 238 | 105 | ready (half) | 412 |  |
 | aphrodite | 4★ | robed | R | 133 | 136 | 126 | natural | 298 |  |
 | chang_e | 4★ | robed | R | 136 | 125 | 126 | natural | 412 |  |
 | hathor | 4★ | robed | R | 129 | 133 | 126 | natural | 88 |  |
 | hel | 4★ | robed | - | 129 | 125 | 126 | natural | 298 |  |
-| idunn | 4★ | robed | - | 129 | 136 | 126 | half | 412 |  |
+| idunn | 4★ | robed | - | 129 | 136 | 126 | ready (half) | 412 |  |
 | maat | 4★ | robed | R | 129 | 133 | 126 | natural | 298 |  |
 | nephthys | 4★ | robed | - | 136 | 133 | 125 | natural | 412 |  |
 | nuwa | 4★ | robed | R | 133 | 125 | 126 | natural | 298 |  |
 | pluto | 4★ | robed | R | 129 | 136 | 126 | natural | 88 |  |
 | ptah | 4★ | robed | R | 136 | 125 | 126 | natural | 298 |  |
-| bastet | 4★ | unarmed | - | 97 | 238 | 86 | 89 | 298 |  |
-| fenrir | 4★ | unarmed | - | 206 | 221 | 91 | half | 88 |  |
-| serqet | 4★ | unarmed | - | 219 | 242 | 105 | 89 | 412 |  |
-| tyr | 4★ | unarmed | R | 97 | 221 | 105 | half | 298 |  |
-| atalanta | 3★ | archer | L | 224 | 224 | 222 | 89 | 412 |  |
-| medjay | 3★ | archer | L | 224 | 224 | 222 | half | 298 |  |
-| bes | 3★ | blade | R | 219 | 242 | 105 | half | 88 |  |
-| centurion | 3★ | blade | L | 97 | 238 | 105 | stand | 88 | basic, heavy, ult |
-| dark_elf | 3★ | blade | L | 220 | 242 | 102 | 89 | 412 | basic |
-| harpy | 3★ | blade | L | 220 | 242 | 102 | half | 88 | basic, heavy |
-| hoplite | 3★ | blade | - | 219 | 221 | 102 | stand | 88 |  |
-| jackal_warrior | 3★ | blade | R | 97 | 105 | 102 | 89 | 412 |  |
-| shield_maiden | 3★ | blade | R | 220 | 238 | 86 | half | 298 |  |
-| light_elf | 3★ | caster | R | 133 | 136 | 126 | half | 412 |  |
+| bastet | 4★ | unarmed | - | 97 | 238 | 86 | ready (89) | 298 |  |
+| fenrir | 4★ | unarmed | - | 206 | 221 | 91 | ready (half) | 88 |  |
+| serqet | 4★ | unarmed | - | 219 | 242 | 105 | ready (89) | 412 |  |
+| tyr | 4★ | unarmed | R | 97 | 221 | 105 | ready (half) | 298 |  |
+| atalanta | 3★ | archer | L | 224 | 224 | 222 | ready (89) | 412 |  |
+| medjay | 3★ | archer | L | 224 | 224 | 222 | ready (half) | 298 |  |
+| bes | 3★ | blade | R | 219 | 242 | 105 | ready (half) | 88 |  |
+| centurion | 3★ | blade | L | 97 | 238 | 105 | ready (stand) | 88 | basic, heavy, ult |
+| dark_elf | 3★ | blade | L | 220 | 242 | 102 | ready (89) | 412 | basic |
+| harpy | 3★ | blade | L | 220 | 242 | 102 | ready (half) | 88 | basic, heavy |
+| hoplite | 3★ | blade | - | 219 | 221 | 102 | ready (stand) | 88 |  |
+| jackal_warrior | 3★ | blade | R | 97 | 105 | 102 | ready (89) | 412 |  |
+| shield_maiden | 3★ | blade | R | 220 | 238 | 86 | ready (half) | 298 |  |
+| light_elf | 3★ | caster | R | 133 | 136 | 126 | ready (half) | 412 |  |
 | medusa | 3★ | caster | - | 136 | 130 | 126 | natural | 412 |  |
 | nymph | 3★ | caster | R | 129 | 125 | 130 | natural | 412 |  |
-| satyr | 3★ | caster | R | 133 | 130 | 125 | half | 298 |  |
+| satyr | 3★ | caster | R | 133 | 130 | 125 | ready (half) | 298 |  |
 | siren | 3★ | caster | R | 129 | 133 | 126 | natural | 412 |  |
-| amazon | 3★ | heavy | L | 97 | 237 | 238 | 89 | 412 | basic, heavy, ult |
-| berserker | 3★ | heavy | - | 128 | 221 | 102 | half | 298 |  |
+| amazon | 3★ | heavy | L | 97 | 237 | 238 | ready (89) | 412 | basic, heavy, ult |
+| berserker | 3★ | heavy | - | 128 | 221 | 102 | ready (half) | 298 |  |
 | cyclops | 3★ | heavy | R | 128 | 242 | 127 | 85 | 88 |  |
-| draugr | 3★ | heavy | R | 219 | 128 | 102 | 89 | 412 |  |
-| dwarf_smith | 3★ | heavy | R | 97 | 221 | 238 | half | 88 |  |
+| draugr | 3★ | heavy | R | 219 | 128 | 102 | ready (89) | 412 |  |
+| dwarf_smith | 3★ | heavy | R | 97 | 221 | 238 | ready (half) | 88 |  |
 | einherjar | 3★ | heavy | R | 128 | 237 | 238 | 85 | 88 |  |
-| frost_troll | 3★ | heavy | - | 219 | 128 | 127 | 89 | 412 |  |
-| minotaur | 3★ | heavy | R | 128 | 242 | 102 | half | 298 |  |
+| frost_troll | 3★ | heavy | - | 219 | 128 | 127 | ready (89) | 412 |  |
+| minotaur | 3★ | heavy | R | 128 | 242 | 102 | ready (half) | 298 |  |
 | scarab_knight | 3★ | heavy | R | 97 | 221 | 127 | 85 | 88 |  |
-| terracotta_soldier | 3★ | polearm | R | 220 | 221 | 102 | stand | 298 |  |
-| valkyrie | 3★ | polearm | R | 219 | 221 | 86 | 89 | 298 |  |
-| cobra_priestess | 3★ | robed | R | 129 | 133 | 126 | half | 88 |  |
-| fox_spirit | 3★ | robed | R | 129 | 136 | 126 | half | 298 |  |
+| terracotta_soldier | 3★ | polearm | R | 220 | 221 | 102 | ready (stand) | 298 |  |
+| valkyrie | 3★ | polearm | R | 219 | 221 | 86 | ready (89) | 298 |  |
+| cobra_priestess | 3★ | robed | R | 129 | 133 | 126 | ready (half) | 88 |  |
+| fox_spirit | 3★ | robed | R | 129 | 136 | 126 | ready (half) | 298 |  |
 | vestal | 3★ | robed | R | 129 | 125 | 126 | natural | 412 |  |
-| gladiator | 3★ | unarmed | R | 206 | 242 | 86 | 89 | 88 |  |
-| jiangshi | 3★ | unarmed | - | 219 | 238 | 102 | half | 412 |  |
-| mummy | 3★ | unarmed | - | 97 | 242 | 91 | 89 | 412 |  |
-| shabti | 3★ | unarmed | R | 206 | 238 | 105 | half | 88 |  |
+| gladiator | 3★ | unarmed | R | 206 | 242 | 86 | ready (89) | 88 |  |
+| jiangshi | 3★ | unarmed | - | 219 | 238 | 102 | ready (half) | 412 |  |
+| mummy | 3★ | unarmed | - | 97 | 242 | 91 | ready (89) | 412 |  |
+| shabti | 3★ | unarmed | R | 206 | 238 | 105 | ready (half) | 88 |  |
 
 ## 10. As rolled out (2026-09-24)
 
@@ -666,13 +669,18 @@ The owner: "can we make the 3D characters have more of a fluid design and
 poses, instead of all the same static, frozen style poses? Something more
 natural" — then "Go ahead". The study, the options and the choice are in
 `Docs/PLAN.md`, *Natural poses*; this is what the stages play now and how it
-is made. The battle's stance is §9's, except where it says `natural`.
+is made. The battle's stance is §9's: `natural` for the calm 35, `ready` for
+the 73 the deal left in the guard (below, *The ready stances*), a preset for
+the other nine. Phase 2 (the same day, later) added the weight-shift alt, the
+ready stances and the idle breaks, and hung the weapons; its numbers are in
+*Phase 2, as shipped*.
 
 ### What each stage plays
 
 Every family's `<family>_idle.usdz` — the idle the island, the reveal, the
 Hall of Ka's altar, the collection's Stage and the unit sheet's well play — is
-`tools/natural_idle.py`'s for **115 of the 117 rigs**. It is built from the
+`tools/natural_idle.py`'s for **all 117 rigs** (115 at step 2; Bastet and
+Serqet joined in phase 2). It is built from the
 rig's OWN BIND POSE, not from the combat guard: the concepts were painted
 with the arms hanging 22° out and a soft elbow for the rigger (the median of
 117 binds), so a pose made from there brings the arms down without dragging
@@ -689,13 +697,21 @@ the weight centred, and a 1.27 s pant, 47 breaths a minute.
   stances tore 9,994 edges past 3x as the stood guard and 198 now. The other
   ten `stand` families (Surtr, Sun Wukong, Diana, Nike, Set, Dionysus, Sobek,
   the Centurion, the Hoplite, the Terracotta Soldier) and every `half` and
-  preset stance keep theirs until the ready stances (PLAN.md step 4).
-- **Two families are held on today's idle** (`OVERRIDES`' `hold`): Bastet and
-  Serqet. The beast row's crouch turned a slim goddess into a squat that
-  reads as sitting on nothing, and the scorpion queen's into the combat guard
-  the owner objected to (the judge of 2026-09-25). Their `retry` is the row's
-  own plain values as the whole style; if either still reads crouched, it
-  moves to `grace` (Bastet) or `champion` (Serqet) in `ARCHETYPE`.
+  raw-89 stance stand in their READY stance since phase 2 (below); the six on
+  85's calm tail, Skadi's 226, the Jötunn and the sentinel keep theirs.
+- **Bastet and Serqet stand in another row on the stages** (`OVERRIDES`'
+  `archetype`; the battle's deal keeps `ARCHETYPE`'s beast). They were held on
+  the stood guard at step 2: the beast row's crouch turned a slim goddess
+  into a squat that read as sitting on nothing, and the scorpion queen's into
+  the combat guard the owner objected to, and the row's plain values as the
+  whole style still bent Bastet's knees and held Serqet's daggers level. So
+  Bastet stands in the grace row (1 → 0 edges past 3x, the arms 19°, the hips
+  6.3° over the right leg) and Serqet in the champion's (86 → 0, the arms
+  12°, the daggers low); the judge of phase 2 passed both.
+- **Beside the idle, since phase 2:** `<family>_idle_alt.usdz`, the same idle
+  standing on the other leg, which `PoseLayer` eases in and out under it (60
+  families), and `<family>_break.usdz`, a look-around laid over it after
+  12-18 s untouched (114 families; the rest break with their victory).
 
 ### How a family's idle is made
 
@@ -741,6 +757,27 @@ the weight centred, and a 1.27 s pant, 47 breaths a minute.
   over) and keeps it only if it still tears nothing and pushes no more of
   the arm or the held piece into the body. 14 of the 27 took it; Athena,
   the awakened Horus and Osiris did not.
+- **The weapon rests** (`hang_weapons`, phase 2): a long thing the hand holds
+  whose head the pick holds within 25° of level, with the forearm hanging, is
+  turned to rest — a pole with a head (a spear, a trident, a guandao) stood
+  up 60–75°, anything else hung 30–40° head down by the thigh, forward and
+  turned up to 40° out — by a turn at the wrist, at the elbow, or half at
+  each (Thor's wrist tore taking the whole 37°; half at each does not); the twist
+  about the forearm is capped at 100°. Pointing the head straight out
+  (Osiris's crook upside down, the sentinel's khopesh cocked up behind him,
+  Nezha's spear butt at the lens) and trailing it back were tried and taken
+  out after the boards. A rest is refused if the weapon still lies within 25°
+  of level, if its lowest point comes within 5% of the height of the floor,
+  or if it goes deeper into the body than it lay in the bind; the rests are
+  tried cheapest first, twenty of them. **27 families rest a weapon:** eight
+  of the eleven the judge named (Athena, Hades, Poseidon, the awakened Ares,
+  Mars, the awakened Mars, Anhur, Guan Yu) and Anubis, the Cyclops, Demeter,
+  the Einherjar, the awakened Freya, the Gladiator, Heracles, the Jackal
+  Warrior, Mercury, the Minotaur, Perseus, Set, the Shield Maiden, Surtr,
+  Taweret, Thor, the Valkyrie, Zeus and the awakened Hera. Poseidon stands his
+  trident at +60°, Guan Yu his guandao at +65°. Athena tears 1–5 robe edges
+  with her spear stood up (the hand's weights bleed into the robe), so it
+  hangs point down at −30°.
 - **The joints are found by where they sit, never by name** (`Rig`): the
   pelvis is the root most joints hang from, the legs its two chains to the
   floor, the chest the first spine joint two arms leave, and the head the
@@ -777,7 +814,7 @@ to it made a re-ship over a natural idle impossible (Hera's plain stance
 tears 18 under her robe against the 7 shipped). Re-derived over the shipped
 bundle, the survey reproduces all 150 files key for key and refuses none.
 
-### Measured, as shipped
+### Measured, as shipped at step 2
 
 On the shipped bases, the 117 standing idles before and after (the two held
 counted as they are):
@@ -809,6 +846,167 @@ keys a cycle, and the construct's 0.07 s twitch still lands on a key. 133–285
 keys a file, 224–510 KB; the bundle grew 13.8 MB. 15 is the fallback if the
 CI's `[Mem]` climbs.
 
+### Phase 2: the weight shift (`<family>_idle_alt.usdz`)
+
+`natural_idle.py --alt` (`make_alt`) writes the same idle standing on the
+OTHER leg, on the SAME foot spots, with the same length and phases, so the
+two can blend. `PoseLayer` plays both and eases the alt's `blendFactor` 0↔1
+over 1.2 s every 8–20 s. Blending two players moves the pelvis on a straight
+line while the legs turn on arcs, so the planted feet sink at the blend's
+middle by about the square of the travel; so the alt's sideways travel and its
+hip roll are searched apart, and the most visible shift is kept whose blends
+at 25, 50 and 75% keep every foot joint within 3 mm (`BLEND_DRIFT`), which
+stands at least 0.53 of the way over its own foot and keeps at least half the
+roll (the hip rising over the other leg is the shift's clearest sign), whose
+tear is no more than its own main idle's (the blends' too), and whose held
+weapon goes no deeper into the body or nearer the floor in the blends than in
+either pose; a weapon the alt's pose would push into the body is rested again
+on the alt. A hunter's alt keeps the main idle's twist, so the bow side still
+leads. `blendcheck` re-reads every written pair.
+
+**60 of 117 pass** (construct 7/7, soldier 6/7, champion 13/19, sovereign
+14/27, mystic 6/9, brute 8/14, hunter 3/6, beast 1/3, grace 2/15, trickster
+0/10); all 60 blend within 3 mm (the worst 2.70 mm, the median 2.56), and on
+those 60 the blends tear 66 edges past 3x, the alts 67 and the mains 74.
+Refused, and standing on one idle: 32 whose feet leave their spots in the
+blend (the graces and tricksters lean 0.72–0.80 of the way over one foot, and
+even the smallest shift allowed drifts 3.4–9 mm; 0.51 of the way over and a
+quarter of the roll barely helps), 23 that tear more than their main idle
+(robes and kilts that stretch as the weight changes legs: Artemis, Atalanta,
+Bellona, Bragi, Diana, the smith, Fenrir, Freya, Frigg, the Harpy, Hera and
+the awakened Hera, Heracles, Horus and the awakened Horus, Mars, Medusa,
+Njord, Nüwa, Odin and the awakened Odin, Sif, the awakened Zeus), Hel (an
+arm through the body) and Surtr (the sword into the body mid-blend). The
+Terracotta Soldier's shift (0.47 to 0.53) is too small to see. 16.6 MB.
+
+### Phase 2: the ready stances (the battle's `<family>_idle_combat.usdz`)
+
+`tools/ready_stance.py` gives the 73 families the deal left in the guard — 89
+raw (26), stood 70% up (`half`, 37) or fully up (`stand`, the ten) — a ready
+stance, built both ways and the better kept:
+
+- **(a) the guard's own motion on a moved pose:** every joint's deviation
+  from the guard's loop mean is kept (its 3.4 cm bounce, its breath, its 6°
+  chest turn), and the MEAN moves: the arms per kit toward the bind
+  (`ARM_KEEP`: fists 0.75 of the guard's arm pose, blades 0.70, poles 0.65,
+  heavy 0.60, archers 0.55, casters 0.45, the robed 0.35), the spine partly up while the pelvis keeps
+  its turn (the stance stays bladed), the face turned back to the enemy (the
+  guard looked 32° right and 26° down at the floor), the knees still bent,
+  the stagger narrowed, the feet planted by IK (no root lock). 30 keys a
+  second, a 1.23–1.60 s loop.
+- **(b) synthesised like the stage idle** (`natural_idle.pose_at`, a `READY`
+  row per archetype): bladed about 20°, the weight on the back leg with the
+  left foot a stride ahead, the knees bent, a quick breath, and the guard's
+  arms per kit laid over it. 20 keys a second, a 4.85–8.65 s loop.
+
+Each recipe is tried at the kit's arm share and down toward the bind's arms,
+then at two fallback levels where nothing tore little enough (straighter
+knees and a taller spine, then the feet closer; (b) squared). The family
+keeps the recipe that tears least; within a tie (a tenth of today's count,
+5–30 edges) the archetype decides — the fighters the guard's crouch, the
+kings, graces, mystics and constructs standing tall (`TIE_PREFER`) — and a
+board may overrule it (`JUDGED`). Nothing is kept that tears more than the
+stance it replaces; the natural idle's guards hold (a foot joint within a
+millimetre, no sole off the floor or more than 5 mm into it, no more arm in
+the body than today's, the loop closed, the carrier binding as the base).
+
+**As shipped: (a) on 45, (b) on 28.** Edges past 3x on the 73: 17,600 →
+2,029 on the base and 6,677 → 656 on the battle's LOD; families with none 7
+→ 22; the median worst stretch 7.3x → 3.6x. The feet drift at most 0.001 mm
+(the guard's slid 12 mm at the median), rise at most 0.97 mm (the guard
+lifted one 36 mm at the median and 35 cm on the awakened Horus, the Minotaur
+and Sekhmet) and sink at most 3.25 mm; every loop closes. On all 117 battle
+stances, 27,884 before step 2 and 18,088 after it, 2,510 now (42 with none).
+15.5 MB against 14.0. The calls: **Poseidon** is (a) by `JUDGED` (the tie
+gave the sovereign (b), which held the trident out LEVEL — the fault the
+idles' hang had just mended; (a) lowers it and tears 2 against 5); the
+smith and Thor pass only as (b) (the guard's arms push the smith's forearm
+into his belly; Thor's (a) lifts a foot 1.01 mm and puts 73–115 arm points
+in his body); Sun Wukong needed the straighter knees (the cloth between his
+legs stretches with the bend); Serqet's pick prefers the arms clear of the
+body on a tie; Diana's arms stay spread, as her rig holds them.
+
+### Phase 2: the idle breaks (`<family>_break.usdz`)
+
+`motion_palette.py breaks` (`make_break`, `break_for`) makes each family's
+break from the presets bought on 2026-09-24, cut to their calm windows
+(`PRESET_CUTS`' `brk`) and dealt by archetype (`BREAKS`, the first that passes
+each family's guards):
+
+| preset | window | kind | dealt to |
+|---|---|---|---|
+| 336 Long Breathe and Look Around | f0–152 (5.1 s): a look left, a look right with the hips, back | look | first for the sovereign, second for the grace and mystic, third for the champion, brute and beast; 39 shipped |
+| 338 Short Breathe and Look Around | f0–136 (4.5 s): a 31° look right and back | look | first for the champion, second for the soldier, brute, trickster, hunter, beast and construct; 30 |
+| 335 Axe Breathe and Look Around | f0–160 (5.3 s): only its turns, over the idle | look | the brute; 14 |
+| 0 Idle | whole (4.0 s): looks over each shoulder | look | first for the mystic, third for the sovereign, trickster and construct; 8 |
+| 2 Alert | whole (4.0 s): 70° right, a crouch, 50° left | look | first for the hunter, beast and construct, third for the soldier; 16 |
+| 334 Lower Weapon, Look, Raise | f84–140 (1.9 s): the lowered-weapon look only | look | first for the soldier, second for the champion, third for the hunter; 7 |
+| 318 Scheming Hand Rub | whole (3.3 s) | gesture | trickster (1st): refused on all ten |
+| 12 Idle 2 | whole (5.3 s): an overhead stretch | gesture | grace (1st): refused on all fifteen |
+| 11 Idle 1 | — | — | not dealt: a still guard, no gesture |
+| 377, 231 | whole, closed as loops | stance | kept for the battle (not used yet) |
+| 306, 403, 255, 41 | 41 f30–150 | victory | not breaks (306 hops 37 cm, 255 lifts a foot) |
+
+A break is ADDITIVE: each joint's turn since the window's first key is laid
+over the natural idle's MEAN pose (the preset's absolute pose would put the
+donor's arms on the figure and drag the cloth welded to them), its ends eased
+into that mean over 0.5 s and 0.6 s so its first and last keys are the idle's,
+and its feet planted by two-bone IK on the idle's own spots, pivoting with a
+share of the pelvis's turn, so nothing slides in the break or in the blend.
+The donor's joints are matched to the family's BY ROLE (`by_role`), never by
+name. A preset that swings a weapon is mirrored to a left-handed family, a
+plain look for half the roster by a hash (43 mirrored), so heads turn both
+ways. Where the whole break tears more than the idle, a ladder quietens the
+pelvis, the spine and the arms (`BREAK_LADDER`), down to the head alone and
+then half the head's turn; a gesture keeps its arms. The guards, at every
+key on the shipped base: no more edges past 3x than the idle (§10's rule,
+strictly), no arm through the body past the idle's count, a foot within 1 mm
+of its spot, the floor limits, and for the 24 robed families the hands no
+more than 10% of the height above the idle's (the dress is welded to them).
+
+**114 ship** (25.4 MB, 174–406 KB, 1.85–5.35 s at 20 keys a second): 41 whole,
+then 12 / 13 / 21 / 22 / 5 on rungs 1–5 — the 27 on rungs 4 and 5 are a
+head-only glance that barely reads, and harms nothing. Odin and the Nymph have
+none that passes (Odin's three tear even at the half-head glance) and break
+with their victory. **Held: Nephthys** (`BREAK_HOLD`): preset 0 whole turns
+her head 131° left and 104° right, her body goes to profile twice in 1.2 s
+while her feet swivel 27° on the spot, and she reads as spinning; her retry
+starts at rung 2 (`breaks nephthys --retry-held`), to be judged on its
+board, and she breaks with her victory until then. **The hand rub is held
+for the owner:** it reads well as a hunched, scheming rub, but it tears 3
+edges on Dionysus and 7 on the Satyr against the look-around's 0, and §10's
+rule says no; with the natural idle's own five-edge slack Dionysus alone
+would take it. The stretch tears 58–3,552 edges on the graces or raises a
+robed figure's hands too high. The Scarab Knight's and the Shield Maiden's
+334 raises the weapon level mid-glance, which reads as checking behind.
+
+### Phase 2, as shipped
+
+The judge read every board of the three lanes and passed all but two files;
+the ship re-read each file with `character.verify`, bound it against the
+shipped base and held every idle and stance to the tear of the file it
+replaced before copying it. Into `Pantheon/Resources/Models`:
+
+| kind | files | size | edges past 3x |
+|---|---|---|---|
+| idles re-made (the 27 resting a weapon, Bastet, Serqet) | 29 | +0.19 MB | 229 → 118 on them |
+| the calm stances of six of them | 6 | +0.00 MB | 75 → 68 |
+| weight-shift alts | 60 | +16.63 MB | — |
+| ready stances (Poseidon's the (a) re-make) | 73 | +1.56 MB | 17,600 → 2,029 |
+| idle breaks | 114 | +25.35 MB | — |
+| **the bundle** | 282 | **+43,733,797 bytes (43.7 MB)** | |
+
+The 88 other idles re-derived key for key (under 0.05°) and were not copied.
+On all 117: the idles tear 488 (599 before phase 2; 71 families with none; the
+median worst stretch 2.0x), the battle stances 2,510. The judge's notes: the
+staff-type items of Anubis, Mercury and the awakened Hera hang head down where
+a staff should stand; Athena's spear still points at the lens from the front;
+Guan Yu holds his blade upright at the shoulder, a salute more than a rest
+(watch the reveal); twelve (b) fighters (Bellona, the awakened Mars, the
+smith, Heracles, Thor, Fenrir, Heimdall, Njord, Mercury, Diana, Horus and the
+awakened Horus) bob about 1 cm with 0.1° of chest turn and may read still in
+battle; the Minotaur's (a) bounces 7.35 cm and Sekhmet's 5.4.
+
 ### The Swift that plays it
 
 No stage needed a change to pick the file up (`restingIdle`, `startLoop`),
@@ -832,6 +1030,25 @@ animations; the `[PoseLab]` lines say whether the presentation turned, the
 frames whether the mesh followed). The lab turns the joint `Head` hangs from,
 which carries the skull on every rig.
 
+**`PoseLayer` (`Pantheon/Render/PoseLayer.swift`, phase 2, lane P) plays the
+alt and the break.** The reveal, the Hall of Ka's altar (and the unit
+sheet's), the collection's Stage and the island's `UnitNode`
+(`takeStageLife`) start their idle through it; the battle never makes one.
+Where the family ships `_idle_alt`, the alt plays ON TOP of the idle on the
+idle's beat (`IdleBeat`), parsed off the main thread 0.6 s after the figure's
+life begins (never in the reveal's charge: its life begins after the
+entrance) and eased 0↔1 over 1.2 s every 8–20 s. After 12–18 s untouched a
+break is blended over the idle (in 0.4 s, out 0.5 s, 0.2 s when a clip of
+the stage's own cuts it short): the family's `_break` two times in three
+where it also has a victory, else the victory's measured window, never the
+victory twice running; the clips load 3 s after the life begins. On the
+island a figure that can stroll strolls on 35% of its stirs and breaks on the
+rest; a tap keeps the hop and the swing. `-tour-pose-blend 0.5` holds the alt
+at half (`3-training-pose-blend`, `21-collection_stage-pose-blend`) and
+`-tour-fidget` holds a break at its high point (`3-training-fidget`,
+`21-collection_stage-fidget`); every change prints a `[Pose]` line naming the
+players and their blends. Nothing of it has been compiled or run yet.
+
 ### The commands, and the places that make the idle
 
 ```
@@ -839,19 +1056,46 @@ python3 tools/natural_idle.py survey [families] --bundle DIR --calm-stances --js
 python3 tools/natural_idle.py board horus vidar --out DIR [--bundle DIR]              # today's idle, then 0/25/50/75%
 python3 tools/natural_idle.py sheet sovereign --out F [--bundle DIR]                  # one archetype at one instant
 python3 tools/natural_idle.py gif zeus --out DIR                                     # today's beside the new, moving
-python3 tools/natural_idle.py ship --all --bundle Pantheon/Resources/Models --calm-stances   # as shipped
+python3 tools/natural_idle.py ship --all --bundle Pantheon/Resources/Models --calm-stances --alt   # as shipped
+python3 tools/natural_idle.py blendcheck --bundle DIR [families] --json F             # the idle and alt pairs blended
+python3 tools/natural_idle.py altboard ares hades --bundle DIR --out DIR             # an idle, its alt, their blend
+python3 tools/ready_stance.py survey [families] --bundle GUARDS --out DIR --json F   # both recipes; the chosen to DIR
+python3 tools/ready_stance.py board [families] --bundle GUARDS --json F --out DIR    # today, (a), (b) at battle distance
+python3 tools/ready_stance.py ship <family> --bundle DIR [--guard 89]                # a re-ship's derivation
+python3 tools/motion_palette.py breaks [families] --out DIR [--idle-bundle DIR] --json F [--retry-held]
+python3 tools/motion_palette.py break-board hera ares --bundle DIR --out F.jpg      # the idle, then the break
 ```
 
-So that no re-ship can put the stood guard back:
+The app's bundle holds the READY stances now, so the guard can no longer be
+read there: `ready_stance.py survey` and `board` read a bundle
+(`--bundle GUARDS`) that `motion_palette.py ship` has written the guard into,
+and refuse a stance whose cut report (`Art/Motions/shipped/<family>.json`,
+which records the idle, the stance, the alt and the break of every family)
+says it is ready already.
+
+So that no re-ship can put the stood guard back (a re-ship over an unchanged
+base reproduces every file within 0.05°: Poseidon's idle, alt, break and
+stance were re-made through `roll` into scratch and compared):
 - `motion_palette.py ship` takes `idle=natural` (the idle made after the
-  clips, on the carrier just shipped) and `idle_combat=natural` (the same
-  file as the stance; the guard is retargeted only as the carrier), and
-  `roll` passes both; `idle=stand` is kept for the record.
+  clips, on the carrier just shipped, with its alt, `natural_idle.py --alt`,
+  and then its break, `break_for`, made beside it), `idle_combat=natural`
+  (the same file as the stance; the guard is retargeted only as the carrier)
+  and `idle_combat=ready:<guard>` (the plan's 73, `READY_OVER`: the guard —
+  89, `half` or `stand` — shipped as the stance first, then
+  `ready_stance.py ship` writes the ready stance over it); `roll` passes all
+  three; `idle=stand` is kept for the record. A refused ready stance leaves
+  the guard (`PROBLEM: no ready stance`); a refused or held idle takes its
+  alt and break with it, since both were made beside another idle.
 - `tools/batch/build_asset.sh` and `tools/batch/proportions.sh` run
-  `natural_idle.py ship <family> --calm-stances` after the ship, because a
-  re-shipped base can change the bind. Where it refuses a family (no
-  `ARCHETYPE` row, a guard) they stand the guard up instead and say
-  `NATURAL IDLE REFUSED`, so the stages still have an idle that binds.
+  `natural_idle.py ship <family> --calm-stances --alt` after the ship,
+  because a re-shipped base can change the bind, then `motion_palette.py
+  breaks <family>` beside the new idle and `ready_stance.py ship <family>
+  --guard 89` over the raw guard `mesh.py` shipped. Where the idle is refused
+  (no `ARCHETYPE` row, a guard) they stand the guard up instead, remove the
+  alt and the break and say `NATURAL IDLE REFUSED`; a refused stance keeps
+  the guard and says `READY STANCE REFUSED`.
+- `clip_fix.py --rearm` leaves a `ready` or `natural` stance alone
+  (`shipped_stance`): a ready (a) stance can match 89's frame count.
 - `clip_fix.py --rearm` no longer re-derives the standing idle from the
   fixed combat idle (the natural idle does not come from it).
 - `stand_idle.py` stays for the stances still made from the guard (`stand`,
@@ -861,19 +1105,24 @@ So that no re-ship can put the stood guard back:
 
 ### What is left
 
-1. **A weapon held level.** The bind's grip is kept, so on eleven families the
-   blade or the pole lies level at the hip instead of hanging by the thigh:
-   Athena (the spear at the lens), Hades, Poseidon, Neptune, Guan Yu, Baldr
-   (the spear slung up through the cloak), the awakened Ares, Mars and the
-   awakened Mars, Anhur, and the Jötunn's axe across the belly. The judge's
-   fix is a pitch at the weapon wrist — a blade 30–50° tip down, a pole
-   raised to 60–75° like Pluto's and Frigg's — with the tip 5% of the height
-   off the floor and inside the arm-through check.
+1. **The weapons phase 2 left as they are** (eight of the judge's eleven
+   rest now). Skinned to a leg or a cloak, so any turn tears them until the
+   weapon pass is run on the base (a re-ship): Neptune's trident (the arm
+   carries 23% of it), the Jötunn's axe (36–50% on the thigh) and Baldr's
+   spear (fused to his cloak at +41°). No rest passes the guards: the smith's
+   hammer, Nezha's short spear, Osiris's crook, the sentinel's khopesh. Held
+   up in front, not at the hip: Bes, the Light Elf, the awakened Thoth. And
+   the judge's notes on what rests: the staffs of Anubis, Mercury and the
+   awakened Hera hang head down where a staff should stand head up; Athena's
+   spear at −30° still points at the lens from the front.
 2. **The breath is quiet** on purpose (1.0–2.4°); every board's four
    instants look alike. Raise it to 1.5–2.5° if the CI's `[StageDoctor]`
    Hips and Hand lines read still (they were 7 mm and 3 cm in five seconds
    before).
-3. **Bastet and Serqet's re-run** (their `retry`), then a board each.
+3. **The weight shift on the other 57** (the 32 whose feet leave their spots
+   mid-blend above all): blend through a middle pose (a Swift change), or
+   allow 5 mm of sink with the slide kept under 3 mm. The judge kept the 3 mm
+   rule for now.
 4. **Stances that barely changed:** Horus and the awakened Hera (the weight
    held back by a kilt or a skirt on both thighs), the awakened Ra, Diana
    (her arms came in only 2° — further tore her), and Sun Wukong, whose whole
@@ -881,8 +1130,16 @@ So that no re-ship can put the stood guard back:
    (forward), which reads as a shamble.
 5. **At the arm-through limit** with nothing on the board: Hel and Taweret
    at 12 of 12, Hermes and Bragi at 11.
-6. **Gestures and variety** belong to the runtime layer and the palette
-   (PLAN.md steps 5–8): the weight shift between two variants, the gaze, the
-   idle breaks, a hand on the hip.
+6. **Gestures:** every break is a look-around. The hand rub (318) waits on
+   the owner's word on §10's rule; the stretch (12) needs hand IK or remeshed
+   cloth; Nephthys's retry waits on its board. The gaze is step 6.
 7. **Apollo's third arm** (the audit's fault) shows plainly with the arms
    hanging: a remake, not an idle.
+8. **The quiet (b) stances** may read still at battle distance (a bob of
+   about 1 cm): give (b)'s fighters a 2–3 cm bounce on a 1.3–1.6 s loop first.
+   The Minotaur's (a) bounces 7.35 cm and Sekhmet's 5.4: watch them in CI.
+9. **Joints matched by name** (found by lane B, older than this work):
+   `motion_palette.py ship` puts the palette's clips on a rig by joint name,
+   so on Zeus, Thor and the smith a clip's neck turn lands in the joint over
+   the hips (their `neck`) and the skull never turns; the breaks match by
+   role (`by_role`), the roll-out's clips still carry it.

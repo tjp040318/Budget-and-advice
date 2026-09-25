@@ -44,5 +44,37 @@
   "frames": 117,
   "seconds": 3.9,
   "rate": 1.95
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "soldier",
+  "stand": "L",
+  "level": "full",
+  "over3": 0,
+  "hung": {
+   "R": "hang -30 deg"
+  }
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "R",
+  "travel": 1.0,
+  "roll_share": 1.0,
+  "over3": 0,
+  "blend_drift_mm": 1.89
+ },
+ "break": {
+  "preset": "334",
+  "name": "Lower Weapon, Look, Raise",
+  "rung": 3,
+  "mirrored": false,
+  "seconds": 1.85,
+  "over3": 0,
+  "idle_over3": 0,
+  "look": [
+   -0.0,
+   23.8
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

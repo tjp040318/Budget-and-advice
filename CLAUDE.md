@@ -2384,38 +2384,85 @@ environment can and cannot do. The short version:
   "more of a fluid design and poses, instead of all the same static, frozen
   style poses. Something more natural").** `<family>_idle.usdz` — the
   island, the reveal, the altar, the collection's Stage, the unit sheet's
-  well — is `tools/natural_idle.py`'s for 115 of the 117 rigs: built from
-  the rig's own BIND pose (the concepts hang the arms 22° out for the
-  rigger), in its archetype's way of standing (`motion_palette.ARCHETYPE`,
-  ten rows of `STYLES` — sovereign, champion, soldier, brute, mystic,
-  grace, hunter, trickster, beast, construct — each number drawn from a
-  hash of the family's key): a contrapposto on the leg opposite the weapon
+  well — is `tools/natural_idle.py`'s for all 117 rigs: built from the
+  rig's own BIND pose (the concepts hang the arms 22° out for the rigger),
+  in its archetype's way of standing (`motion_palette.ARCHETYPE`, ten rows
+  of `STYLES` — sovereign, champion, soldier, brute, mystic, grace, hunter,
+  trickster, beast, construct — each number drawn from a hash of the
+  family's key; `OVERRIDES`' `archetype` moves a family's STAGE row only:
+  Bastet stands as a grace and Serqet as a champion, since the beast row's
+  crouch read as a squat): a contrapposto on the leg opposite the weapon
   hand, the feet planted by IK, the arms at the bind's hang, a breath, a
   sway, the head's survey and the row's own tics, a 6.6–14.2 s loop
-  written as F+1 keys at 20 a second (`FPS`; 30 would have added 22.8 MB,
-  20 added 13.8), no root lock. Its guards refuse a foot that drifts or
-  leaves the floor, a carrier binding off the base, more tear than the
-  file it replaces (measured before that is overwritten), a hand in the
-  body and an open loop; `OVERRIDES` holds the judged rests and the HELD —
-  Bastet and Serqet keep the stood guard until their `retry` passes a
-  board. Edges past 3x 22,202 → 599, the arms 51°/39° → 18.5° from
-  straight down, hips tilted over 3° on 79 of 115 (1 of 117 before). The
-  35 calm families (the sovereigns, graces and mystics the deal stood up
-  for battle: `motion_palette.CALM`, stance `natural`) wear the same file
-  as `_idle_combat` (9,994 → 198). `motion_palette.py ship` takes
-  `idle=natural` and `idle_combat=natural` and `roll` passes them;
+  written as F+1 keys at 20 a second (`FPS`), no root lock. A long weapon
+  the bind held level is RESTED (`hang_weapons`): a headed pole stood up
+  60–75°, anything else hung 30–40° head down by the thigh, turned at the
+  wrist, the elbow or half at each — 27 families; Neptune's trident, the
+  Jötunn's axe and Baldr's spear are skinned to a leg or a cloak and wait
+  on the weapon pass. Its guards refuse a foot that drifts or leaves the
+  floor, a carrier binding off the base, more tear than the file it
+  replaces (measured before that is overwritten), a hand or a weapon in
+  the body and an open loop. Edges past 3x 22,202 → 488, the arms 51°/39°
+  → about 18° from straight down. The 35 calm families (the sovereigns,
+  graces and mystics the deal stood up for battle: `motion_palette.CALM`,
+  stance `natural`) wear the same file as `_idle_combat`. **Beside it
+  (phase 2, the same day):** `<family>_idle_alt.usdz` for 60 families, the
+  same idle on the other leg on the same foot spots (`--alt`; the other 57
+  were refused because a blend of two players sinks the planted feet past
+  3 mm mid-way, or tears more — `blendcheck` re-reads every pair), and
+  `<family>_break.usdz` for 114, a look-around from the presets bought on
+  the 24th laid ADDITIVELY over the idle's mean pose, its ends eased into
+  it, its feet planted, quietened down a ladder where it tears more than
+  the idle (`motion_palette.py breaks`; `PRESET_CUTS`' `brk`, `BREAKS`;
+  Nephthys's is held in `BREAK_HOLD` — she read as spinning — and Odin and
+  the Nymph break with their victory; the trickster's hand rub tears 3–7
+  edges where the look-around tears none, so it waits on the owner's word
+  on MOTION.md §10's rule). **The battle's ready stances**
+  (`tools/ready_stance.py`): the 73 the deal left in the Meshy guard stand
+  in a stance built two ways — (a) the guard's own motion on a moved mean
+  pose, (b) synthesised like the idle with the guard's arms per kit — the
+  one that tears less kept, the archetype deciding a tie (`TIE_PREFER`) and
+  a board overruling it (`JUDGED`: Poseidon's (b) held his trident level):
+  45 (a), 28 (b), 17,600 → 2,029 edges past 3x (27,884 → 2,510 over all
+  117 stances), the feet planted where the guard slid 12 mm. The plan reads
+  `ready (<guard>)` for them and keeps the guard as the fallback. **So that
+  no re-ship puts the guard back:** `motion_palette.py ship` takes
+  `idle=natural` (the idle, its alt and its break) and
+  `idle_combat=natural` or `ready:<guard>`, and `roll` passes them;
   `build_asset.sh` and `proportions.sh` run `natural_idle.py ship <family>
-  --calm-stances` after every ship (a refused family gets the guard stood
-  up and a `NATURAL IDLE REFUSED` line); `clip_fix --rearm` no longer
-  re-derives the idle; `stand_idle.py` stays for the `stand` and `half`
-  battle stances, the held two and that fallback. Before this the idle was
+  --calm-stances --alt`, `motion_palette.py breaks <family>` and
+  `ready_stance.py ship <family> --guard 89` after every ship (a refused
+  idle gets the guard stood up, loses its alt and break and says `NATURAL
+  IDLE REFUSED`; a refused stance keeps the guard and says `READY STANCE
+  REFUSED`). The app's bundle holds the ready stances now, so
+  `ready_stance.py survey`/`board` read a bundle `motion_palette.py ship`
+  has written the GUARD into, and refuse a stance the cut report
+  (`Art/Motions/shipped/<family>.json`, which records every family's idle,
+  stance, alt and break) says is ready already. Before this the idle was
   `stand_idle.py`'s Meshy 89 guard stood up (2026-09-18: no family had
   shipped a plain idle and every stage played the crouch — "the screenshot
   is still fucked"), which kept 85% of the guard's arms, so every figure
-  held an invisible shield and panted 47 times a minute. Left: the weapon
-  lies level at the hip on eleven families (the judge's wrist pitch is
-  next), and the breath is quiet on purpose — raise it if `[StageDoctor]`
-  reads still on the phone.
+  held an invisible shield and panted 47 times a minute; `stand_idle.py`
+  stays as the fallback. Left: the breath is quiet on purpose — raise it
+  if `[StageDoctor]` reads still on the phone — and twelve (b) fighters may
+  read still in battle (a 1 cm bob).
+- **A figure on a stage has a life (`PoseLayer`, 2026-09-25).** The
+  reveal, the Hall of Ka's altar and the collection's Stage start their
+  idle through `PoseLayer.startIdle`, never a bare `startLoop`, and the
+  island's `UnitNode` owns one (`takeStageLife`) that its resting idle
+  reports to (`idleStarted`, `idleLeft`): where the family ships
+  `_idle_alt` it plays on top of the idle on the idle's beat (`IdleBeat`),
+  parsed off the main thread once the figure's LIFE has begun (the
+  reveal's begins after its entrance, so no parse lands in the charge) and
+  eased 0↔1 over 1.2 s every 8–20 s; after 12–18 s untouched a break is
+  blended over it (in 0.4 s, out 0.5 s), the family's `_break` two times
+  in three beside its victory, never the victory twice running; the island
+  strolls on 35% of its stirs and breaks on the rest. The battle never
+  makes one. Every clock is a main-run-loop `Timer` through a weak target;
+  `stop()` is final and every stage's `dismantleUIView` calls it.
+  `-tour-pose-blend 0.5` and `-tour-fidget` photograph the blend and a
+  held break on steps 3 and 21, and every change prints a `[Pose]` line.
+  A new stage that holds a figure starts its idle the same way.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 

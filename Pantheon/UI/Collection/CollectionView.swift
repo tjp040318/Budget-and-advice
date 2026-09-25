@@ -1173,6 +1173,12 @@ struct CollectionStageView: UIViewRepresentable {
         var framing: Framing?
         /// Replaced in `makeUIView` by one named for the framing.
         var doctor = StageDoctor(label: "collection")
+        /// The figure's life at rest: its idle, the idle's second variant
+        /// and its breaks (`PoseLayer`, Docs/PLAN.md *Natural poses*).
+        var pose: PoseLayer?
+        /// The drag's turn last applied: a change is a touch, and the
+        /// untouched clock of the breaks starts again.
+        var lastSpin: Float = 0
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -1269,15 +1275,21 @@ struct CollectionStageView: UIViewRepresentable {
         place(unit, in: coordinator)
         frameCamera(view, coordinator)
         // The drag, applied every pass: it is one float and the figure is
-        // one node, so there is nothing to be saved by checking first.
+        // one node, so there is nothing to be saved by checking first. A
+        // turn is a touch: the figure's breaks wait out another spell.
         coordinator.figure?.eulerAngles.y = framing.stance + spin
+        if spin != coordinator.lastSpin {
+            coordinator.lastSpin = spin
+            coordinator.pose?.touch()
+        }
         // Out of sight, the stage stops: no scene time, no frames. Only a
         // change is written, so the collection's stage, which always plays,
-        // is never touched here.
+        // is never touched here. The figure's life holds with it.
         if view.isPlaying != playing {
             view.isPlaying = playing
             view.rendersContinuously = playing
         }
+        coordinator.pose?.isHeld = !playing
     }
 
     /// The stage lets go of its scene the moment it leaves the screen
@@ -1296,6 +1308,9 @@ struct CollectionStageView: UIViewRepresentable {
     /// scene, as a torn-down battle's do — `VFXLibrary.dismiss` is for a node
     /// leaving a scene that goes on rendering, which this one does not.
     static func dismantleUIView(_ view: SCNView, coordinator: Coordinator) {
+        // The figure's life first: its clocks stop with the stage.
+        coordinator.pose?.stop()
+        coordinator.pose = nil
         view.isPlaying = false
         view.rendersContinuously = false
         view.delegate = nil
@@ -1323,6 +1338,8 @@ struct CollectionStageView: UIViewRepresentable {
         coordinator.ring?.removeFromParentNode()
         coordinator.shadow?.removeFromParentNode()
         coordinator.figure = nil
+        coordinator.pose?.stop()
+        coordinator.pose = nil
         guard let unit else { return }
         let blueprint = unit.blueprint
         let height = blueprint.model.height
@@ -1347,11 +1364,15 @@ struct CollectionStageView: UIViewRepresentable {
         // the Hall of Ka's figure (2026-09-17).
         // The clips of the mesh on the stage (`ModelLibrary.clipAsset`): an
         // awakened figure plays its own rig's idle, never the base rig's.
+        // Through its life (`PoseLayer`, Docs/PLAN.md *Natural poses*,
+        // steps 5 and 7): the idle by `startLoop`, its second variant eased
+        // under it where the family ships one, a break after 12-18 s
+        // untouched.
         let assetName = ModelLibrary.shared.clipAsset(for: blueprint.model, awakened: unit.unit.isAwakened)
-        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
-            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
-            node.startLoop(idle, key: "idle")
-        }
+        let pose = PoseLayer.startIdle(on: node, clips: assetName, label: framing.name)
+        pose.isHeld = !playing
+        coordinator.pose = pose
+        coordinator.lastSpin = spin
         node.runAction(.fadeIn(duration: 0.35))
         // The figure is the scene's one shadow caster; the ring, the shadow
         // patch and the set never cast (2026-09-18).

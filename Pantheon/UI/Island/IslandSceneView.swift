@@ -211,6 +211,11 @@ struct IslandSceneView: UIViewRepresentable {
         /// Metres a second, in the figure's own metres; the walk clip is a
         /// casual stroll and a little foot-slide at this size is invisible.
         private let wanderSpeed: CGFloat = 1.05
+        /// Of the stirs that fall on a figure that can stroll, the share
+        /// that strolls; the rest, and every stir of a figure that cannot,
+        /// are an idle BREAK where the family has one (Docs/PLAN.md *Natural
+        /// poses*, build step 7). The hop and the swing are a tap's.
+        private let strollShare: Double = 0.35
 
         private struct Walk {
             let from: CGPoint
@@ -304,6 +309,8 @@ struct IslandSceneView: UIViewRepresentable {
             }
 
             active = isActive
+            // The figures' weight shifts wait while the island is away.
+            for node in figureNodes { node.holdStageLife(!isActive) }
             if isActive {
                 armStir()
             } else {
@@ -316,6 +323,7 @@ struct IslandSceneView: UIViewRepresentable {
             stirTimer?.invalidate()
             stirTimer = nil
             active = false
+            for node in figureNodes { node.endStageLife() }
         }
 
         // MARK: - Figures
@@ -328,6 +336,7 @@ struct IslandSceneView: UIViewRepresentable {
             // `VFXLibrary.dismiss`: an awakened one carries a live aura, and a
             // node freed with its motes alive is 2026-09-15's crash.
             for child in figures.childNodes {
+                (child as? UnitNode)?.endStageLife()
                 child.enumerateHierarchy { node, _ in node.removeAllActions() }
                 VFXLibrary.dismiss(child, reportsLive: false)
             }
@@ -345,6 +354,12 @@ struct IslandSceneView: UIViewRepresentable {
                 let node = UnitNode(combatant: combatant, detail: .high)
                 node.hideBattleDecorations()
                 figures.addChildNode(node)
+                // The stages' life (Docs/PLAN.md *Natural poses*, steps 5
+                // and 7): given before the resting idle plays, so the idle's
+                // start seats its second variant on top of it. The stirs
+                // below ask it for a break.
+                node.takeStageLife(label: "island")
+                node.holdStageLife(!active)
                 // A team changed while the island was up goes into a scene
                 // that is already rendering, where an idle attached before
                 // the figure was in it never starts (the Hall of Ka's frozen
@@ -438,7 +453,8 @@ struct IslandSceneView: UIViewRepresentable {
         }
 
         /// Every 9–15 s one figure stirs by itself, so the island is never
-        /// four statues; the screen is told which so it can name it.
+        /// four statues; the screen is told which so it can name it (a
+        /// break or a hop; a stroll names nobody).
         private func armStir() {
             guard stirTimer == nil, !figureNodes.isEmpty else { return }
             let delay = Double.random(in: 9...15)
@@ -447,7 +463,18 @@ struct IslandSceneView: UIViewRepresentable {
                 self.stirTimer = nil
                 guard self.active, !self.figureNodes.isEmpty else { return }
                 let index = Int.random(in: 0..<self.figureNodes.count)
-                if self.figureHasWalk[index], self.walks[index] == nil, self.layout != nil {
+                // Most stirs are an idle BREAK over the figure's standing idle
+                // (Docs/PLAN.md *Natural poses*, build step 7: the family's
+                // own break or its victory's window, `UnitNode.fidget`); a
+                // figure that can stroll strolls on about a third of its
+                // stirs. The hop and the swing are kept for a tap
+                // (`react`), and for a figure with nothing to break with.
+                let canStroll = self.figureHasWalk[index] && self.walks[index] == nil && self.layout != nil
+                if canStroll, Double.random(in: 0..<1) < self.strollShare {
+                    self.wander(index)
+                } else if self.figureNodes[index].fidget() {
+                    self.onStir?(index)
+                } else if canStroll {
                     self.wander(index)
                 } else {
                     self.hop(index)

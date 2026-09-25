@@ -33,15 +33,50 @@
   "rate": 1.18
  },
  "idle_combat": {
-  "preset": "89",
-  "frames": 39,
-  "seconds": 1.3,
-  "loop": true
+  "preset": "ready (b) over the 89 guard",
+  "guard": "89",
+  "recipe": "b",
+  "arm_keep": 0.13,
+  "level": 2,
+  "over3": 58,
+  "today_over3": 1528,
+  "why": "tears least (b 58 against a 148)",
+  "tool": "tools/ready_stance.py"
  },
  "victory": {
   "preset": "412",
   "frames": 119,
   "seconds": 3.97,
   "rate": 1.99
+ },
+ "idle": {
+  "preset": "natural (tools/natural_idle.py)",
+  "archetype": "sovereign",
+  "stand": "R",
+  "level": "partial",
+  "over3": 5,
+  "hung": null
+ },
+ "idle_alt": {
+  "made": "tools/natural_idle.py --alt",
+  "stand": "L",
+  "travel": 0.3,
+  "roll_share": 1.0,
+  "over3": 4,
+  "blend_drift_mm": 2.56
+ },
+ "break": {
+  "preset": "336",
+  "name": "Long Breathe and Look Around",
+  "rung": 3,
+  "mirrored": true,
+  "seconds": 5.05,
+  "over3": 5,
+  "idle_over3": 5,
+  "look": [
+   -18.6,
+   22.5
+  ],
+  "tool": "tools/motion_palette.py breaks"
  }
 }

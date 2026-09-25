@@ -2190,10 +2190,18 @@ struct AltarStageView: UIViewRepresentable {
         var framedFor: Float = 0
         var playedStamp = 0
         let doctor = StageDoctor(label: "altar")
+        /// The figure's life at rest: its idle, the idle's second variant
+        /// and its breaks (`PoseLayer`, Docs/PLAN.md *Natural poses*).
+        var pose: PoseLayer?
+        /// The drag's turn last applied: a change is a touch, and the
+        /// untouched clock of the breaks starts again.
+        var lastSpin: Float = 0
 
         /// Lets go of every node and the scene (`dismantleUIView`), on the
         /// main thread once the renderer has stopped.
         func release() {
+            pose?.stop()
+            pose = nil
             scene = nil
             figure = nil
             figureKey = ""
@@ -2226,6 +2234,8 @@ struct AltarStageView: UIViewRepresentable {
     /// only `SummonStageView.teardownSettle` later do the root's children
     /// go, the view let go of its scene and the coordinator of its nodes.
     static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
+        // The figure's life first: its clocks stop before its players go.
+        coordinator.pose?.stop()
         uiView.isPlaying = false
         uiView.rendersContinuously = false
         uiView.delegate = nil
@@ -2349,15 +2359,21 @@ struct AltarStageView: UIViewRepresentable {
         let coordinator = context.coordinator
         place(blueprint, awakened: awakened, in: coordinator)
         frameCamera(view, coordinator)
-        // The drag, applied every pass: one float on one node.
+        // The drag, applied every pass: one float on one node. A turn is a
+        // touch: the figure's breaks wait out another untouched spell.
         coordinator.figure?.eulerAngles.y = Self.stance + spin
+        if spin != coordinator.lastSpin {
+            coordinator.lastSpin = spin
+            coordinator.pose?.touch()
+        }
         // Out of sight, the stage stops: no scene time, no frames. Only a
         // change is written, so the Hall of Ka's stage, which always plays,
-        // is never touched here.
+        // is never touched here. The figure's life holds with it.
         if view.isPlaying != playing {
             view.isPlaying = playing
             view.rendersContinuously = playing
         }
+        coordinator.pose?.isHeld = !playing
         if let ceremony, ceremony.stamp != coordinator.playedStamp {
             coordinator.playedStamp = ceremony.stamp
             play(ceremony, coordinator)
@@ -2379,6 +2395,8 @@ struct AltarStageView: UIViewRepresentable {
         coordinator.ring?.removeFromParentNode()
         coordinator.shadow?.removeFromParentNode()
         coordinator.figure = nil
+        coordinator.pose?.stop()
+        coordinator.pose = nil
         guard let blueprint else { return }
         let height = blueprint.model.height
         let tint = UIColor(hex: blueprint.element.accentHex) ?? .white
@@ -2403,11 +2421,15 @@ struct AltarStageView: UIViewRepresentable {
         // the figure stood in its bind pose (2026-09-17).
         // The clips of the mesh on the stage (`ModelLibrary.clipAsset`): an
         // awakened figure plays its own rig's idle, never the base rig's.
+        // Through its life (`PoseLayer`, Docs/PLAN.md *Natural poses*,
+        // steps 5 and 7): the idle by `startLoop`, its second variant eased
+        // under it where the family ships one, a break after 12-18 s
+        // untouched.
         let assetName = ModelLibrary.shared.clipAsset(for: blueprint.model, awakened: awakened)
-        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
-            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
-            node.startLoop(idle, key: "idle")
-        }
+        let pose = PoseLayer.startIdle(on: node, clips: assetName, label: "altar")
+        pose.isHeld = !playing
+        coordinator.pose = pose
+        coordinator.lastSpin = spin
         node.runAction(.fadeIn(duration: 0.35))
         // The figure is the scene's one shadow caster; the ring, the shadow
         // patch and the set never cast (2026-09-18).
@@ -2473,6 +2495,10 @@ struct AltarStageView: UIViewRepresentable {
     /// The rite.
     private func play(_ ceremony: AltarCeremony, _ coordinator: Coordinator) {
         guard let scene = coordinator.scene, let figure = coordinator.figure else { return }
+        // The rite has the figure: a break in flight gives way, and the
+        // untouched clock starts again.
+        coordinator.pose?.interruptBreak()
+        coordinator.pose?.touch()
         let tint = UIColor(hex: ceremony.tintHex) ?? .white
         let height = coordinator.figureHeight
         switch ceremony.kind {
