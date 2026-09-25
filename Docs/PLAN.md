@@ -10468,3 +10468,14 @@ The review of the phase's Swift (two reviewers, a skeptic per finding)
 found one real fault, minor, mended in 2d8dda57: the guard against a
 compounding turn read an idle's slow neck as a hand-back while the turn
 eased through zero, and the head moved in 0.6° steps.
+
+**Run 262 (71580f6e): the face follows the lens, measured.** Green, the
+stress alive again (the summon half 401 MB, the battle half 257 MB, no
+crash report), and main moved to it. The `[Gaze]` lines now print where
+the face points beside where the lens stands, and every one shares its
+sign: on the altar the lens +32° and the face +18° to +30°, on the Stage
+the lens −37° and the face −16° to −20°, on the reveal the lens +23° and
+the face +26° to +27°, the lab's +40° direction and the face +22° to +25°
+— the gaze's turn of about 25° with the idle's own head survey a few
+degrees either side of it. During a break (strength falling) the face is
+the break's.
