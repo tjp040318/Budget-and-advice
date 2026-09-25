@@ -65,6 +65,12 @@ final class Gaze {
     /// The joint the constraint hangs on, while it does.
     private weak var joint: SCNNode?
     private let constraint: SCNTransformConstraint
+    /// The head and the figure, and the head's face in its own frame at
+    /// the bind (the figure's +Z carried into it): for `faceAcross`, the
+    /// tour's measure of where the face points.
+    private weak var head: SCNNode?
+    private weak var figure: SCNNode?
+    private let faceLocal: SIMD3<Float>
 
     /// Finds the joint the head hangs from and hangs the gaze's constraint
     /// on it. Nil for a rig with no head over a neck. The figure must stand
@@ -83,9 +89,25 @@ final class Gaze {
         state = made
         constraint = Self.headTurn(made)
         self.joint = joint
+        self.head = head
+        self.figure = figure
+        let headRest: simd_quatf = toFigure * Self.rotation(of: head.simdWorldTransform)
+        faceLocal = headRest.inverse.act(SIMD3<Float>(0, 0, 1))
         var hung = joint.constraints ?? []
         hung.append(constraint)
         joint.constraints = hung
+    }
+
+    /// Where the face points now, in degrees across the figure's front
+    /// (+ toward its left; the pose lab's measure), read off the
+    /// presentation tree: the clip and the gaze together. Main thread, for
+    /// the tour's `[Gaze]` line; nil once the figure has gone.
+    func faceAcross() -> Float? {
+        guard let head, let figure else { return nil }
+        let toFigure: simd_quatf = Self.rotation(of: figure.presentation.simdWorldTransform).inverse
+        let headNow: simd_quatf = toFigure * Self.rotation(of: head.presentation.simdWorldTransform)
+        let face: SIMD3<Float> = headNow.act(faceLocal)
+        return atan2(face.x, face.z) * 180 / .pi
     }
 
     /// Takes the constraint off the joint: the head is the clip's again.

@@ -631,8 +631,11 @@ final class PoseLayer {
         #if DEBUG
         guard let gaze else { return }
         let seen = gaze.state.reading()
-        print(String(format: "[Gaze] %@ %@: the head turned %+.1f° across and %+.1f° up over its clip, the lens %+.1f° off its front, strength %.2f, %d frames",
-                     label, clips, seen.yaw, seen.pitch, seen.across, seen.strength, seen.frames))
+        // Where the face points, measured, beside where the lens stands: the
+        // two share a sign when the gaze turns the head toward the lens.
+        let face: Float = gaze.faceAcross() ?? .nan
+        print(String(format: "[Gaze] %@ %@: the head turned %+.1f° across and %+.1f° up over its clip, the lens %+.1f° off its front, the face %+.1f°, strength %.2f, %d frames",
+                     label, clips, seen.yaw, seen.pitch, seen.across, face, seen.strength, seen.frames))
         #endif
     }
 

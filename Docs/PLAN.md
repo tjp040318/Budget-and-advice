@@ -10445,3 +10445,26 @@ about +25° across; the reveal (step 5) with its one turn and the head on the
 lens; `20-victory-triumph` with the survivors in the new victories and the
 reckoning after them; and the island's and the stages' breaks, which may now
 be a fist pump or a stomp but never a bow.
+
+**Run 261 (ed32aa58): green, and the stress finished alive.** The build
+compiled `Gaze.swift` and the rest; the tests passed; the tour ran every
+step. The summon stress ran its thirty singles and three ten-pulls to
+`stress summon done` at 406 MB, the battle stress its six runs at 265 MB,
+and no crash report was left (run 260 died in the summon half), so the
+copy passes under the importer's lock hold. The `[Gaze]` lines: on the
+altar the head turned +22–25° toward a lens +32° off the figure's front,
+on the collection's Stage −24° toward a lens −37° off, on the reveal
++10–25°; a break took the head (strength 0.00, the turn −0.9°) and gave it
+back; the lab's fixed direction read +23–24°. The frames: Sekhmet's and
+the awakened Ares's fist pumps on the reveal at the high point, Zeus's
+victory in the win's first frame and the survivors back in their stance
+by the triumph, the battles, the arena, the Labyrinth and two realms as
+before. The two Stage frames alone could not settle the head's direction
+(each relaunch starts the idle at a random phase, and its head survey
+moves the face as much as the gaze does), so the `[Gaze]` line now also
+prints where the FACE points, measured off the presentation tree as the
+pose lab measured it (`Gaze.faceAcross`): it must share the lens's sign.
+The review of the phase's Swift (two reviewers, a skeptic per finding)
+found one real fault, minor, mended in 2d8dda57: the guard against a
+compounding turn read an idle's slow neck as a hand-back while the turn
+eased through zero, and the head moved in 0.6° steps.
