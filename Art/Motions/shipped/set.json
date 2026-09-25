@@ -1,6 +1,6 @@
 {
  "attack_basic": {
-  "preset": "Art/Motions/aimed/set_attack_basic.motion.npz",
+  "preset": "Art/Motions/set_attack_basic.motion.npz",
   "frames": 60,
   "seconds": 2.0,
   "rate": 1.0

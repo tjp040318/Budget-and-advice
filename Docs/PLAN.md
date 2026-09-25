@@ -10786,12 +10786,17 @@ feet and the chest at every strike):
 | Hephaestus's ultimate | +56° (both hands) | +54°: the two-handed slam | the ship was right |
 | Nezha's basic (cut) | +48° | +48°: the baton chop | the ship was right |
 | Taweret's basic (cut) | +66° (both hands) | +66°: the staff chop | the ship was right |
-FREYA_ROWS
+| Freya's basic | +36° | +36°: the overhand cast | the ship was right |
+| the scarab knight's basic | +36° | +36°: the diagonal club | the ship was right |
+| Set's basic | +35° (the counterweight hand) | −10.5°: the flat slash | unturned (pinned) |
 | polearm ×3 | +85° (the stab and the sweep's wrap; the thrust read as a spread) | −0.5° by the thrust and the stab | unturned; the sweep's blow moved to where it crosses the line (f56 → f51) and cut before it wraps behind |
 | polearm ×2 | +35° (the stab alone) | +1° by both strikes | unturned |
 | unarmed ×2 | −42° (the guard hand averaged in) | −28°: the hook's hand, the uppercut's | pinned −28° |
 | unarmed ×3 | −41° | −31° | pinned −31° |
 | unarmed ×4 | −44° | −37° by the three punches | pinned −37°, eased off (f56–70) before the kick, which lands as made |
+
+Nine of the fourteen were misreads and five the ship had right; every family
+wearing one of the nine was shipped again.
 
 **The composed moves.** The 30 shared second-skill moves (blade, heavy,
 polearm, unarmed ×2–×4, caster ×2–×5, archer ×2/×3/×5, the areas and the

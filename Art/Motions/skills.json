@@ -4801,7 +4801,9 @@
       "judged": "keep",
       "judged_prompt": "Fighting stance facing the target, a hooked sword in the right hand. A short step straight in and the right arm reaches forward to the target's chest, hooks it, and rips back to the right hip in one fast pulling slash, the chest square to the target, then a sly step back to the fighting stance. In place.",
       "judge_reason": "Keep: one wide slash with the right hand across the front, square to the target at the blow, ending on its stance.",
-      "judge_notes": "Board /tmp/judge_2_set_attack_basic.jpg, with f10-f36 re-rendered every frame (front/side/back and from the battle camera). f0-f10 is the wind-up: the sword is cocked back over the left shoulder (tip behind her) and the shoulders turn 54 deg left. f11-f18 is the slash: the right arm sweeps from her left across the front to her right, and the blade tip reaches 22 m/s. f16 is the blow: elbow 163 deg"
+      "judge_notes": "Board /tmp/judge_2_set_attack_basic.jpg, with f10-f36 re-rendered every frame (front/side/back and from the battle camera). f0-f10 is the wind-up: the sword is cocked back over the left shoulder (tip behind her) and the shoulders turn 54 deg left. f11-f18 is the slash: the right arm sweeps from her left across the front to her right, and the blade tip reaches 22 m/s. f16 is the blow: elbow 163 deg",
+      "aim_heading": -10.5,
+      "kept_as": "kept on target: audited, the slash crosses the front at -10.5; the counterweight hand flung the other way read +35"
     },
     "set_ultimate": {
       "history": [
