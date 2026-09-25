@@ -1326,9 +1326,16 @@ Pantheon/Resources/Models --real` passes each family's sources to
    strike, holds through the last and eases away, so the figure starts and
    ends square. The heading is the hand furthest from the hips at each
    strike, both hands when they strike together, and none for a spread of
-   both arms; where that misleads (a one-handed strike whose other hand hangs
-   on the far side reads as a spread: the cobra priestess, Osiris), the
-   judge's own measure is the record's `aim_heading`. Never a rite's spread.
+   both arms. That reading misleads three ways: a one-handed strike whose
+   free hand hangs or is flung further out (the cobra priestess and Osiris
+   read as a spread; Sif's ultimate read +87° for a stab at +17°; Thor's
+   hook read the pulled-back fist), a kick (Nezha's ultimate, Vidar's basic,
+   Mercury's ultimate), and a combo that ends in a sweep (the polearm ×3).
+   There the judge's own measure is the record's `aim_heading`, or for a
+   composed move the recipe's in `style_moves.json`; a judge's `SHIP:` note
+   is applied before the ship, and a clip its judge saw facing the target
+   that the ship turns more than 30° is audited on renders before it is
+   believed (PLAN.md, *As built*, has the audit). Never a rite's spread.
 3. **archery** (`aimed`, `aimed_preset`): every archery clip is turned so the
    bow arm points at the target at the loose (`bow_yaw`) — the signatures and
    the palette's own 224 (the heavy, and the basic where no signature fills
@@ -1337,14 +1344,17 @@ Pantheon/Resources/Models --real` passes each family's sources to
 4. **mirror**: a clip is mirrored where the family's weapon hand is not the
    source's (`source_side`: every sentence right-handed but the archers';
    `HAND_OVERRIDE` for Heimdall and Idunn left, the dark elf and Bellona
-   right; a judged `flip`).
+   right; a judged `flip`: the satyr's and Hades's basics, Chang'e's
+   ultimate).
 
 Then `python3 tools/skill_moves.py timings` writes `clip_timings.json` from
 the cut reports. Run it after every ship.
 
 ### The lengths
 
-A clip plays at its own length up to its ceiling and never faster than 2×:
+A clip plays at its own length up to its ceiling and never faster than 2×
+(every signature and composed move at 1.25× or less; the palette's archery
+shot, 224 cut to 3.0 s, at 1.5× as an archer's basic and heavy):
 basic 2.0 s, heavy 2.0, ×2 2.4, ×3 2.8, ×4 3.2, ×5 3.6, area 2.6, rite 2.8,
 ultimate 3.4 (`ClipTimings.ceiling`, `motion_palette.CONTRACT`,
 `ClipTimingTests`). The ceilings were 1.6/1.7/2.6/3.4 when the signatures

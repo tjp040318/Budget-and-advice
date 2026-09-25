@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "219",
-  "frames": 46,
-  "seconds": 1.53,
-  "blow_source": 0.333,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.79,
-  "follow_speed": 1.15,
-  "rate": 1.18
+  "preset": "Art/Motions/neptune_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "242",
@@ -22,15 +17,10 @@
   "rate": 1.34
  },
  "ultimate": {
-  "preset": "91",
-  "frames": 85,
-  "seconds": 2.83,
-  "blow_source": 0.548,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 0.88,
-  "follow_speed": 1.19,
-  "rate": 1.18
+  "preset": "Art/Motions/aimed/neptune_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88
  },
  "idle_combat": {
   "preset": "ready (b) over the 89 guard",
@@ -78,5 +68,11 @@
    22.5
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_polearm_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
  }
 }

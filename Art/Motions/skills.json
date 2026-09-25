@@ -8649,7 +8649,7 @@
       "role": "basic",
       "queued": "2026-09-25T18:07:14Z",
       "state": "archived",
-      "touched": 1790359670.9372602,
+      "touched": 1790362139.7383523,
       "motion_task": "01a0d9c0-06be-7460-aea2-98c78d5e77af",
       "motion_created": "2026-09-25T18:07:16Z",
       "balance_before": 193,
@@ -8667,7 +8667,20 @@
       "seconds_made": 2.5,
       "blow_frame": 15,
       "blow_fraction": 0.203,
-      "archived_at": "2026-09-25T18:07:50Z"
+      "archived_at": "2026-09-25T18:07:50Z",
+      "contact_frames": [
+        16,
+        30
+      ],
+      "contacts": [
+        0.216,
+        0.405
+      ],
+      "judged": "keep",
+      "kept_as": "aimed at ship",
+      "judged_prompt": "Fighting stance, a short winged wand in the right hand. Two quick strikes with the right arm: the wand raised high and whipped hard straight down to waist height, then at once driven up and forward in a sharp rising jab, the right arm fully straight at the target's chin, the left hand up and open, then a light skip back to the fighting stance. In place.",
+      "judge_reason": "Direction only. There are two right-hand strikes, and both land about 50 deg to his LEFT while the body is side-on (chest 65-81 deg left, never past 90). Strike 1: the wand is raised overhead (f3-f12, hand at 1.69 m) and whipped down across the front to the left hip at waist height (f13-f21). The hand reaches 11.4 m/s at f16 and the arm is straight (172 deg) at f17. After a one-frame stop at the waist (f22), strike 2: the straight arm drives back up to chest height (f23-f30, 3.1 m/s at f26). The hand ends 0.53 m from the shoulder at 1.36 m with the weapon level at the target, then folds into t",
+      "judge_notes": "Board /tmp/judge_2_mercury_attack_basic.jpg. I also re-rendered f12-f37 larger (front and side), rendered the aimed copy from the front and from behind, and made per-frame numbers. The second strike is soft. Its hand peaks at 3.1 m/s against the whip's 11.4, which is why the automatic peaks find only [15]. It rises mostly up (0.40 m) rather than forward (0.09 m) and reaches chest height, not the c"
     },
     "mercury_ultimate": {
       "prompt": "Fighting stance, a short winged wand in the right hand. He bounces on the toes and dips low, coiled a moment, then pivots on the ball of the left foot and whips the right leg round and forward in a roundhouse kick, the shin and heel smashing into the target's ribs at chest height, arms flung wide, then sets the foot down light, back in the fighting stance. In place.",
@@ -8830,7 +8843,7 @@
       "role": "basic",
       "queued": "2026-09-25T18:07:14Z",
       "state": "archived",
-      "touched": 1790359682.8190331,
+      "touched": 1790362139.7395535,
       "motion_task": "01a0d9c0-0a4f-743f-aad1-7290b3c17447",
       "motion_created": "2026-09-25T18:07:16Z",
       "balance_before": 183,
@@ -8848,7 +8861,17 @@
       "seconds_made": 2.0,
       "blow_frame": 20,
       "blow_fraction": 0.339,
-      "archived_at": "2026-09-25T18:08:02Z"
+      "archived_at": "2026-09-25T18:08:02Z",
+      "contact_frames": [
+        18
+      ],
+      "contacts": [
+        0.305
+      ],
+      "judged": "keep",
+      "judged_prompt": "Fighting stance, a short trident held low in the right hand beside the right hip, the left fist kept still at the chest. He sinks a little, then surges up and forward, the right arm driving the trident up in one rising underhand thrust until the arm is straight at the target's chest, like a wave breaking on a rock, then back to the fighting stance. In place.",
+      "judge_reason": "Kept. There is one right-hand blow through the target. He sinks slightly and draws the arm back to his right side (f0-f10). The arm then sweeps forward and across, rising from 1.21 m to 1.55 m. It crosses the target line at full forward reach and chest height at f18: 0.72 m ahead of the hips, 0.07 m left, 1.42 m high, elbow 146 deg, dead ahead (+6 deg). The faults are all in its shape, and none is a reroll fault. It is a rising right-to-left sweep, not an underhand thrust. The trident hand starts up at the right shoulder, not low by the hip. The left fist rests at the waist, not the chest.",
+      "judge_notes": "Board /tmp/judge_2_neptune_attack_basic.jpg. I also rendered f15-f36 larger, did a three-view head check at f18/f24/f28/f32, and made per-frame numbers. The follow-through wraps the arm round to the left hip, and the upper chest turns up to 111 deg left. It is past side-on only f23-f33 (0.37 s), under the half-second rule, while the head stays on the target (at most 29 deg off). Relative to the ch"
     },
     "neptune_ultimate": {
       "prompt": "Fighting stance, a short trident in the right hand. Rearing like a stallion, he lifts the right knee high and the trident high overhead with a roar, the left fist hauling back as if reining in horses, held a moment, then stamps the foot down and lunges, driving the trident straight forward into the target's chest in one long thrust, then back to the fighting stance. In place.",
@@ -9290,7 +9313,7 @@
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790360212.9255426,
+      "touched": 1790362139.7365355,
       "motion_task": "01a0d9b6-89ef-70bd-a758-e9ca433f7956",
       "motion_created": "2026-09-25T17:56:54Z",
       "balance_before": 308,
@@ -9308,7 +9331,18 @@
       "seconds_made": 2.0,
       "blow_frame": 25,
       "blow_fraction": 0.424,
-      "archived_at": "2026-09-25T18:01:36Z"
+      "archived_at": "2026-09-25T18:01:36Z",
+      "contact_frames": [
+        28
+      ],
+      "contacts": [
+        0.475
+      ],
+      "judged": "keep",
+      "kept_as": "aimed at ship",
+      "judged_prompt": "A sly standing pose, weight on one hip, both arms relaxed at her sides. The right hand lifts to her mouth as if hiding a smile, only briefly, then the right arm snaps straight forward at the target at chest height in one fast flick, as if throwing a wisp of fox-fire, the left hand staying at her side, and she settles back to standing. In place.",
+      "judge_reason": "Direction only. There is one right-hand flick, released once. The hand rises to the right side of the face (f6-f20, held about 0.2 s). It then snaps forward and across to her LEFT (f21-f28, 4.4 m/s at f26). It is furthest forward at f28: 0.40 m ahead of the hips, 1.48 m high, 34 deg left of the target measured from the hips and 45 deg measured from the shoulder. The chest turns 45-57 deg left with it. On a scratch copy, the ship's aim at [28] turns the clip -33.5 deg.",
+      "judge_notes": "Board /tmp/judge_2_fox_spirit_attack_basic.jpg. I also re-rendered f18-f34 at every frame, made per-frame joint numbers, and rendered the aimed copy (scratch jfmn/, nothing written to the repo). The aimed flick points straight at the target at f28. It starts and ends in the relaxed stance with both arms at her sides (f59 = f0). The left hand stays at her side. The head stays on the target througho"
     },
     "guan_yu_attack_basic": {
       "prompt": "Fighting stance, tall and dignified, a broad curved sword in the right hand, the left hand at the belt. He draws the sword back past the right hip, then one heavy step forward on the left foot and a powerful flat cut from right to left across the target's chest in a crescent arc, the whole weight behind it, then a measured step back to the fighting stance. In place.",

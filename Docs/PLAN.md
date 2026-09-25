@@ -10688,3 +10688,188 @@ video beside the frames.
   re-rolls are budgeted.
 - A painted sheet can come back incoherent or on grey; each is keyed and
   judged on a contact sheet before shipping.
+
+### As built (2026-09-25)
+
+**What plays now.** Every skill slot plays a clip made for it, and every hit
+lands on a strike of that clip (MOTION.md §12 has the table and the ship's
+steps):
+
+| slot | clip | made from |
+|---|---|---|
+| basic (slot 0) | `attack_basic` | the family's signature; else its palette basic |
+| second, one blow | `attack_heavy` | the palette's heavy blow, as dealt on the 24th |
+| second, N blows | `skill_x2` … `skill_x5` | a shared move per weapon kind, chained from single strikes |
+| second, every enemy | `skill_area` | a shared move per weapon kind |
+| second, a rite | `cast_release` | a shared move per weapon kind |
+| ultimate (slot 2) | `ultimate` | the family's signature (4★ and 5★); else its palette ultimate |
+
+**The signatures, as they ended.** 152 sentences (92 basics, 60
+ultimates), written one family at a time from its design sentence and its
+kit, went through Meshy's Text to Motion onto the donor (prime, 10 credits,
+plus 3 to apply) in 237 takes; every motion was archived the moment it
+landed, so the donor's expiry (2026-09-26 21:12 UTC) takes nothing with it.
+The FBX route was tried on the first sentence and dropped: a prime motion's
+FBX is an SMPL-H skeleton in a T-pose, not the donor's, so skipping the
+3-credit apply would have meant a pose mapping of our own for every motion.
+
+| outcome | count |
+|---|---|
+| kept on the first take | 62 |
+| kept on the second | 42 |
+| kept on the third | 2 |
+| retired: archery (the whole kind, below) | 8 |
+| retired: two failed takes (three for Achilles's, Anhur's and Apollo's ultimates) | 36 |
+| failed on Meshy's side (Jiangshi's and Nüwa's basics) | 2 |
+
+A retired move plays the palette's clip for its slot, for good; the credits
+ran to eleven at the second takes, so no move got a third that had not
+already been bought. The retired two-take moves: Achilles, Anhur, Apollo,
+Bragi, Frigg, Hades, Heimdall, Horus, Loki, Mars, Nike, Osiris, Serqet, Set,
+Thor and Tyr's ultimates; Demeter, the gladiator, Hathor, Hel, Hephaestus,
+the hoplite, Horus, Isis, Khnum, the light elf, Mars, the minotaur,
+Nephthys, Njord, Pluto, Ptah, the shield maiden, the siren, Sobek and
+Surtr's basics.
+
+**The judges.** Every archived motion was judged by an agent on its donor
+board (`skill_moves.py board <key>`: front and side every third frame, the
+hands' speed under it) against its sentence — keep, aim or re-roll with a
+corrected sentence, and in every case the frame of each strike
+(`tools/skills/judge_workflow.js`; the verdicts go in through
+`tools/skills/apply_verdicts.py`). What they found, in order of how often:
+1. **Direction** (most rejections): text to motion turns the body and throws
+   sideways — Ra's basic landed 86° off its target, the einherjar's 56°. A
+   turn fixes that for nothing (`aim_blows`, below). 52 kept takes are aimed
+   by the ship.
+2. **The wrong count**: a basic that swings three times, an ultimate with
+   two releases.
+3. **Nothing happens**: the weapon hand never leaves the shoulder, and the
+   empty hand does the work.
+4. **The back to the target** for more than half a second — the commonest
+   reason a second take failed too: a spin asked for, or a lunge, comes back
+   as a whirl.
+
+**What a judge saved without paying.**
+- *A cut* (`cut` [first, last]; `cut_source`, the contacts rebased): Sun
+  Wukong's basic jabbed twice for a one-hit kit (kept f0–32), Taweret's
+  chopped twice (kept the second, harder chop, f22–59), Nezha's swung twice
+  (kept the first chop, f0–28).
+- *A mirror* (`flip`): the satyr's and Hades's basics, and Chang'e's
+  ultimate, whose second take was a clean rite led by the empty left hand —
+  mirrored, the mirror hand raises and sweeps, as written.
+- *The judge's heading* (`aim_heading`), where the ship's reading of the
+  hands misleads (next paragraph): 14 takes.
+
+**The aim, and its audit.** `aim_blows` measures where the blow lands at
+each judged strike — the hand furthest from the hips, both hands when they
+strike the same way, none for a spread — and when the mean is more than 20°
+off the target it turns the root by that much: rising from a quarter of the
+way to the first strike, held through the last, eased away by the end, so
+the figure starts and finishes square. Never on a rite's spread. The hand
+rule misreads three ways, and the judges' `SHIP:` notes named most of them
+— a one-handed blow whose FREE hand is flung further out (Sif's ultimate
+read +87° for a stab at +17°), a KICK (Nezha's ultimate, Vidar's basic,
+Mercury's ultimate: the arms fly apart and read as a spread or the wrong
+way), and a combo that ENDS IN A SWEEP (the polearm ×3's last sweep dragged
+its mean to 85°). Sif's ultimate shipped turned 87° away from its target
+before the note was read, which is why every judge's `SHIP:` note is now
+applied before a ship and why every clip a judge had seen facing its target
+that the ship turned more than 30° was audited on renders
+(`aim-audit`, one agent per group, measuring each hand, the forearms, the
+feet and the chest at every strike):
+
+| clip | the ship read | the blow | done |
+|---|---|---|---|
+AUDIT_ROWS
+
+**The composed moves.** The 30 shared second-skill moves (blade, heavy,
+polearm, unarmed ×2–×4, caster ×2–×5, archer ×2/×3/×5, the areas and the
+rites) are chained from single strikes (`style_moves.json`: presets bought
+at 3, and single-action sentences at 13), each segment carried onto the
+first segment's rig before chaining — the Colossus-rigged presets 127 and
+128 had carried the hips at 2.4 m and floated the heavy composites — with
+the hips held at the first frame's place, so the strike count and the
+contacts are exact by construction. The heavy area's sentence leapt 1.9 m,
+and a heavy never leaps: it is Charged Ground Slam (127) whole, cut from its
+fourth frame with an 8-frame recovery (3.13 s, played at 1.2× in its 2.6 s
+slot); the sentence is kept in `Art/Motions/history/`. The two area
+sentences for casters (a two-handed sweep) and robed casters (a point from
+the sky) were judged like the signatures and kept.
+
+**Archery.** No archery motion Meshy makes ever looses: the signatures hold
+the draw to the last frame or throw overhand, and the palette's own shots
+loose about 80° to the side (the body side-on as an archer stands, the bow
+arm pointing past the target). Every archer's signature is retired to the
+palette's archery — Charged Arrow (224) for the basic and the heavy (cut
+50–140) and 222 for the ultimate — each aimed at its loose by `bow_yaw` (the
+left arm to the hand) through `aimed_preset`: Artemis, Diana, Skadi and
+Ullr. 224's cut is 3.0 s, so an archer's basic and heavy play at 1.5× in
+their 2.0 s slots; every signature and composed move plays at 1.25× or less.
+
+**Mirroring.** A clip is mirrored when the family's weapon hand is not the
+source's: every sentence is written right-handed except the archers' (the
+bow in the LEFT hand), so `source_side` reads the kind; `HAND_OVERRIDE`
+corrects the four families whose weapon hand the palette read wrong (Heimdall
+and Idunn left, the dark elf and Bellona right).
+
+**Clip lengths.** A 2.0 s basic played at 1.6 s ran 25% fast and looked it,
+so the ceilings are the clips' own lengths: basic 2.0, heavy 2.0, ×2 2.4, ×3
+2.8, ×4 3.2, ×5 3.6, area 2.6, rite 2.8, ultimate 3.4 (`ClipTimings.ceiling`,
+`motion_palette.CONTRACT`, `ClipTimingTests`) — not the design's 1.6/2.6/3.4.
+
+**Ranged hits.** A ranged caster's hit is presented a flight after its
+release: 0.20 s for an arrow, 0.28 s for an orb (`SkillFX.flight`, read by
+the timeline and the effect alike), so the number lands when the arrow does.
+
+**The effects.** 63 sheets and singles painted on nano-banana-2 at 6
+credits, keyed per cell. The meteor's sheet painted a second, smaller meteor
+falling in its last four cells; they were replaced by the blast's dust fading
+out.
+
+**The engine** (four lanes on disjoint files, then one integrator, then an
+independent review of the whole diff before the first build — no Swift
+compiler exists here): the clip rule and `ClipTimings` (lane A); the per-hit
+timeline, `SkillFX` and the painted pieces in `VFXLibrary` (lane B);
+`SkillSound`, sixteen synthesised sounds and five rebuilt impacts (lane C);
+and the skill reel, CI step 54 (lane D). The integrator's fixes: a serial
+that stops a scheduled effect drawing after a skip or a forfeit, the swing
+sound led in real seconds (at ×3 it had peaked after the blow), the
+ultimate's charge sound started a charge's length before the first hit, and
+a skip that sends the camera home from an ultimate's push.
+
+**Checked.** `tear_check.py` (the scratch, on `clip_fix.clip_stretch`)
+measured every new clip's cloth on its family's base beside the clip it
+replaced: the new clips stretch no more than the old ones overall; six rose
+by more than double, and on the pictures only the dwarf smith's wind-up (its
+arms overhead) shows it. The robes welded to the arm (Athena, Freya, Baldr,
+the berserker, Fenrir) tear on the new moves as they did on the old — the
+remake is still the fix (*The robe ring's verdict*).
+
+**What went wrong on the way.**
+- *The verdict tool put old verdicts on new takes.* A workflow rewrites its
+  journal for as long as it runs; applying by the file's time put ten
+  second-take verdicts on third takes. A verdict now lands only if its judge
+  STARTED after the take was queued, and `--repair` cleared the ten.
+- *The disk ran out twice* (the session's allowance is about 38 GB, 16 of it
+  .git): in Guan Yu's ship and the eighth re-roll's download. The scratch was
+  cleared and both resumed without paying again (`skill_moves.py run` picks
+  an archived task up by its id).
+- *A ship ran before its judge's note was read* (Sif's ultimate, above).
+
+**Known limits.**
+- The game holds the hips on the spot (`canonicalise`), so a motion that
+  travels (a lunge, a leap) skates its feet a little instead; the worst
+  (Taweret's ultimate, 1.76 m) was re-rolled.
+- The caster ×N moves release with both arms flung wide (Mage Spell Cast 4,
+  133): a burst, not a push; the orb flies from the chest.
+- Sounds can sum past full scale when a cast's pieces land together (1.61 at
+  worst, lane C's mix check): a limiter, which means `AVAudioEngine`, is the
+  fix.
+
+**The bill.** 3,743 of the 3,754 credits, 11 left:
+
+| item | count | credits |
+|---|---|---|
+| motions (signature and style takes, prime + apply) | 254 at 13 | 3,302 |
+| effect sheets and singles | 63 at 6 | 378 |
+| presets for the composed moves | at 3 | 63 |
