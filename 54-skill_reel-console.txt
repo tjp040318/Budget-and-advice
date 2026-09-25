@@ -1,0 +1,1134 @@
+== stdout
+[Crash] armed (under the tour MetricKit and the exit flag are off: the job kills the app at every step)
+[Mem] launch footprint 14 MB, available n/a MB, peak 14 MB, gpu 0 MB, heap 0 of 27 MB, graphics 0 MB, internal 5 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Fonts] registered 8 of 8 bundled faces; Cinzel true, Manrope true
+[ModelLibrary] bundle: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Bundle/Application/D0E7CF48-8C44-4E83-8E62-C0CEA80BFA22/Pantheon.app
+[ModelLibrary] 3D files actually inside the app: 1650
+[ModelLibrary]     achilles.usdz
+[ModelLibrary]     achilles_attack_basic.usdz
+[ModelLibrary]     achilles_attack_heavy.usdz
+[ModelLibrary]     achilles_break.usdz
+[ModelLibrary]     achilles_death.usdz
+[ModelLibrary]     achilles_hit_react.usdz
+[ModelLibrary]     achilles_idle.usdz
+[ModelLibrary]     achilles_idle_alt.usdz
+[ModelLibrary]     achilles_idle_combat.usdz
+[ModelLibrary]     achilles_lod.usdz
+[ModelLibrary]     achilles_skill_x2.usdz
+[ModelLibrary]     achilles_skill_x3.usdz
+[ModelLibrary]     achilles_ultimate.usdz
+[ModelLibrary]     achilles_victory.usdz
+[ModelLibrary]     achilles_walk.usdz
+[ModelLibrary]     amazon.usdz
+[ModelLibrary]     amazon_attack_basic.usdz
+[ModelLibrary]     amazon_attack_heavy.usdz
+[ModelLibrary]     amazon_break.usdz
+[ModelLibrary]     amazon_death.usdz
+[ModelLibrary]     amazon_hit_react.usdz
+[ModelLibrary]     amazon_idle.usdz
+[ModelLibrary]     amazon_idle_alt.usdz
+[ModelLibrary]     amazon_idle_combat.usdz
+[ModelLibrary]     … and 1626 more
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       ammit -> ammit.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       apep -> apep.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   MISSING  boss_bronze_colossus — will render as a placeholder
+[ModelLibrary]   OK       boss_colossus -> boss_colossus.usdz
+[ModelLibrary]   OK       boss_hydra -> boss_hydra.usdz
+[ModelLibrary]   OK       boss_jotunn -> boss_jotunn.usdz
+[ModelLibrary]   MISSING  boss_longmen_dragon — will render as a placeholder
+[ModelLibrary]   OK       boss_unwrapped_king -> boss_unwrapped_king.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       sandstone_sentinel -> sandstone_sentinel.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       serpopard -> serpopard.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sun_scarab -> sun_scarab.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[Mem] step 54 skill_reel appeared footprint 22 MB, available n/a MB, peak 22 MB, gpu 0 MB, heap 8 of 62 MB, graphics 0 MB, internal 20 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Tour] reel: 6 families, 18 casts planned: Zeus · Ember, Ra · Tide, Sif · Gale, Artemis · Gale, Isis · Radiance, Poseidon · Tide
+[Perf] 21:00:23.927 main thread was busy for about 824 ms before this
+[ModelLibrary] 'sif_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'sif_lod' built 1 node(s) of interest:
+      sif_mesh: geometry 3 sources, 1 elements, bbox x -0.38..0.38 y 0.00..2.00 z -0.35..0.35; skinner with 24 bones
+[ModelLibrary] 'isis_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'isis_lod' built 1 node(s) of interest:
+      isis_mesh: geometry 3 sources, 1 elements, bbox x -0.32..0.32 y -0.00..2.00 z -0.17..0.17; skinner with 24 bones
+[ModelLibrary] 'poseidon_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'poseidon_lod' built 1 node(s) of interest:
+      poseidon_mesh: geometry 3 sources, 1 elements, bbox x -0.56..0.56 y -0.00..2.15 z -0.77..0.77; skinner with 22 bones
+[ModelLibrary] 'artemis_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'artemis_lod' built 1 node(s) of interest:
+      artemis_mesh: geometry 3 sources, 1 elements, bbox x -0.46..0.46 y -0.00..1.95 z -0.22..0.23; skinner with 24 bones
+[ModelLibrary] 'zeus_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'zeus_lod' built 1 node(s) of interest:
+      zeus_mesh: geometry 3 sources, 1 elements, bbox x -0.55..0.54 y -0.00..2.15 z -0.47..0.47; skinner with 22 bones
+[ModelLibrary] 'ra_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'ra_lod' built 1 node(s) of interest:
+      ra_mesh: geometry 3 sources, 1 elements, bbox x -0.37..0.37 y 0.00..2.15 z -0.21..0.21; skinner with 24 bones
+[ModelLibrary] 'shabti_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'shabti_lod' built 1 node(s) of interest:
+      shabti_mesh: geometry 3 sources, 1 elements, bbox x -0.34..0.34 y 0.00..1.70 z -0.25..0.25; skinner with 24 bones
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.05 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.33 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.20 s, a group of 72 tracks
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 28° for #FF9A3C in the surface shader
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'zeus_lod': measured x1.09 y2.15 z0.93, 2.1 units → 2.15 m (×1.0003)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[Perf] 21:00:37.106 unit zeus built took 772 ms on main
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 208° for #3C9BF2 in the surface shader
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] 'ra_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'ra_lod': measured x0.74 y2.15 z0.41, 2.2 units → 2.15 m (×0.9993)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 5.40 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 149° for #4FC98A in the surface shader
+[ModelLibrary] 'sif_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sif_lod': measured x0.75 y2.00 z0.69, 2.0 units → 2.00 m (×1.0011)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.53 s, a group of 72 tracks
+[ModelLibrary] model: 1 textured material(s); the 120° costume accent becomes 149° for #4FC98A in the surface shader
+[ModelLibrary] 'artemis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'artemis_lod': measured x0.92 y1.95 z0.45, 1.9 units → 1.95 m (×1.0002)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.40 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 47° for #F5D96B in the surface shader
+[ModelLibrary] 'isis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'isis_lod': measured x0.64 y2.00 z0.34, 2.0 units → 2.00 m (×1.0001)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.30 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.55 s, a group of 72 tracks
+[Perf] 21:00:37.568 unit isis built took 145 ms on main
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.37 s, a group of 72 tracks
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 222° for #6C7A9C in the surface shader
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': measured x0.68 y1.70 z0.50, 1.7 units → 1.90 m (×1.1189)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 6.70 s, a group of 72 tracks
+[Perf] 21:00:37.696 unit shabti built took 126 ms on main
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 66 tracks
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 66 tracks
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[VFX] script stands: 3.20 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] vfx_wisp refused: painted on a light ground (an opaque square when added)
+[VFX] sunburst stands: 3.40 m, its centre 1.20 m up, 0.95 of it upright
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.93 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.03 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.50 s, a group of 72 tracks
+[VFX] heal stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] buff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.33 s, a group of 72 tracks
+[VFX] debuff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[VFX] shield stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] pre-drawn under the stage card: 18 effect(s), 4 projectile(s), 19 skill painting(s)
+[Perf] 21:00:40.159 battle build: stage 12384 ms, light and camera 5 ms, 8 unit(s) 1438 ms, 16216 ms in all
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[Perf] 21:00:40.237 thumbnail portrait_zeus_ember@1024 took 68 ms off main
+[Perf] 21:00:40.237 warming 1 thumbnails took 68 ms off main
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[Perf] 21:00:40.324 main thread was busy for about 16112 ms before this
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.37 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.40 s, a group of 66 tracks
+[Perf] 21:00:40.466 save (133 units, 19 relics) took 136 ms on main
+[Mem] step 54 skill_reel settled footprint 852 MB, available n/a MB, peak 852 MB, gpu 0 MB, heap 138 of 212 MB, graphics 0 MB, internal 1036 MB, compressed 0 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 4 MB; views battle 1, island 0, reveal 0
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.60 s, a group of 66 tracks
+[Frames] battle hitch 1883 ms at 1.9 s
+[Perf] 21:00:44.462 main thread was busy for about 3825 ms before this
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 66 tracks
+[VFX] 21:00:44.610 vfx_orb_ember retired, 1 system(s) taken off
+[VFX] 21:00:44.613 vfx_projectile_flare retired, 1 system(s) taken off
+[VFX] 21:00:44.613 vfx_projectile_fireball retired, 1 system(s) taken off
+[VFX] 21:00:44.614 vfx_orb_gale retired, 1 system(s) taken off
+[VFX] 21:00:44.614 vfx_projectile_slash retired, 1 system(s) taken off
+[VFX] 21:00:44.614 vfx_projectile_splash retired, 1 system(s) taken off
+[VFX] 21:00:44.614 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:00:44.614 vfx_orb_radiance retired, 1 system(s) taken off
+[VFX] 21:00:44.614 vfx_orb_umbra retired, 0 system(s) taken off
+[VFX] vfx_duat_rite still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.622 vfx_duat_rite retired, 1 system(s) taken off
+[VFX] vfx_gale_slash still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.622 vfx_gale_slash retired, 1 system(s) taken off
+[VFX] vfx_radiance_burst still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.622 vfx_radiance_burst retired, 1 system(s) taken off
+[VFX] vfx_umbra_burst still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.622 vfx_umbra_burst retired, 1 system(s) taken off
+[VFX] vfx_ember_slash still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.622 vfx_ember_slash retired, 1 system(s) taken off
+[VFX] vfx_scale_strike still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.622 vfx_scale_strike retired, 2 system(s) taken off
+[VFX] vfx_keraunos still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.623 vfx_keraunos retired, 2 system(s) taken off
+[VFX] vfx_soul_light still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.623 vfx_soul_light retired, 1 system(s) taken off
+[VFX] vfx_gale_burst still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.623 vfx_gale_burst retired, 1 system(s) taken off
+[VFX] vfx_radiance_slash still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.623 vfx_radiance_slash retired, 1 system(s) taken off
+[VFX] vfx_ember_burst still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.623 vfx_ember_burst retired, 1 system(s) taken off
+[VFX] vfx_tide_slash still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.623 vfx_tide_slash retired, 1 system(s) taken off
+[VFX] vfx_shockwave still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.623 vfx_shockwave retired, 1 system(s) taken off
+[VFX] vfx_impact_umbra still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.624 vfx_impact_umbra retired, 2 system(s) taken off
+[VFX] vfx_impact_ember still carried 3 particle system(s) when it was retired
+[VFX] 21:00:44.624 vfx_impact_ember retired, 3 system(s) taken off
+[VFX] vfx_soul_column still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.624 vfx_soul_column retired, 1 system(s) taken off
+[VFX] vfx_olympian_decree still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.624 vfx_olympian_decree retired, 1 system(s) taken off
+[VFX] vfx_impact_tide still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.624 vfx_impact_tide retired, 2 system(s) taken off
+[VFX] vfx_heal still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.626 vfx_heal retired, 2 system(s) taken off
+[VFX] vfx_umbra_slash still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_umbra_slash retired, 1 system(s) taken off
+[VFX] vfx_thunderclap still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_thunderclap retired, 2 system(s) taken off
+[VFX] vfx_impact_gale still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_impact_gale retired, 2 system(s) taken off
+[VFX] vfx_debuff still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_debuff retired, 1 system(s) taken off
+[VFX] vfx_tide_burst still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_tide_burst retired, 1 system(s) taken off
+[VFX] vfx_buff still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_buff retired, 1 system(s) taken off
+[VFX] vfx_maat_shield still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_maat_shield retired, 2 system(s) taken off
+[VFX] vfx_crit still carried 1 particle system(s) when it was retired
+[VFX] 21:00:44.627 vfx_crit retired, 1 system(s) taken off
+[VFX] vfx_thunderbolt still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.628 vfx_thunderbolt retired, 2 system(s) taken off
+[VFX] vfx_impact_radiance still carried 2 particle system(s) when it was retired
+[VFX] 21:00:44.628 vfx_impact_radiance retired, 2 system(s) taken off
+[Frames] battle hitch 150 ms at 2.0 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.23 s, a group of 66 tracks
+[Frames] battle hitch 433 ms at 2.5 s
+[VFX] 21:00:45.205 vfx_predraw retired, 0 system(s) taken off
+[TourCue] shown (the 5 s limit)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 66 tracks
+[Frames] battle p50 66.8 p95 127.8 p99 127.8 · 11 over 33 ms of 12, the longest 1883 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.90 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 66 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.90 s, a group of 72 tracks
+[TourCue] reel-ready
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.40 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.90 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.93 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.00 s, a group of 72 tracks
+[Frames] battle hitch 200 ms at 4.6 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.67 s, a group of 72 tracks
+[Frames] battle hitch 150 ms at 4.8 s
+[Frames] battle hitch 100 ms at 5.1 s
+[Frames] battle hitch 117 ms at 5.5 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.93 s, a group of 72 tracks
+[Frames] battle hitch 150 ms at 5.9 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[Frames] battle p50 49.8 p95 127.8 p99 127.8 · 50 over 33 ms of 76, the longest 1883 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.90 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.50 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.55 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.13 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.23 s, a group of 72 tracks
+[Frames] battle hitch 100 ms at 6.7 s
+[Frames] battle hitch 150 ms at 6.9 s
+[Frames] battle hitch 100 ms at 7.0 s
+[Frames] battle hitch 117 ms at 7.3 s
+[Frames] battle hitch 133 ms at 8.0 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[Frames] battle hitch 117 ms at 8.1 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[Frames] battle hitch 133 ms at 8.5 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.90 s, a group of 72 tracks
+[Frames] battle hitch 200 ms at 8.8 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[Perf] 21:00:51.390 warmed 7 meshes, clips of 7 took 28017 ms off main
+[Frames] battle hitch 100 ms at 8.9 s
+[Frames] battle hitch 150 ms at 9.0 s
+[Frames] battle p50 50.2 p95 127.8 p99 127.8 · 84 over 33 ms of 124, the longest 1883 ms
+[Frames] battle hitch 117 ms at 9.2 s
+[Frames] battle hitch 167 ms at 9.4 s
+[Frames] battle hitch 200 ms at 9.6 s
+[Mem] step 54 skill_reel +12 s footprint 274 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 138 of 305 MB, graphics 0 MB, internal 257 MB, compressed 66 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 4 MB; views battle 1, island 0, reveal 0
+[Frames] battle hitch 133 ms at 10.0 s
+[Frames] battle hitch 117 ms at 10.3 s
+[Frames] battle hitch 100 ms at 10.6 s
+[Frames] battle p50 50.2 p95 127.8 p99 127.8 · 115 over 33 ms of 164, the longest 1883 ms
+[Frames] battle p50 50.2 p95 127.8 p99 127.8 · 150 over 33 ms of 207, the longest 1883 ms
+[Frames] battle p50 50.2 p95 127.8 p99 127.8 · 181 over 33 ms of 252, the longest 1883 ms
+[TourCue] reel-go (no word from a recorder in 15.0 s)
+[Tour] reel +1.8 s: cast 1, Zeus casts Thunderbolt (slot 1, attack_basic, 1 hit(s), thunderbolt)
+[Frames] battle p50 50.2 p95 127.8 p99 127.8 · 218 over 33 ms of 311, the longest 1883 ms
+[ClipTimings] 493 clip(s) of 115 asset(s) timed from clip_timings.json
+[Perf] 21:01:03.910 cast Thunderbolt by zeus as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[Mem] step 54 skill_reel +24 s footprint 275 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 139 of 305 MB, graphics 0 MB, internal 223 MB, compressed 66 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 4 MB; views battle 1, island 0, reveal 0
+[VFX] 21:01:05.397 vfx_orb_ember retired, 1 system(s) taken off
+[Tour] reel +4.7 s: cast 2, Zeus casts Thunderclap (slot 2, skill_area, 1 hit(s), thunderclap)
+[Perf] 21:01:06.749 cast Thunderclap by zeus as skillArea (plays skillArea, 2.50 s), 1 hit(s) on 3 target(s)
+[Frames] battle p50 49.8 p95 127.8 p99 127.8 · 256 over 33 ms of 385, the longest 1883 ms
+[VFX] lightning stands: 3.40 m, its centre 2.04 m up, 0.95 of it upright
+[VFX] 21:01:08.697 vfx_thunderbolt retired, 0 system(s) taken off
+[Frames] battle p50 33.2 p95 127.8 p99 127.8 · 303 over 33 ms of 465, the longest 1883 ms
+[Tour] reel +8.7 s: cast 3, Zeus casts Keraunos (slot 3, ultimate, 1 hit(s), keraunos)
+[Perf] 21:01:10.762 cast Keraunos by zeus as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 1 target(s)
+[VFX] 21:01:12.036 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 21:01:12.039 vfx_thunderclap retired, 0 system(s) taken off
+[VFX] 21:01:12.040 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 21:01:12.040 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 21:01:12.288 vfx_crit retired, 0 system(s) taken off
+[Frames] battle p50 33.2 p95 127.8 p99 127.8 · 340 over 33 ms of 558, the longest 1883 ms
+[Frames] battle p50 33.2 p95 127.8 p99 127.8 · 369 over 33 ms of 663, the longest 1883 ms
+[Mem] step 54 skill_reel +36 s footprint 303 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 140 of 306 MB, graphics 0 MB, internal 293 MB, compressed 58 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 4 MB; views battle 1, island 0, reveal 0
+[Tour] reel +15.1 s: Ra · Tide steps up
+[VFX] 21:01:16.927 previous_run retired, 6 system(s) taken off
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'ra_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sif_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'artemis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'isis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Perf] 21:01:17.076 battle build: stage 90 ms, light and camera 21 ms, 8 unit(s) 37 ms, 148 ms in all
+[Perf] 21:01:17.127 thumbnail portrait_ra_tide@1024 took 48 ms off main
+[Perf] 21:01:17.128 warming 1 thumbnails took 48 ms off main
+[Tour] reel +17.1 s: cast 4, Ra casts Sun Spear (slot 1, attack_basic, 1 hit(s), thunderbolt)
+[Frames] battle p50 33.2 p95 116.8 p99 127.8 · 397 over 33 ms of 765, the longest 1883 ms
+[Perf] 21:01:19.122 cast Sun Spear by ra as attackBasic (plays attackBasic, 2.00 s), 1 hit(s) on 1 target(s)
+[VFX] 21:01:20.236 vfx_orb_tide retired, 1 system(s) taken off
+[Tour] reel +19.7 s: cast 5, Ra casts Solar Barque (slot 2, skill_x3, 3 hit(s), impact_tide)
+[Perf] 21:01:21.794 cast Solar Barque by ra as skillX3 (plays skillX3, 2.50 s), 3 hit(s) on 3 target(s)
+[Frames] battle p50 33.2 p95 116.8 p99 127.8 · 425 over 33 ms of 864, the longest 1883 ms
+[VFX] 21:01:22.729 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:22.729 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:22.735 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:23.312 vfx_thunderbolt retired, 0 system(s) taken off
+[VFX] 21:01:23.433 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:23.433 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:23.434 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:24.288 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:24.292 vfx_orb_tide retired, 1 system(s) taken off
+[VFX] 21:01:24.292 vfx_orb_tide retired, 1 system(s) taken off
+[Frames] battle p50 33.2 p95 116.8 p99 127.8 · 463 over 33 ms of 962, the longest 1883 ms
+[VFX] 21:01:26.176 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:01:26.183 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:26.184 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:01:26.184 vfx_crit retired, 0 system(s) taken off
+[VFX] 21:01:26.184 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:26.184 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:26.184 vfx_sparks retired, 0 system(s) taken off
+[Tour] reel +24.9 s: cast 6, Ra casts Volley of the West (slot 3, ultimate, 1 hit(s), duat_rite)
+[VFX] 21:01:26.754 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:26.761 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:26.761 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:01:26.761 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:26.761 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:01:26.761 vfx_sparks retired, 0 system(s) taken off
+[Perf] 21:01:26.953 cast Volley of the West by ra as ultimate (plays ultimate, 3.00 s), 1 hit(s) on 3 target(s)
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 494 over 33 ms of 1,064, the longest 1883 ms
+[VFX] 21:01:28.404 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:28.411 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:01:28.411 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:01:28.411 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:01:28.411 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:01:28.411 vfx_tide_burst retired, 0 system(s) taken off
+[Mem] step 54 skill_reel +48 s footprint 311 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 138 of 305 MB, graphics 0 MB, internal 330 MB, compressed 54 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 9 MB; views battle 1, island 0, reveal 0
+[VFX] 21:01:28.628 vfx_crit retired, 0 system(s) taken off
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 525 over 33 ms of 1,175, the longest 1883 ms
+[Tour] reel +30.2 s: Sif · Gale steps up
+[VFX] 21:01:32.053 previous_run retired, 6 system(s) taken off
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'ra_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sif_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'artemis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'isis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Perf] 21:01:32.234 battle build: stage 84 ms, light and camera 60 ms, 8 unit(s) 37 ms, 181 ms in all
+[Perf] 21:01:32.274 thumbnail portrait_sif_gale@1024 took 39 ms off main
+[Perf] 21:01:32.274 warming 1 thumbnails took 39 ms off main
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 553 over 33 ms of 1,274, the longest 1883 ms
+[Tour] reel +32.2 s: cast 7, Sif casts Golden Cut (slot 1, attack_basic, 2 hit(s), scale_strike)
+[Perf] 21:01:34.304 cast Golden Cut by sif as attackBasic (plays attackBasic, 2.00 s), 2 hit(s) on 1 target(s)
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 592 over 33 ms of 1,371, the longest 1883 ms
+[VFX] 21:01:37.061 swing trail of sif taken off
+[Tour] reel +35.4 s: cast 8, Sif casts Four Sheaves (slot 2, skill_x4, 4 hit(s), scale_strike)
+[Perf] 21:01:37.471 cast Four Sheaves by sif as skillX4 (plays skillX4, 3.20 s), 4 hit(s) on 1 target(s)
+[VFX] 21:01:38.556 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:38.557 vfx_gale_slash retired, 0 system(s) taken off
+[VFX] 21:01:39.415 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:39.415 vfx_gale_slash retired, 0 system(s) taken off
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 622 over 33 ms of 1,416, the longest 1883 ms
+[Mem] step 54 skill_reel +60 s footprint 326 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 137 of 303 MB, graphics 0 MB, internal 389 MB, compressed 47 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 14 MB; views battle 1, island 0, reveal 0
+[VFX] 21:01:41.934 swing trail of sif taken off
+[VFX] 21:01:42.001 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:42.010 vfx_gale_slash retired, 0 system(s) taken off
+[Tour] reel +40.4 s: cast 9, Sif casts Scythe Through the Field (slot 3, ultimate, 1 hit(s), thunderclap)
+[Perf] 21:01:42.448 cast Scythe Through the Field by sif as ultimate (plays ultimate, 3.00 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 656 over 33 ms of 1,457, the longest 1883 ms
+[VFX] 21:01:43.657 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:43.658 vfx_gale_slash retired, 0 system(s) taken off
+[VFX] 21:01:43.658 vfx_crit retired, 0 system(s) taken off
+[VFX] 21:01:44.245 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:44.246 vfx_gale_slash retired, 0 system(s) taken off
+[VFX] 21:01:44.911 vfx_gale_slash retired, 0 system(s) taken off
+[VFX] 21:01:44.918 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] bladestorm stands: 3.80 m, its centre 1.14 m up, 0.95 of it upright
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 690 over 33 ms of 1,536, the longest 1883 ms
+[VFX] 21:01:46.831 swing trail of sif taken off
+[Tour] reel +45.3 s: Artemis · Gale steps up
+[VFX] 21:01:47.326 previous_run retired, 6 system(s) taken off
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'ra_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sif_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'artemis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'isis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Perf] 21:01:47.462 battle build: stage 94 ms, light and camera 15 ms, 8 unit(s) 26 ms, 136 ms in all
+[Perf] 21:01:47.517 thumbnail portrait_artemis_gale@1024 took 49 ms off main
+[Perf] 21:01:47.518 warming 1 thumbnails took 50 ms off main
+[Perf] 21:01:47.689 main thread was busy for about 253 ms before this
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 720 over 33 ms of 1,608, the longest 1883 ms
+[Tour] reel +47.5 s: cast 10, Artemis casts Silver Arrow (slot 1, attack_basic, 1 hit(s), thunderbolt)
+[Perf] 21:01:49.515 cast Silver Arrow by artemis as attackBasic (plays attackBasic, 2.00 s), 1 hit(s) on 1 target(s)
+[VFX] 21:01:50.935 vfx_arrow retired, 1 system(s) taken off
+[Tour] reel +50.1 s: cast 11, Artemis casts Five from the Hills (slot 2, skill_x5, 5 hit(s), scale_strike)
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 745 over 33 ms of 1,732, the longest 1883 ms
+[Perf] 21:01:52.207 cast Five from the Hills by artemis as skillX5 (plays skillX5, 3.60 s), 5 hit(s) on 5 target(s)
+[Mem] step 54 skill_reel +72 s footprint 336 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 135 of 302 MB, graphics 0 MB, internal 359 MB, compressed 68 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 18 MB; views battle 1, island 0, reveal 0
+[VFX] shadow stands: 1.77 m, its centre 1.14 m up, 0.95 of it upright
+[VFX] 21:01:53.685 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:53.702 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:53.710 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:53.711 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:53.711 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:54.124 vfx_thunderbolt retired, 0 system(s) taken off
+[VFX] 21:01:54.385 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:54.386 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:54.386 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:54.386 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:54.386 vfx_arrow retired, 1 system(s) taken off
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 777 over 33 ms of 1,849, the longest 1883 ms
+[VFX] 21:01:55.293 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:55.293 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:55.293 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:55.293 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:55.294 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.098 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.098 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.098 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.098 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.098 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.778 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.781 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.781 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.781 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:56.781 vfx_arrow retired, 1 system(s) taken off
+[VFX] 21:01:58.119 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.132 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.132 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.132 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.132 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.132 vfx_scale_strike retired, 0 system(s) taken off
+[Frames] battle p50 33.2 p95 100.2 p99 127.8 · 805 over 33 ms of 1,971, the longest 1883 ms
+[VFX] 21:01:58.446 vfx_crit retired, 0 system(s) taken off
+[VFX] 21:01:58.961 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.961 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.961 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.961 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:58.961 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:58.961 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.325 vfx_crit retired, 0 system(s) taken off
+[VFX] 21:01:59.404 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.410 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.410 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:59.410 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.411 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.411 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.882 vfx_crit retired, 0 system(s) taken off
+[VFX] 21:01:59.958 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.959 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.968 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.968 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:01:59.968 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:01:59.968 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:02:00.481 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:02:00.492 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:02:00.492 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 21:02:00.492 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:02:00.492 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[VFX] 21:02:00.493 vfx_scale_strike_sparks retired, 0 system(s) taken off
+[Tour] reel +58.7 s: cast 12, Artemis casts Hounds Loosed (slot 3, ultimate, 1 hit(s), thunderclap)
+[Perf] 21:02:00.767 cast Hounds Loosed by artemis as ultimate (plays ultimate, 3.40 s), 1 hit(s) on 3 target(s)
+[Frames] battle p50 33.2 p95 99.8 p99 127.8 · 837 over 33 ms of 2,078, the longest 1883 ms
+[VFX] 21:02:01.807 vfx_crit retired, 0 system(s) taken off
+[VFX] volley stands: 3.06 m, its centre 1.45 m up, 0.95 of it upright
+[Frames] battle p50 33.2 p95 99.8 p99 127.8 · 865 over 33 ms of 2,202, the longest 1883 ms
+[Mem] step 54 skill_reel +84 s footprint 354 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 140 of 307 MB, graphics 0 MB, internal 303 MB, compressed 67 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 18 MB; views battle 1, island 0, reveal 0
+[Tour] reel +65.2 s: Isis · Radiance steps up
+[VFX] 21:02:07.050 previous_run retired, 6 system(s) taken off
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'ra_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sif_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'artemis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'isis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Perf] 21:02:07.170 battle build: stage 82 ms, light and camera 12 ms, 8 unit(s) 25 ms, 119 ms in all
+[Perf] 21:02:07.188 warming 1 thumbnails took 14 ms off main
+[Perf] 21:02:09.926 main thread was busy for about 2792 ms before this
+[Frames] battle p50 33.2 p95 99.8 p99 127.8 · 881 over 33 ms of 2,342, the longest 1883 ms
+[Tour] reel +68.9 s: cast 13, Isis casts Ankh's Touch (slot 1, attack_basic, 1 hit(s), impact_generic)
+[Perf] 21:02:10.951 cast Ankh's Touch by isis as attackBasic (plays attackBasic, 2.00 s), 1 hit(s) on 1 target(s)
+[VFX] 21:02:12.275 vfx_orb_radiance retired, 1 system(s) taken off
+[Frames] battle p50 33.2 p95 99.8 p99 127.8 · 896 over 33 ms of 2,458, the longest 1883 ms
+[Tour] reel +71.6 s: cast 14, Isis casts Knot of Isis (slot 2, cast_release, 0 hit(s), maat_shield)
+[Perf] 21:02:13.654 cast Knot of Isis by isis as castRelease (plays castRelease, 2.80 s), 0 hit(s) on 5 target(s)
+[VFX] 21:02:15.215 vfx_sparks retired, 0 system(s) taken off
+[VFX] 21:02:15.225 vfx_radiance_burst retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 920 over 33 ms of 2,586, the longest 1883 ms
+[Mem] step 54 skill_reel +96 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 136 of 303 MB, graphics 0 MB, internal 301 MB, compressed 77 MB; cache 7 files, 373 MB, 6 pinned, 8 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 8, tinted materials 8, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 22 MB; views battle 1, island 0, reveal 0
+[Tour] reel +75.8 s: cast 15, Isis casts Words of Power (slot 3, ultimate, 0 hit(s), olympian_decree)
+[Perf] 21:02:17.859 cast Words of Power by isis as ultimate (plays ultimate, 3.00 s), 0 hit(s) on 5 target(s)
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 956 over 33 ms of 2,684, the longest 1883 ms
+[VFX] 21:02:19.659 vfx_rising retired, 0 system(s) taken off
+[VFX] 21:02:19.666 vfx_maat_shield retired, 0 system(s) taken off
+[VFX] 21:02:19.666 vfx_maat_shield retired, 0 system(s) taken off
+[VFX] 21:02:19.666 vfx_maat_shield retired, 0 system(s) taken off
+[VFX] 21:02:19.666 vfx_maat_shield retired, 0 system(s) taken off
+[VFX] 21:02:19.667 vfx_radiance_burst retired, 0 system(s) taken off
+[VFX] 21:02:19.667 vfx_maat_shield retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 977 over 33 ms of 2,820, the longest 1883 ms
+[VFX] 21:02:23.369 vfx_rising retired, 0 system(s) taken off
+[VFX] 21:02:23.369 vfx_olympian_decree retired, 0 system(s) taken off
+[VFX] 21:02:23.369 vfx_olympian_decree retired, 0 system(s) taken off
+[VFX] 21:02:23.369 vfx_olympian_decree retired, 0 system(s) taken off
+[VFX] 21:02:23.369 vfx_olympian_decree retired, 0 system(s) taken off
+[VFX] 21:02:23.369 vfx_olympian_decree retired, 0 system(s) taken off
+[VFX] 21:02:23.369 vfx_radiance_burst retired, 0 system(s) taken off
+[Tour] reel +82.7 s: Poseidon · Tide steps up
+[VFX] 21:02:24.504 previous_run retired, 6 system(s) taken off
+[ModelLibrary] model: 1 textured material(s); the 35° costume accent becomes 208° for #3C9BF2 in the surface shader
+[ModelLibrary] 'poseidon_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'poseidon_lod': measured x1.11 y2.15 z1.54, 2.2 units → 2.15 m (×0.9999)
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Perf] 21:02:24.630 battle build: stage 91 ms, light and camera 18 ms, 4 unit(s) 16 ms, 126 ms in all
+[Perf] 21:02:24.657 thumbnail portrait_poseidon_tide@1024 took 27 ms off main
+[Perf] 21:02:24.658 warming 1 thumbnails took 27 ms off main
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 997 over 33 ms of 2,942, the longest 1883 ms
+[Tour] reel +84.6 s: cast 16, Poseidon casts Trident Thrust (slot 1, attack_basic, 1 hit(s), impact_generic)
+[Perf] 21:02:26.668 cast Trident Thrust by poseidon as attackBasic (plays attackBasic, 2.00 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1026 over 33 ms of 3,061, the longest 1883 ms
+[Mem] step 54 skill_reel +108 s footprint 339 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 301 MB, graphics 0 MB, internal 336 MB, compressed 73 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[VFX] 21:02:29.274 swing trail of poseidon taken off
+[Tour] reel +87.6 s: cast 17, Poseidon casts Tidal Roar (slot 2, skill_area, 1 hit(s), wrath_of_the_eye)
+[Perf] 21:02:29.706 cast Tidal Roar by poseidon as skillArea (plays skillArea, 2.50 s), 1 hit(s) on 3 target(s)
+[VFX] 21:02:31.171 vfx_tide_slash retired, 0 system(s) taken off
+[VFX] 21:02:31.178 vfx_tide_burst retired, 0 system(s) taken off
+[VFX] 21:02:31.179 vfx_sparks retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1038 over 33 ms of 3,209, the longest 1883 ms
+[VFX] 21:02:32.766 swing trail of poseidon taken off
+[Tour] reel +91.4 s: cast 18, Poseidon casts Drink of the Abyss (slot 3, ultimate, 1 hit(s), duat_rite)
+[Perf] 21:02:33.457 cast Drink of the Abyss by poseidon as ultimate (plays ultimate, 3.00 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1056 over 33 ms of 3,347, the longest 1883 ms
+[VFX] 21:02:34.702 vfx_wrath_of_the_eye_sparks retired, 0 system(s) taken off
+[VFX] 21:02:34.707 vfx_wrath_of_the_eye retired, 0 system(s) taken off
+[VFX] 21:02:34.707 vfx_wrath_of_the_eye_sparks retired, 0 system(s) taken off
+[VFX] 21:02:34.707 vfx_wrath_of_the_eye_sparks retired, 0 system(s) taken off
+[VFX] 21:02:34.734 vfx_crit retired, 0 system(s) taken off
+[VFX] tidal stands: 4.40 m, its centre 2.08 m up, 0.95 of it upright
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1073 over 33 ms of 3,496, the longest 1883 ms
+[VFX] 21:02:37.768 swing trail of poseidon taken off
+[Tour] reel: done, 18 casts in 96.0 s
+[TourCue] reel-done
+[VFX] 21:02:38.695 vfx_duat_rite retired, 0 system(s) taken off
+[VFX] 21:02:38.695 vfx_tide_slash retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1095 over 33 ms of 3,627, the longest 1883 ms
+[Mem] step 54 skill_reel +120 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 300 MB, graphics 0 MB, internal 357 MB, compressed 77 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1117 over 33 ms of 3,760, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1139 over 33 ms of 3,902, the longest 1883 ms
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 1167 over 33 ms of 4,025, the longest 1883 ms
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 1203 over 33 ms of 4,135, the longest 1883 ms
+[Mem] step 54 skill_reel +132 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 300 MB, graphics 0 MB, internal 357 MB, compressed 77 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 1242 over 33 ms of 4,201, the longest 1883 ms
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 1285 over 33 ms of 4,273, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1327 over 33 ms of 4,343, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1367 over 33 ms of 4,403, the longest 1883 ms
+[Mem] step 54 skill_reel +144 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 300 MB, graphics 0 MB, internal 335 MB, compressed 88 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1411 over 33 ms of 4,455, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1453 over 33 ms of 4,513, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1494 over 33 ms of 4,588, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1532 over 33 ms of 4,653, the longest 1883 ms
+[Mem] step 54 skill_reel +156 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 300 MB, graphics 0 MB, internal 318 MB, compressed 106 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1580 over 33 ms of 4,721, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1618 over 33 ms of 4,785, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1658 over 33 ms of 4,844, the longest 1883 ms
+[Mem] step 54 skill_reel +168 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 300 MB, graphics 0 MB, internal 317 MB, compressed 107 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1688 over 33 ms of 4,880, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1725 over 33 ms of 4,921, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1764 over 33 ms of 4,977, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1802 over 33 ms of 5,035, the longest 1883 ms
+[Mem] step 54 skill_reel +180 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 300 MB, graphics 0 MB, internal 317 MB, compressed 107 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1836 over 33 ms of 5,127, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1879 over 33 ms of 5,212, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1912 over 33 ms of 5,309, the longest 1883 ms
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1951 over 33 ms of 5,410, the longest 1883 ms
+[Mem] step 54 skill_reel +192 s footprint 347 MB, available n/a MB, peak 1157 MB, gpu 0 MB, heap 132 of 300 MB, graphics 0 MB, internal 317 MB, compressed 107 MB; cache 7 files, 373 MB, 2 pinned, 4 clones, 7 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 4, tinted materials 4, cloth chains 0; stranded 0: none; textures alive 28, 373 MB, stranded 0: none; art 0 MB, thumbs 26 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 83.2 p99 127.8 · 1984 over 33 ms of 5,509, the longest 1883 ms
+
+== stderr
+2026-09-25 21:00:22.653525+0000 Pantheon[45494:378757] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x600000238e00> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-09-25 21:00:22.962336+0000 Pantheon[45494:378757] [library] load_eligibility_plist: Failed to open /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/B76DB8AA-1170-4A2B-AD02-EA716D874FE5/private/var/db/eligibilityd/eligibility.plist: No such file or directory(2)
+2026-09-25 21:00:23.423271+0000 Pantheon[45494:378757] [UIFocus] Pantheon.BattleStageView implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+2026-09-25 21:00:23.488636+0000 Pantheon[45494:378810] [tbbmain] TBB Global TLS count is not == 1, instead it is: 2
+2026-09-25 21:00:58.900800+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:01:03.156520+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:01:38.534430+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:01:39.083590+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:01:39.382153+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:01:39.382612+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:01:39.553300+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:03:29.373038+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 21:03:30.434047+0000 Pantheon[45494:378798] [AMCP] 131331          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload

@@ -1,0 +1,18 @@
+no compiler errors
+---- slowest to type-check (over 300 ms) ----
+RelicsScreen.swift:2034:30 1533ms
+RelicsScreen.swift:2034:30 1301ms
+VFXLibrary.swift:1667:29 580ms
+VFXLibrary.swift:1667:29 525ms
+StageBuilder+Arena.swift:795:29 492ms
+VFXLibrary.swift:1667:29 465ms
+BattleSceneView.swift:1692:42 438ms
+BattleSceneView.swift:1498:71 436ms
+BattleSceneView.swift:1498:71 417ms
+VFXLibrary.swift:1667:29 389ms
+BattleSceneView.swift:1498:24 364ms
+BattleSceneView.swift:1692:42 332ms
+BattleSceneView.swift:1498:24 319ms
+BattleSceneView.swift:1498:24 313ms
+BattleSceneView.swift:1498:24 310ms
+PROMOTION KEY MISSING: CADisableMinimumFrameDurationOnPhone is not in the built Info.plist; move it to an INFOPLIST_FILE

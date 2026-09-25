@@ -1,0 +1,1858 @@
+== stdout
+[Crash] armed (under the tour MetricKit and the exit flag are off: the job kills the app at every step)
+[Mem] launch footprint 14 MB, available n/a MB, peak 14 MB, gpu 0 MB, heap 0 of 27 MB, graphics 0 MB, internal 5 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Fonts] registered 8 of 8 bundled faces; Cinzel true, Manrope true
+[ModelLibrary] bundle: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Bundle/Application/D0E7CF48-8C44-4E83-8E62-C0CEA80BFA22/Pantheon.app
+[ModelLibrary] 3D files actually inside the app: 1650
+[ModelLibrary]     achilles.usdz
+[ModelLibrary]     achilles_attack_basic.usdz
+[ModelLibrary]     achilles_attack_heavy.usdz
+[ModelLibrary]     achilles_break.usdz
+[ModelLibrary]     achilles_death.usdz
+[ModelLibrary]     achilles_hit_react.usdz
+[ModelLibrary]     achilles_idle.usdz
+[ModelLibrary]     achilles_idle_alt.usdz
+[ModelLibrary]     achilles_idle_combat.usdz
+[ModelLibrary]     achilles_lod.usdz
+[ModelLibrary]     achilles_skill_x2.usdz
+[ModelLibrary]     achilles_skill_x3.usdz
+[ModelLibrary]     achilles_ultimate.usdz
+[ModelLibrary]     achilles_victory.usdz
+[ModelLibrary]     achilles_walk.usdz
+[ModelLibrary]     amazon.usdz
+[ModelLibrary]     amazon_attack_basic.usdz
+[ModelLibrary]     amazon_attack_heavy.usdz
+[ModelLibrary]     amazon_break.usdz
+[ModelLibrary]     amazon_death.usdz
+[ModelLibrary]     amazon_hit_react.usdz
+[ModelLibrary]     amazon_idle.usdz
+[ModelLibrary]     amazon_idle_alt.usdz
+[ModelLibrary]     amazon_idle_combat.usdz
+[ModelLibrary]     … and 1626 more
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       ammit -> ammit.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       apep -> apep.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   MISSING  boss_bronze_colossus — will render as a placeholder
+[ModelLibrary]   OK       boss_colossus -> boss_colossus.usdz
+[ModelLibrary]   OK       boss_hydra -> boss_hydra.usdz
+[ModelLibrary]   OK       boss_jotunn -> boss_jotunn.usdz
+[ModelLibrary]   MISSING  boss_longmen_dragon — will render as a placeholder
+[ModelLibrary]   OK       boss_unwrapped_king -> boss_unwrapped_king.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       sandstone_sentinel -> sandstone_sentinel.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       serpopard -> serpopard.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sun_scarab -> sun_scarab.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[Mem] step 18 dungeon_battle appeared footprint 23 MB, available n/a MB, peak 23 MB, gpu 0 MB, heap 8 of 64 MB, graphics 0 MB, internal 21 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Perf] 20:28:05.820 main thread was busy for about 336 ms before this
+[Frames] battle hitch 183 ms at 0.2 s
+[Frames] battle hitch 267 ms at 0.4 s
+[Frames] battle hitch 183 ms at 0.6 s
+[Frames] battle hitch 117 ms at 0.9 s
+[Frames] battle hitch 717 ms at 1.9 s
+[Frames] battle hitch 867 ms at 2.8 s
+[Frames] battle hitch 367 ms at 3.1 s
+[Frames] battle hitch 133 ms at 3.3 s
+[Frames] battle p50 16.8 p95 127.8 p99 127.8 · 11 over 33 ms of 24, the longest 867 ms
+[ModelLibrary] 'anubis_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'anubis_lod' built 1 node(s) of interest:
+      anubis_mesh: geometry 3 sources, 1 elements, bbox x -0.40..0.40 y 0.00..2.05 z -0.33..0.33; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 17° for #F2703C in the surface shader
+[ModelLibrary] 'anubis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] model: awakened look: costume glow 0.12, rim 0.18 at power 4.0
+[ModelLibrary] 'anubis_lod': measured x0.79 y2.05 z0.66, 2.0 units → 2.05 m (×1.0004)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.05 s, a group of 72 tracks
+[Perf] 20:28:11.434 unit anubis built took 2566 ms on main
+[Frames] battle hitch 133 ms at 4.5 s
+[ModelLibrary] 'sekhmet_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'sekhmet_lod' built 1 node(s) of interest:
+      sekhmet_mesh: geometry 3 sources, 1 elements, bbox x -0.39..0.39 y 0.00..2.00 z -0.40..0.40; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 269° for #9B5FD9 in the surface shader
+[ModelLibrary] 'sekhmet_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sekhmet_lod': measured x0.78 y2.00 z0.80, 2.0 units → 2.00 m (×1.0002)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.27 s, a group of 72 tracks
+[Perf] 20:28:12.788 unit sekhmet built took 1322 ms on main
+[ModelLibrary] 'zeus_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'zeus_lod' built 1 node(s) of interest:
+      zeus_mesh: geometry 3 sources, 1 elements, bbox x -0.55..0.54 y -0.00..2.15 z -0.47..0.47; skinner with 22 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 28° for #FF9A3C in the surface shader
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'zeus_lod': measured x1.09 y2.15 z0.93, 2.1 units → 2.15 m (×1.0003)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[Perf] 20:28:13.820 unit zeus built took 1027 ms on main
+[Frames] battle p50 16.8 p95 99.8 p99 127.8 · 14 over 33 ms of 190, the longest 867 ms
+[ModelLibrary] 'shabti_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'shabti_lod' built 1 node(s) of interest:
+      shabti_mesh: geometry 3 sources, 1 elements, bbox x -0.34..0.34 y 0.00..1.70 z -0.25..0.25; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 222° for #6C7A9C in the surface shader
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': measured x0.68 y1.70 z0.50, 1.7 units → 1.90 m (×1.1189)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 6.70 s, a group of 72 tracks
+[Perf] 20:28:14.966 unit shabti built took 1144 ms on main
+[ModelLibrary] 'sun_scarab': 4 texture(s) decoded ahead of the first frame (13 MB)
+[ModelLibrary] 'sun_scarab' built 1 node(s) of interest:
+      sun_scarab_mesh: geometry 3 sources, 1 elements, bbox x -1.03..1.03 y -0.00..1.40 z -1.44..1.44
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 44° for #F2D06B in the surface shader
+[ModelLibrary] 'sun_scarab': measured x2.06 y1.40 z2.88, Z-up: pitched -90°, 2.9 units → 1.90 m (×0.6588)
+[Perf] 20:28:15.354 unit sun_scarab built took 388 ms on main
+[ModelLibrary] 'sandstone_sentinel_lod': 1 texture(s) decoded ahead of the first frame (1 MB)
+[ModelLibrary] 'sandstone_sentinel_lod' built 1 node(s) of interest:
+      sandstone_sentinel_mesh: geometry 3 sources, 1 elements, bbox x -0.89..0.89 y 0.00..2.59 z -0.96..0.96; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 30° for #E0A05F in the surface shader
+[ModelLibrary] 'sandstone_sentinel_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sandstone_sentinel_lod': measured x1.78 y2.58 z1.92, 2.6 units → 1.90 m (×0.7351)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.67 s, a group of 72 tracks
+[VFX] script stands: 3.20 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] vfx_wisp refused: painted on a light ground (an opaque square when added)
+[VFX] shadow stands: 3.00 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] sunburst stands: 3.40 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] heal stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] buff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] debuff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] shield stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] pre-drawn under the stage card: 18 effect(s), 1 projectile(s), a boss's dust, 13 skill painting(s)
+[Perf] 20:28:16.397 battle build: stage 3024 ms, light and camera 3 ms, 6 unit(s) 6601 ms, 10558 ms in all
+[Perf] 20:28:16.525 thumbnail portrait_zeus_ember@1024 took 94 ms off main
+[Perf] 20:28:16.559 main thread was busy for about 10582 ms before this
+[Perf] 20:28:16.591 thumbnail portrait_sekhmet_umbra@1024 took 65 ms off main
+[Perf] 20:28:16.592 warming 2 thumbnails took 165 ms off main
+[Perf] 20:28:16.685 save (13 units, 14 relics) took 124 ms on main
+[Mem] step 18 dungeon_battle settled footprint 228 MB, available n/a MB, peak 376 MB, gpu 0 MB, heap 111 of 196 MB, graphics 0 MB, internal 271 MB, compressed 99 MB; cache 6 files, 227 MB, 6 pinned, 6 clones, 5 clip sets; decoded alive 0, 0 MB; alive prototypes 6, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 21, 227 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 33.2 p99 127.8 · 16 over 33 ms of 356, the longest 867 ms
+[TourCue] shown (drawn)
+[Perf] 20:28:19.591 main thread was busy for about 2213 ms before this
+[VFX] 20:28:19.631 vfx_orb_umbra retired, 0 system(s) taken off
+[VFX] 20:28:20.148 vfx_orb_radiance retired, 1 system(s) taken off
+[VFX] 20:28:20.151 vfx_predraw retired, 40 system(s) taken off
+[VFX] 20:28:20.151 vfx_orb_ember retired, 0 system(s) taken off
+[VFX] 20:28:20.151 vfx_projectile_fireball retired, 0 system(s) taken off
+[Perf] 20:28:20.172 main thread was busy for about 508 ms before this
+[Frames] battle hitch 533 ms at 9.9 s
+[Frames] battle hitch 433 ms at 10.4 s
+[ModelLibrary] 'boss_colossus_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'boss_colossus_lod' built 1 node(s) of interest:
+      boss_colossus_mesh: geometry 3 sources, 1 elements, bbox x -2.48..2.49 y -0.00..8.00 z -1.00..1.00; skinner with 24 bones
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 66 tracks
+[ClipTimings] 493 clip(s) of 115 asset(s) timed from clip_timings.json
+[Perf] 20:28:21.282 cast Thunderclap by zeus as skillArea (plays skillArea, 2.50 s), 1 hit(s) on 3 target(s)
+[Perf] 20:28:21.477 main thread was busy for about 1304 ms before this
+[VFX] 20:28:21.477 vfx_umbra_burst retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_radiance_slash retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_debuff retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_buff retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_impact_umbra retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_lioness_rake retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_impact_ember retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_thunderbolt retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_impact_radiance retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_maat_shield retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_radiance_burst retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:28:21.477 vfx_keraunos retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_thunderclap retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_blood_thirst retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_shockwave retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_heart_weigh retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_heal retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_duat_rite retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_rim_dust retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_soul_column retired, 0 system(s) taken off
+[VFX] 20:28:21.478 vfx_soul_light retired, 0 system(s) taken off
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.20 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 7.30 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 7.67 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.50 s, a group of 72 tracks
+[VFX] lightning stands: 3.40 m, its centre 2.04 m up, 0.95 of it upright
+[Frames] battle hitch 167 ms at 12.4 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 49.8 p99 127.8 · 24 over 33 ms of 444, the longest 867 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.33 s, a group of 72 tracks
+[Perf] 20:28:22.689 main thread was busy for about 411 ms before this
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.37 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 12.90 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.03 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.50 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.67 s, a group of 72 tracks
+[Frames] battle hitch 117 ms at 12.7 s
+[Frames] battle hitch 633 ms at 13.6 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.00 s, a group of 72 tracks
+[Perf] 20:28:23.873 main thread was busy for about 667 ms before this
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.10 s, a group of 72 tracks
+[Perf] 20:28:24.092 warmed 1 meshes, clips of 4 took 7689 ms off main
+[Frames] battle p50 16.8 p95 50.2 p99 127.8 · 34 over 33 ms of 553, the longest 867 ms
+[VFX] 20:28:25.990 vfx_thunderclap retired, 0 system(s) taken off
+[VFX] 20:28:25.995 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 20:28:25.995 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 20:28:25.995 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[Perf] 20:28:26.214 cast Verdict of Ash by anubis as attackHeavy (plays attackHeavy, 2.00 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 72 tracks
+[Mem] step 18 dungeon_battle +12 s footprint 238 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 116 of 234 MB, graphics 0 MB, internal 159 MB, compressed 125 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 49.8 p99 127.8 · 41 over 33 ms of 708, the longest 867 ms
+[VFX] 20:28:28.988 swing trail of anubis taken off
+[VFX] 20:28:30.965 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:28:30.969 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:28:30.969 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:28:30.969 vfx_crit retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 127.8 · 42 over 33 ms of 881, the longest 867 ms
+[Perf] 20:28:32.098 cast Breath of Plague by sekhmet as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 2 target(s)
+[Frames] battle hitch 233 ms at 22.4 s
+[Frames] battle hitch 167 ms at 22.6 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 33.2 p99 127.8 · 53 over 33 ms of 1,002, the longest 867 ms
+[VFX] 20:28:35.750 vfx_soul_light retired, 0 system(s) taken off
+[VFX] 20:28:36.363 vfx_soul_column retired, 0 system(s) taken off
+[VFX] 20:28:36.871 swing trail of sekhmet taken off
+[Frames] battle hitch 100 ms at 26.6 s
+[Perf] 20:28:36.882 cast Quarry Quake by sandstone_sentinel as skillArea (plays attackHeavy, 1.70 s), 1 hit(s) on 3 target(s)
+[VFX] ember_strike stands: 2.93 m, its centre 1.39 m up, 0.95 of it upright
+[Frames] battle p50 16.8 p95 33.2 p99 127.8 · 58 over 33 ms of 1,153, the longest 867 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[VFX] 20:28:37.942 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:28:38.032 vfx_crit retired, 0 system(s) taken off
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 66 tracks
+[VFX] 20:28:38.340 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_umbra_burst retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_wrath_of_the_eye_sparks retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_umbra_burst retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_wrath_of_the_eye retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_wrath_of_the_eye_sparks retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:28:38.340 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:28:38.704 vfx_soul_light retired, 0 system(s) taken off
+[VFX] 20:28:39.204 swing trail of sandstone_sentinel taken off
+[VFX] 20:28:39.305 vfx_soul_column retired, 0 system(s) taken off
+[Perf] 20:28:40.263 cast Keraunos by zeus as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 1 target(s)
+[Mem] step 18 dungeon_battle +24 s footprint 259 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 116 of 233 MB, graphics 0 MB, internal 170 MB, compressed 131 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 49.8 p99 127.8 · 77 over 33 ms of 1,273, the longest 867 ms
+[Frames] battle hitch 117 ms at 30.8 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 66 tracks
+[VFX] 20:28:42.217 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:28:42.222 vfx_ember_slash retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 49.8 p99 116.8 · 86 over 33 ms of 1,410, the longest 867 ms
+[Frames] battle hitch 117 ms at 34.6 s
+[Frames] battle p50 16.8 p95 49.8 p99 116.8 · 98 over 33 ms of 1,554, the longest 867 ms
+[VFX] 20:28:46.897 vfx_keraunos retired, 0 system(s) taken off
+[ModelLibrary] 'sandstone_sentinel_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Idle] shabti: idle_combat off over 0.25 s for walk
+[Frames] battle hitch 467 ms at 37.3 s
+[Perf] 20:28:47.579 main thread was busy for about 395 ms before this
+[VFX] 20:28:47.595 combatant_0872FF38-4778-49C6-ADA2-2FB0944B1B30 retired, 0 system(s) taken off
+[VFX] 20:28:47.595 combatant_C65E7311-794F-4604-84DD-274251C4FB32 retired, 0 system(s) taken off
+[VFX] 20:28:47.595 combatant_4D5FBE16-B324-4DD2-8A68-AD5E1A3CD87A retired, 0 system(s) taken off
+[Frames] battle hitch 117 ms at 37.5 s
+[Idle] shabti: walk off over 0.25 s for idle_combat
+[Perf] 20:28:49.406 cast Jackal's Due by anubis as attackBasic (plays attackBasic, 1.97 s), 2 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 49.8 p99 116.8 · 101 over 33 ms of 1,693, the longest 867 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[VFX] 20:28:52.312 swing trail of anubis taken off
+[Mem] step 18 dungeon_battle +36 s footprint 265 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 115 of 233 MB, graphics 0 MB, internal 184 MB, compressed 124 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 49.8 p99 116.8 · 103 over 33 ms of 1,861, the longest 867 ms
+[Perf] 20:28:53.075 cast Seven Arrows by sekhmet as attackHeavy (plays attackHeavy, 2.00 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 72 tracks
+[VFX] 20:28:53.879 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:28:53.883 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:28:54.015 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:28:54.017 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:28:54.113 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:28:55.473 vfx_soul_light retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 100.2 · 105 over 33 ms of 2,027, the longest 867 ms
+[VFX] 20:28:55.871 swing trail of sekhmet taken off
+[VFX] 20:28:56.066 vfx_soul_column retired, 0 system(s) taken off
+[Perf] 20:28:57.481 cast Thunderbolt by zeus as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 66 tracks
+[VFX] 20:28:57.616 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:28:57.616 vfx_heart_weigh retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 99.8 · 105 over 33 ms of 2,202, the longest 867 ms
+[VFX] 20:28:59.158 vfx_orb_ember retired, 1 system(s) taken off
+[VFX] 20:28:59.934 vfx_rising retired, 0 system(s) taken off
+[VFX] 20:29:01.215 vfx_soul_light retired, 0 system(s) taken off
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 47° for #F5D96B in the surface shader
+[ModelLibrary] 'boss_colossus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'boss_colossus_lod': measured x4.97 y8.00 z1.99, 8.0 units → 8.00 m (×0.9999)
+[Boss] boss_colossus: paint 0.091 linear, warm spot 2400
+[ModelLibrary] 'sandstone_sentinel_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Idle] shabti: idle_combat off over 0.25 s for walk
+[Camera] measured boss boss_colossus at (0.0, -7.06, -11.0) head 5.44 actions true
+[Camera] a boss is on the field: 29 points, re-framing from behind the team
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Frames] battle hitch 350 ms at 51.7 s
+[VFX] 20:29:01.941 combatant_C91639D3-4DDF-4F07-A454-014E0EFBD494 retired, 0 system(s) taken off
+[VFX] 20:29:01.941 combatant_64F5FBC3-638C-4FF6-A734-4A9578215351 retired, 0 system(s) taken off
+[VFX] 20:29:01.942 vfx_soul_column retired, 0 system(s) taken off
+[VFX] 20:29:01.942 combatant_1AEDF16C-6126-4AEB-A300-FB504B73B2CD retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 99.8 · 108 over 33 ms of 2,358, the longest 867 ms
+[Frames] battle hitch 100 ms at 51.9 s
+[VFX] 20:29:02.093 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:29:02.131 vfx_thunderbolt retired, 0 system(s) taken off
+[Idle] shabti: walk off over 0.25 s for idle_combat
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Perf] 20:29:04.304 cast Jackal's Due by anubis as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[Frames] battle hitch 100 ms at 54.1 s
+[Mem] step 18 dungeon_battle +48 s footprint 279 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 116 of 233 MB, graphics 0 MB, internal 182 MB, compressed 130 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 33.2 p99 99.8 · 115 over 33 ms of 2,500, the longest 867 ms
+[VFX] 20:29:05.180 vfx_rim_dust retired, 0 system(s) taken off
+[VFX] 20:29:06.553 vfx_rim_dust retired, 0 system(s) taken off
+[VFX] 20:29:06.939 swing trail of anubis taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Perf] 20:29:07.830 cast Rake of the Lioness by sekhmet as attackBasic (plays attackBasic, 1.97 s), 2 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 99.8 · 119 over 33 ms of 2,660, the longest 867 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[VFX] 20:29:08.583 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:29:08.591 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:29:08.681 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:29:10.774 swing trail of sekhmet taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 120 over 33 ms of 2,821, the longest 867 ms
+[Perf] 20:29:11.158 cast Thunderbolt by zeus as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[VFX] 20:29:12.457 vfx_soul_light retired, 0 system(s) taken off
+[VFX] 20:29:12.457 vfx_orb_ember retired, 1 system(s) taken off
+[VFX] 20:29:12.731 vfx_lioness_rake retired, 0 system(s) taken off
+[VFX] 20:29:12.761 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:29:12.840 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:29:12.857 vfx_lioness_rake retired, 0 system(s) taken off
+[VFX] 20:29:13.265 vfx_soul_column retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 120 over 33 ms of 2,997, the longest 867 ms
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Perf] 20:29:14.989 cast Verdict of Ash by anubis as attackHeavy (plays attackHeavy, 2.00 s), 1 hit(s) on 1 target(s)
+[VFX] 20:29:15.631 vfx_thunderbolt retired, 0 system(s) taken off
+[Mem] step 18 dungeon_battle +60 s footprint 288 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 120 of 237 MB, graphics 0 MB, internal 175 MB, compressed 146 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 123 over 33 ms of 3,158, the longest 867 ms
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[VFX] 20:29:17.738 swing trail of anubis taken off
+[Perf] 20:29:18.514 cast Fall of the Colossus by boss_colossus as skillArea (plays skillArea, 2.60 s), 1 hit(s) on 3 target(s)
+[VFX] 20:29:19.326 vfx_soul_light retired, 0 system(s) taken off
+[VFX] radiance_strike stands: 2.93 m, its centre 1.45 m up, 0.99 of it upright
+[VFX] 20:29:19.637 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:29:19.637 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:29:19.637 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:29:19.715 vfx_crit retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 129 over 33 ms of 3,317, the longest 867 ms
+[VFX] 20:29:20.046 vfx_soul_column retired, 0 system(s) taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Perf] 20:29:22.547 cast Rake of the Lioness by sekhmet as attackBasic (plays attackBasic, 1.97 s), 2 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 151 over 33 ms of 3,421, the longest 867 ms
+[VFX] 20:29:23.349 vfx_radiance_burst retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_radiance_slash retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_radiance_slash retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_radiance_slash retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_radiance_burst retired, 0 system(s) taken off
+[VFX] 20:29:23.349 vfx_radiance_burst retired, 0 system(s) taken off
+[VFX] 20:29:23.614 vfx_crit retired, 0 system(s) taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[VFX] 20:29:25.296 swing trail of sekhmet taken off
+[Perf] 20:29:25.564 cast Thunderclap by zeus as skillArea (plays skillArea, 2.50 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 155 over 33 ms of 3,588, the longest 867 ms
+[VFX] 20:29:27.085 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:29:27.104 vfx_lioness_rake retired, 0 system(s) taken off
+[VFX] 20:29:27.197 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:29:27.206 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:29:27.206 vfx_lioness_rake retired, 0 system(s) taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[VFX] 20:29:27.424 vfx_crit retired, 0 system(s) taken off
+[Mem] step 18 dungeon_battle +72 s footprint 289 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 116 of 233 MB, graphics 0 MB, internal 184 MB, compressed 138 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Perf] 20:29:28.598 cast Jackal's Due by anubis as attackBasic (plays attackBasic, 1.97 s), 2 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 157 over 33 ms of 3,758, the longest 867 ms
+[VFX] 20:29:29.393 vfx_thunderclap retired, 0 system(s) taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[VFX] 20:29:31.455 swing trail of anubis taken off
+[Perf] 20:29:31.632 cast Seven Arrows by sekhmet as attackHeavy (plays attackHeavy, 2.00 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 162 over 33 ms of 3,906, the longest 867 ms
+[VFX] 20:29:33.183 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:29:33.203 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:29:33.263 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:29:33.333 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:29:33.342 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:29:33.477 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:29:34.400 swing trail of sekhmet taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Perf] 20:29:34.796 cast Thunderbolt by zeus as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 164 over 33 ms of 4,064, the longest 867 ms
+[VFX] 20:29:36.200 vfx_heart_weigh retired, 0 system(s) taken off
+[VFX] 20:29:36.200 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:29:36.248 vfx_orb_ember retired, 1 system(s) taken off
+[VFX] 20:29:36.285 vfx_crit retired, 0 system(s) taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[VFX] 20:29:37.097 vfx_rising retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 167 over 33 ms of 4,227, the longest 867 ms
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Perf] 20:29:38.967 cast Jackal's Due by anubis as attackBasic (plays attackBasic, 1.97 s), 2 hit(s) on 1 target(s)
+[VFX] 20:29:39.199 vfx_thunderbolt retired, 0 system(s) taken off
+[Mem] step 18 dungeon_battle +84 s footprint 295 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 119 of 236 MB, graphics 0 MB, internal 196 MB, compressed 140 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 169 over 33 ms of 4,390, the longest 867 ms
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[VFX] 20:29:41.824 swing trail of anubis taken off
+[Perf] 20:29:42.065 cast Breath of Plague by sekhmet as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 180 over 33 ms of 4,512, the longest 867 ms
+[VFX] 20:29:44.266 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:29:44.272 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:29:44.556 vfx_crit retired, 0 system(s) taken off
+[VFX] 20:29:44.582 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:29:44.582 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:29:44.749 vfx_crit retired, 0 system(s) taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[VFX] 20:29:46.326 swing trail of sekhmet taken off
+[Perf] 20:29:46.498 cast Keraunos by zeus as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 194 over 33 ms of 4,628, the longest 867 ms
+[VFX] 20:29:48.566 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:29:48.567 vfx_umbra_burst retired, 0 system(s) taken off
+[VFX] 20:29:48.567 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:29:48.637 vfx_eye_of_ra retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 210 over 33 ms of 4,754, the longest 867 ms
+[Mem] step 18 dungeon_battle +96 s footprint 286 MB, available n/a MB, peak 415 MB, gpu 0 MB, heap 115 of 233 MB, graphics 0 MB, internal 225 MB, compressed 138 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[VFX] 20:29:53.018 vfx_keraunos retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 213 over 33 ms of 4,915, the longest 867 ms
+[VFX] 20:29:53.063 vfx_crit retired, 0 system(s) taken off
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Camera] measured boss boss_colossus at (0.0, -8.851296, -11.0) head 5.44 actions true
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.53 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.93 s, a group of 66 tracks
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 214 over 33 ms of 5,093, the longest 867 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.20 s, a group of 72 tracks
+[Idle] sekhmet: idle_combat off over 0.25 s for idle
+[VFX] 20:29:57.133 vfx_rim_dust retired, 0 system(s) taken off
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[Idle] zeus: idle_combat off over 0.25 s for idle
+
+== stderr
+2026-09-25 20:28:05.177861+0000 Pantheon[78805:211195] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x6000002384c0> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-09-25 20:28:05.636290+0000 Pantheon[78805:211195] [UIFocus] Pantheon.BattleStageView implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+2026-09-25 20:28:05.816053+0000 Pantheon[78805:211195] [library] load_eligibility_plist: Failed to open /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/B76DB8AA-1170-4A2B-AD02-EA716D874FE5/private/var/db/eligibilityd/eligibility.plist: No such file or directory(2)
+2026-09-25 20:28:07.529668+0000 Pantheon[78805:211195] [tbbmain] TBB Global TLS count is not == 1, instead it is: 2
+2026-09-25 20:28:10.694413+0000 Pantheon[78805:211212] [AMCP]  55043          HALC_ProxyIOContext.cpp:1622  HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload
+2026-09-25 20:29:37.895228+0000 Pantheon[78805:216763] [ServicesDaemonManager] interruptionHandler is called. -[FontServicesDaemonManager connection]_block_invoke
+
+==== relaunched with: -tour-waves
+== stdout
+[Crash] armed (under the tour MetricKit and the exit flag are off: the job kills the app at every step)
+[Mem] launch footprint 14 MB, available n/a MB, peak 14 MB, gpu 0 MB, heap 0 of 27 MB, graphics 0 MB, internal 5 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Fonts] registered 8 of 8 bundled faces; Cinzel true, Manrope true
+[ModelLibrary] bundle: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Bundle/Application/D0E7CF48-8C44-4E83-8E62-C0CEA80BFA22/Pantheon.app
+[ModelLibrary] 3D files actually inside the app: 1650
+[ModelLibrary]     achilles.usdz
+[ModelLibrary]     achilles_attack_basic.usdz
+[ModelLibrary]     achilles_attack_heavy.usdz
+[ModelLibrary]     achilles_break.usdz
+[ModelLibrary]     achilles_death.usdz
+[ModelLibrary]     achilles_hit_react.usdz
+[ModelLibrary]     achilles_idle.usdz
+[ModelLibrary]     achilles_idle_alt.usdz
+[ModelLibrary]     achilles_idle_combat.usdz
+[ModelLibrary]     achilles_lod.usdz
+[ModelLibrary]     achilles_skill_x2.usdz
+[ModelLibrary]     achilles_skill_x3.usdz
+[ModelLibrary]     achilles_ultimate.usdz
+[ModelLibrary]     achilles_victory.usdz
+[ModelLibrary]     achilles_walk.usdz
+[ModelLibrary]     amazon.usdz
+[ModelLibrary]     amazon_attack_basic.usdz
+[ModelLibrary]     amazon_attack_heavy.usdz
+[ModelLibrary]     amazon_break.usdz
+[ModelLibrary]     amazon_death.usdz
+[ModelLibrary]     amazon_hit_react.usdz
+[ModelLibrary]     amazon_idle.usdz
+[ModelLibrary]     amazon_idle_alt.usdz
+[ModelLibrary]     amazon_idle_combat.usdz
+[ModelLibrary]     … and 1626 more
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       ammit -> ammit.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       apep -> apep.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   MISSING  boss_bronze_colossus — will render as a placeholder
+[ModelLibrary]   OK       boss_colossus -> boss_colossus.usdz
+[ModelLibrary]   OK       boss_hydra -> boss_hydra.usdz
+[ModelLibrary]   OK       boss_jotunn -> boss_jotunn.usdz
+[ModelLibrary]   MISSING  boss_longmen_dragon — will render as a placeholder
+[ModelLibrary]   OK       boss_unwrapped_king -> boss_unwrapped_king.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       sandstone_sentinel -> sandstone_sentinel.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       serpopard -> serpopard.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sun_scarab -> sun_scarab.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[Mem] step 18 dungeon_battle appeared footprint 22 MB, available n/a MB, peak 22 MB, gpu 0 MB, heap 7 of 65 MB, graphics 0 MB, internal 20 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Perf] 20:30:00.259 main thread was busy for about 687 ms before this
+[ModelLibrary] 'anubis_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'anubis_lod' built 1 node(s) of interest:
+      anubis_mesh: geometry 3 sources, 1 elements, bbox x -0.40..0.40 y 0.00..2.05 z -0.33..0.33; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 17° for #F2703C in the surface shader
+[ModelLibrary] 'anubis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] model: awakened look: costume glow 0.12, rim 0.18 at power 4.0
+[ModelLibrary] 'anubis_lod': measured x0.79 y2.05 z0.66, 2.0 units → 2.05 m (×1.0004)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.05 s, a group of 72 tracks
+[Perf] 20:30:03.190 unit anubis built took 681 ms on main
+[ModelLibrary] 'sekhmet_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'sekhmet_lod' built 1 node(s) of interest:
+      sekhmet_mesh: geometry 3 sources, 1 elements, bbox x -0.39..0.39 y 0.00..2.00 z -0.40..0.40; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 269° for #9B5FD9 in the surface shader
+[ModelLibrary] 'sekhmet_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sekhmet_lod': measured x0.78 y2.00 z0.80, 2.0 units → 2.00 m (×1.0002)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.27 s, a group of 72 tracks
+[Perf] 20:30:03.796 unit sekhmet built took 599 ms on main
+[ModelLibrary] 'zeus_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'zeus_lod' built 1 node(s) of interest:
+      zeus_mesh: geometry 3 sources, 1 elements, bbox x -0.55..0.54 y -0.00..2.15 z -0.47..0.47; skinner with 22 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 28° for #FF9A3C in the surface shader
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'zeus_lod': measured x1.09 y2.15 z0.93, 2.1 units → 2.15 m (×1.0003)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[Perf] 20:30:04.464 unit zeus built took 667 ms on main
+[ModelLibrary] 'shabti_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'shabti_lod' built 1 node(s) of interest:
+      shabti_mesh: geometry 3 sources, 1 elements, bbox x -0.34..0.34 y 0.00..1.70 z -0.25..0.25; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 222° for #6C7A9C in the surface shader
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': measured x0.68 y1.70 z0.50, 1.7 units → 1.90 m (×1.1189)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 6.70 s, a group of 72 tracks
+[Perf] 20:30:05.156 unit shabti built took 692 ms on main
+[ModelLibrary] 'sun_scarab': 4 texture(s) decoded ahead of the first frame (13 MB)
+[ModelLibrary] 'sun_scarab' built 1 node(s) of interest:
+      sun_scarab_mesh: geometry 3 sources, 1 elements, bbox x -1.03..1.03 y -0.00..1.40 z -1.44..1.44
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 44° for #F2D06B in the surface shader
+[ModelLibrary] 'sun_scarab': measured x2.06 y1.40 z2.88, Z-up: pitched -90°, 2.9 units → 1.90 m (×0.6588)
+[Perf] 20:30:05.372 unit sun_scarab built took 216 ms on main
+[ModelLibrary] 'sandstone_sentinel_lod': 1 texture(s) decoded ahead of the first frame (1 MB)
+[ModelLibrary] 'sandstone_sentinel_lod' built 1 node(s) of interest:
+      sandstone_sentinel_mesh: geometry 3 sources, 1 elements, bbox x -0.89..0.89 y 0.00..2.59 z -0.96..0.96; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 30° for #E0A05F in the surface shader
+[ModelLibrary] 'sandstone_sentinel_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sandstone_sentinel_lod': measured x1.78 y2.58 z1.92, 2.6 units → 1.90 m (×0.7351)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.67 s, a group of 72 tracks
+[VFX] script stands: 3.20 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] vfx_wisp refused: painted on a light ground (an opaque square when added)
+[VFX] shadow stands: 3.00 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] sunburst stands: 3.40 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] heal stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] buff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] debuff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] shield stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] pre-drawn under the stage card: 18 effect(s), 1 projectile(s), a boss's dust, 13 skill painting(s)
+[Perf] 20:30:05.796 battle build: stage 2238 ms, light and camera 1 ms, 6 unit(s) 2917 ms, 5527 ms in all
+[Perf] 20:30:05.853 thumbnail portrait_zeus_ember@1024 took 48 ms off main
+[Perf] 20:30:05.860 main thread was busy for about 5484 ms before this
+[Perf] 20:30:05.883 thumbnail portrait_sekhmet_umbra@1024 took 30 ms off main
+[Perf] 20:30:05.883 warming 2 thumbnails took 78 ms off main
+[Perf] 20:30:05.916 save (13 units, 15 relics) took 55 ms on main
+[Mem] step 18 dungeon_battle settled footprint 351 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 82 of 161 MB, graphics 0 MB, internal 506 MB, compressed 0 MB; cache 6 files, 227 MB, 6 pinned, 6 clones, 5 clip sets; decoded alive 0, 0 MB; alive prototypes 6, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 21, 227 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Perf] 20:30:06.308 main thread was busy for about 394 ms before this
+[Frames] battle hitch 867 ms at 0.9 s
+[Perf] 20:30:18.341 main thread was busy for about 11939 ms before this
+[Frames] battle hitch 600 ms at 1.5 s
+[VFX] vfx_keraunos still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.953 vfx_keraunos retired, 1 system(s) taken off
+[VFX] vfx_buff still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.956 vfx_buff retired, 1 system(s) taken off
+[VFX] vfx_duat_rite still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.956 vfx_duat_rite retired, 1 system(s) taken off
+[VFX] vfx_ember_slash still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.956 vfx_ember_slash retired, 1 system(s) taken off
+[VFX] vfx_crit still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.956 vfx_crit retired, 1 system(s) taken off
+[VFX] vfx_umbra_slash still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_umbra_slash retired, 1 system(s) taken off
+[VFX] vfx_thunderbolt still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_thunderbolt retired, 1 system(s) taken off
+[VFX] vfx_impact_umbra still carried 2 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_impact_umbra retired, 2 system(s) taken off
+[VFX] vfx_maat_shield still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_maat_shield retired, 1 system(s) taken off
+[VFX] vfx_impact_radiance still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_impact_radiance retired, 1 system(s) taken off
+[VFX] vfx_umbra_burst still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_umbra_burst retired, 1 system(s) taken off
+[VFX] vfx_blood_thirst still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_blood_thirst retired, 1 system(s) taken off
+[VFX] vfx_scale_strike still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_scale_strike retired, 1 system(s) taken off
+[VFX] vfx_soul_column still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_soul_column retired, 1 system(s) taken off
+[VFX] 20:30:18.957 vfx_orb_radiance retired, 1 system(s) taken off
+[VFX] vfx_thunderclap still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_thunderclap retired, 1 system(s) taken off
+[VFX] 20:30:18.957 vfx_orb_ember retired, 1 system(s) taken off
+[VFX] vfx_radiance_slash still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_radiance_slash retired, 1 system(s) taken off
+[VFX] vfx_impact_ember still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_impact_ember retired, 1 system(s) taken off
+[VFX] 20:30:18.957 vfx_orb_umbra retired, 0 system(s) taken off
+[VFX] vfx_rim_dust still carried 2 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_rim_dust retired, 2 system(s) taken off
+[VFX] 20:30:18.957 vfx_projectile_fireball retired, 1 system(s) taken off
+[VFX] vfx_soul_light still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_soul_light retired, 1 system(s) taken off
+[VFX] vfx_heal still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_heal retired, 1 system(s) taken off
+[VFX] vfx_heart_weigh still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.957 vfx_heart_weigh retired, 1 system(s) taken off
+[VFX] vfx_lioness_rake still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.958 vfx_lioness_rake retired, 1 system(s) taken off
+[VFX] vfx_radiance_burst still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.958 vfx_radiance_burst retired, 1 system(s) taken off
+[VFX] vfx_debuff still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.958 vfx_debuff retired, 1 system(s) taken off
+[VFX] vfx_shockwave still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.958 vfx_shockwave retired, 1 system(s) taken off
+[VFX] vfx_ember_burst still carried 1 particle system(s) when it was retired
+[VFX] 20:30:18.958 vfx_ember_burst retired, 1 system(s) taken off
+[Perf] 20:30:19.015 main thread was busy for about 639 ms before this
+[VFX] 20:30:19.016 vfx_predraw retired, 0 system(s) taken off
+[TourCue] shown (the 5 s limit)
+[Frames] battle hitch 533 ms at 2.0 s
+[ModelLibrary] 'boss_colossus_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'boss_colossus_lod' built 1 node(s) of interest:
+      boss_colossus_mesh: geometry 3 sources, 1 elements, bbox x -2.48..2.49 y -0.00..8.00 z -1.00..1.00; skinner with 24 bones
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.20 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 7.30 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 7.67 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 127.8 p99 127.8 · 5 over 33 ms of 53, the longest 867 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 66 tracks
+[ClipTimings] 493 clip(s) of 115 asset(s) timed from clip_timings.json
+[Perf] 20:30:20.683 cast Thunderclap by zeus as skillArea (plays skillArea, 2.50 s), 1 hit(s) on 3 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.50 s, a group of 72 tracks
+[Perf] 20:30:21.015 main thread was busy for about 250 ms before this
+[Frames] battle hitch 117 ms at 3.7 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.33 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.37 s, a group of 72 tracks
+[VFX] lightning stands: 3.40 m, its centre 2.04 m up, 0.95 of it upright
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 12.90 s, a group of 72 tracks
+[Frames] battle hitch 333 ms at 4.7 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.03 s, a group of 72 tracks
+[Perf] 20:30:22.183 main thread was busy for about 458 ms before this
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.50 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.67 s, a group of 72 tracks
+[Perf] 20:30:23.088 main thread was busy for about 676 ms before this
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[Frames] battle hitch 333 ms at 6.2 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.10 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 12 over 33 ms of 174, the longest 867 ms
+[Frames] battle hitch 100 ms at 6.3 s
+[Perf] 20:30:24.004 warmed 1 meshes, clips of 4 took 18207 ms off main
+[Frames] battle p50 16.8 p95 33.2 p99 127.8 · 15 over 33 ms of 333, the longest 867 ms
+[Mem] step 18 dungeon_battle +12 s footprint 236 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 110 of 221 MB, graphics 0 MB, internal 157 MB, compressed 114 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Perf] 20:30:29.489 main thread was busy for about 4218 ms before this
+[VFX] 20:30:29.489 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 20:30:29.489 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 20:30:29.489 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 20:30:29.489 vfx_thunderclap retired, 0 system(s) taken off
+[VFX] 20:30:29.490 vfx_crit retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 116.8 · 15 over 33 ms of 511, the longest 867 ms
+[Perf] 20:30:30.347 cast Verdict of Ash by anubis as attackHeavy (plays attackHeavy, 2.00 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 33.2 p99 100.2 · 18 over 33 ms of 670, the longest 867 ms
+[VFX] 20:30:33.197 swing trail of anubis taken off
+[Perf] 20:30:34.898 cast Solar Flare by sun_scarab as skillArea (plays skillArea, 2.20 s), 1 hit(s) on 3 target(s)
+[VFX] 20:30:35.124 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:30:35.129 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:30:35.129 vfx_ember_burst retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 21 over 33 ms of 836, the longest 867 ms
+[Frames] battle hitch 367 ms at 18.7 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[VFX] radiance_strike stands: 2.93 m, its centre 1.39 m up, 0.95 of it upright
+[Frames] battle hitch 133 ms at 18.9 s
+[Frames] battle hitch 117 ms at 19.1 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 66 tracks
+[Mem] step 18 dungeon_battle +24 s footprint 255 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 114 of 224 MB, graphics 0 MB, internal 213 MB, compressed 106 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 33.2 p99 100.2 · 36 over 33 ms of 943, the longest 867 ms
+[Perf] 20:30:38.715 cast Breath of Plague by sekhmet as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 2 target(s)
+[Frames] battle hitch 200 ms at 21.7 s
+[Frames] battle hitch 200 ms at 21.9 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[VFX] 20:30:39.920 vfx_soul_light retired, 0 system(s) taken off
+[VFX] 20:30:40.558 vfx_soul_column retired, 0 system(s) taken off
+[VFX] 20:30:40.593 vfx_radiance_slash retired, 0 system(s) taken off
+[VFX] 20:30:40.593 vfx_radiance_burst retired, 0 system(s) taken off
+[VFX] 20:30:40.594 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:30:40.594 vfx_radiance_burst retired, 0 system(s) taken off
+[VFX] 20:30:40.594 vfx_radiance_slash retired, 0 system(s) taken off
+[VFX] 20:30:40.613 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:30:40.613 vfx_radiance_slash retired, 0 system(s) taken off
+[VFX] 20:30:40.613 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:30:40.613 vfx_radiance_burst retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 116.8 · 45 over 33 ms of 1,062, the longest 867 ms
+[VFX] 20:30:43.434 swing trail of sekhmet taken off
+[ModelLibrary] 'sandstone_sentinel_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Idle] shabti: idle_combat off over 0.25 s for walk
+[TourCue] wave-stamp
+[Frames] battle hitch 467 ms at 26.8 s
+[Frames] battle hitch 133 ms at 27.0 s
+[Frames] battle p50 16.8 p95 33.2 p99 116.8 · 57 over 33 ms of 1,172, the longest 867 ms
+[Frames] battle p50 16.8 p95 49.8 p99 116.8 · 70 over 33 ms of 1,285, the longest 867 ms
+[Mem] step 18 dungeon_battle +36 s footprint 269 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 115 of 224 MB, graphics 0 MB, internal 217 MB, compressed 146 MB; cache 7 files, 281 MB, 6 pinned, 9 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 9, tinted materials 9, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 49.8 p99 99.8 · 81 over 33 ms of 1,420, the longest 867 ms
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 82 over 33 ms of 1,584, the longest 867 ms
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 92 over 33 ms of 1,718, the longest 867 ms
+[VFX] 20:30:58.349 combatant_D4F65EFD-BF42-42F0-894F-F4DB23CD1F7B retired, 0 system(s) taken off
+[VFX] 20:30:58.349 combatant_4B607B2D-AACE-4965-8195-BB9EE04819AF retired, 0 system(s) taken off
+[VFX] 20:30:58.368 combatant_E546317C-4426-4370-806B-B240B34269AE retired, 0 system(s) taken off
+[VFX] 20:30:58.717 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:30:58.722 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:30:58.722 vfx_umbra_burst retired, 0 system(s) taken off
+[VFX] 20:30:58.723 vfx_umbra_burst retired, 0 system(s) taken off
+[VFX] 20:30:58.723 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:30:58.723 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:30:58.826 vfx_wrath_of_the_eye_sparks retired, 0 system(s) taken off
+[VFX] 20:30:58.837 vfx_wrath_of_the_eye_sparks retired, 0 system(s) taken off
+[VFX] 20:30:58.837 vfx_wrath_of_the_eye retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 100 over 33 ms of 1,860, the longest 867 ms
+[Idle] shabti: walk off over 0.25 s for idle_combat
+[VFX] 20:30:59.847 vfx_soul_light retired, 0 system(s) taken off
+[VFX] 20:31:00.471 vfx_soul_column retired, 0 system(s) taken off
+[Perf] 20:31:00.487 cast Keraunos by zeus as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 1 target(s)
+[Frames] battle hitch 117 ms at 43.3 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 66 tracks
+[Mem] step 18 dungeon_battle +48 s footprint 265 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 112 of 222 MB, graphics 0 MB, internal 167 MB, compressed 201 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 106 over 33 ms of 1,999, the longest 867 ms
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 114 over 33 ms of 2,150, the longest 867 ms
+[Perf] 20:31:06.998 cast Jackal's Due by anubis as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[VFX] 20:31:07.115 vfx_keraunos retired, 0 system(s) taken off
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 115 over 33 ms of 2,323, the longest 867 ms
+[VFX] 20:31:09.671 swing trail of anubis taken off
+[Perf] 20:31:10.267 cast Seven Arrows by sekhmet as attackHeavy (plays attackHeavy, 2.00 s), 1 hit(s) on 1 target(s)
+[VFX] 20:31:10.498 vfx_soul_light retired, 0 system(s) taken off
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 72 tracks
+[VFX] 20:31:11.115 vfx_soul_column retired, 0 system(s) taken off
+[VFX] 20:31:11.298 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:31:11.301 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:31:11.348 vfx_crit retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 115 over 33 ms of 2,500, the longest 867 ms
+[VFX] 20:31:12.601 vfx_soul_light retired, 0 system(s) taken off
+[VFX] 20:31:13.027 swing trail of sekhmet taken off
+[VFX] 20:31:13.215 vfx_soul_column retired, 0 system(s) taken off
+[Perf] 20:31:13.581 cast Quarry Quake by sandstone_sentinel as skillArea (plays attackHeavy, 1.70 s), 1 hit(s) on 3 target(s)
+[Mem] step 18 dungeon_battle +60 s footprint 282 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 113 of 223 MB, graphics 0 MB, internal 199 MB, compressed 183 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[VFX] ember_strike stands: 2.93 m, its centre 1.39 m up, 0.95 of it upright
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 115 over 33 ms of 2,678, the longest 867 ms
+[VFX] 20:31:15.039 vfx_heart_weigh retired, 0 system(s) taken off
+[VFX] 20:31:15.039 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:31:15.888 swing trail of sandstone_sentinel taken off
+[VFX] 20:31:15.898 vfx_rising retired, 0 system(s) taken off
+[Perf] 20:31:16.915 cast Thunderbolt by zeus as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 66 tracks
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 126 over 33 ms of 2,828, the longest 867 ms
+[VFX] 20:31:17.847 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:31:17.850 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:31:18.511 vfx_orb_ember retired, 1 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 127 over 33 ms of 2,990, the longest 867 ms
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 47° for #F5D96B in the surface shader
+[ModelLibrary] 'boss_colossus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'boss_colossus_lod': measured x4.97 y8.00 z1.99, 8.0 units → 8.00 m (×0.9999)
+[Boss] boss_colossus: paint 0.091 linear, warm spot 2400
+[ModelLibrary] 'sandstone_sentinel_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Idle] shabti: idle_combat off over 0.25 s for walk
+[Camera] measured boss boss_colossus at (0.0, -7.06, -11.0) head 5.44 actions true
+[Camera] a boss is on the field: 29 points, re-framing from behind the team
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Frames] battle hitch 283 ms at 63.8 s
+[Perf] 20:31:21.283 main thread was busy for about 268 ms before this
+[VFX] 20:31:21.316 combatant_FA09838E-858B-4500-8993-DD478D81B0D7 retired, 0 system(s) taken off
+[VFX] 20:31:21.316 combatant_1FFB80B9-8417-4F05-9559-21DF397D21EB retired, 0 system(s) taken off
+[VFX] 20:31:21.316 combatant_B059634C-D558-4374-828B-F3D73B5D3A39 retired, 0 system(s) taken off
+[VFX] 20:31:21.509 vfx_thunderbolt retired, 0 system(s) taken off
+[TourCue] boss-ribbon
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 135 over 33 ms of 3,123, the longest 867 ms
+[Mem] step 18 dungeon_battle +72 s footprint 283 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 112 of 230 MB, graphics 0 MB, internal 221 MB, compressed 177 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 135 over 33 ms of 3,299, the longest 867 ms
+[Frames] battle hitch 117 ms at 70.9 s
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 141 over 33 ms of 3,453, the longest 867 ms
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 146 over 33 ms of 3,620, the longest 867 ms
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 146 over 33 ms of 3,799, the longest 867 ms
+[Idle] shabti: walk off over 0.25 s for idle_combat
+[Camera] measured boss boss_colossus at (0.0, -2.56, -11.0) head 5.44 actions false
+[Camera] boss solve: 29 points, head (0.0, 5.44, -11.0) across 2.9708023e-13 up 0.767892, aim (-4.6926412e-12, 1.5861325, 0.3313036), distance 18.550924, yaw 0.0
+[Perf] 20:31:37.738 cast Jackal's Due by anubis as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[Mem] step 18 dungeon_battle +84 s footprint 284 MB, available n/a MB, peak 553 MB, gpu 0 MB, heap 113 of 230 MB, graphics 0 MB, internal 221 MB, compressed 177 MB; cache 7 files, 281 MB, 6 pinned, 6 clones, 6 clip sets; decoded alive 0, 0 MB; alive prototypes 7, clones 6, tinted materials 6, cloth chains 0; stranded 0: none; textures alive 25, 281 MB, stranded 0: none; art 0 MB, thumbs 8 MB; views battle 1, island 0, reveal 0
+[VFX] 20:31:38.614 vfx_rim_dust retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 33.2 p99 66.8 · 148 over 33 ms of 3,959, the longest 867 ms
+[VFX] 20:31:40.012 vfx_rim_dust retired, 0 system(s) taken off
+
+== stderr
+2026-09-25 20:29:59.226888+0000 Pantheon[81593:218539] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x6000002065e0> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-09-25 20:29:59.788681+0000 Pantheon[81593:218539] [UIFocus] Pantheon.BattleStageView implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+2026-09-25 20:30:00.251851+0000 Pantheon[81593:218539] [library] load_eligibility_plist: Failed to open /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/B76DB8AA-1170-4A2B-AD02-EA716D874FE5/private/var/db/eligibilityd/eligibility.plist: No such file or directory(2)
+2026-09-25 20:30:01.660759+0000 Pantheon[81593:218539] [tbbmain] TBB Global TLS count is not == 1, instead it is: 2

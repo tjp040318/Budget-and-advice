@@ -1,0 +1,47 @@
+/tmp/reel_convert.swift:25:25: warning: 'tracks(withMediaType:)' was deprecated in macOS 13.0: Use loadTracks(withMediaType:) instead
+ 23 | 
+ 24 | let asset = AVURLAsset(url: source)
+ 25 | guard let track = asset.tracks(withMediaType: .video).first else { fail("no video track in \(source.path)") }
+    |                         `- warning: 'tracks(withMediaType:)' was deprecated in macOS 13.0: Use loadTracks(withMediaType:) instead
+ 26 | let shown = track.naturalSize.applying(track.preferredTransform)
+ 27 | let across = Double(abs(shown.width))
+
+/tmp/reel_convert.swift:26:19: warning: 'naturalSize' was deprecated in macOS 13.0: Use load(.naturalSize) instead
+ 24 | let asset = AVURLAsset(url: source)
+ 25 | guard let track = asset.tracks(withMediaType: .video).first else { fail("no video track in \(source.path)") }
+ 26 | let shown = track.naturalSize.applying(track.preferredTransform)
+    |                   `- warning: 'naturalSize' was deprecated in macOS 13.0: Use load(.naturalSize) instead
+ 27 | let across = Double(abs(shown.width))
+ 28 | let down = Double(abs(shown.height))
+
+/tmp/reel_convert.swift:26:46: warning: 'preferredTransform' was deprecated in macOS 13.0: Use load(.preferredTransform) instead
+ 24 | let asset = AVURLAsset(url: source)
+ 25 | guard let track = asset.tracks(withMediaType: .video).first else { fail("no video track in \(source.path)") }
+ 26 | let shown = track.naturalSize.applying(track.preferredTransform)
+    |                                              `- warning: 'preferredTransform' was deprecated in macOS 13.0: Use load(.preferredTransform) instead
+ 27 | let across = Double(abs(shown.width))
+ 28 | let down = Double(abs(shown.height))
+
+/tmp/reel_convert.swift:37:23: warning: 'preferredTransform' was deprecated in macOS 13.0: Use load(.preferredTransform) instead
+ 35 | let outWidth = even((turned ? down : across) * scale)
+ 36 | let outHeight = even((turned ? across : down) * scale)
+ 37 | var transform = track.preferredTransform
+    |                       `- warning: 'preferredTransform' was deprecated in macOS 13.0: Use load(.preferredTransform) instead
+ 38 | if turned {
+ 39 |     // (x, y) to (y, across - x), y downward: the top edge goes left.
+
+/tmp/reel_convert.swift:48:67: warning: 'duration' was deprecated in macOS 13.0: Use load(.duration) instead
+ 46 | composition.frameDuration = CMTime(value: 1, timescale: 30)
+ 47 | let instruction = AVMutableVideoCompositionInstruction()
+ 48 | instruction.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+    |                                                                   `- warning: 'duration' was deprecated in macOS 13.0: Use load(.duration) instead
+ 49 | let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
+ 50 | layer.setTransform(transform, at: .zero)
+
+/tmp/reel_convert.swift:112:44: warning: 'duration' was deprecated in macOS 13.0: Use load(.duration) instead
+110 | if finished.wait(timeout: .now() + 120) == .timedOut { fail("finishing took over two minutes") }
+111 | if writer.status != .completed { fail("finishing: \(String(describing: writer.error))") }
+112 | let seconds = String(format: "%.1f", asset.duration.seconds)
+    |                                            `- warning: 'duration' was deprecated in macOS 13.0: Use load(.duration) instead
+113 | print("reel_convert: \(written) frames at \(outWidth) x \(outHeight),"
+114 |       + " \(turned ? "turned a quarter to the left" : "as recorded"), \(seconds) s")

@@ -1,0 +1,2503 @@
+== stdout
+[Crash] armed (under the tour MetricKit and the exit flag are off: the job kills the app at every step)
+[Mem] launch footprint 14 MB, available n/a MB, peak 14 MB, gpu 0 MB, heap 0 of 27 MB, graphics 0 MB, internal 5 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Fonts] registered 8 of 8 bundled faces; Cinzel true, Manrope true
+[ModelLibrary] bundle: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Bundle/Application/D0E7CF48-8C44-4E83-8E62-C0CEA80BFA22/Pantheon.app
+[ModelLibrary] 3D files actually inside the app: 1650
+[ModelLibrary]     achilles.usdz
+[ModelLibrary]     achilles_attack_basic.usdz
+[ModelLibrary]     achilles_attack_heavy.usdz
+[ModelLibrary]     achilles_break.usdz
+[ModelLibrary]     achilles_death.usdz
+[ModelLibrary]     achilles_hit_react.usdz
+[ModelLibrary]     achilles_idle.usdz
+[ModelLibrary]     achilles_idle_alt.usdz
+[ModelLibrary]     achilles_idle_combat.usdz
+[ModelLibrary]     achilles_lod.usdz
+[ModelLibrary]     achilles_skill_x2.usdz
+[ModelLibrary]     achilles_skill_x3.usdz
+[ModelLibrary]     achilles_ultimate.usdz
+[ModelLibrary]     achilles_victory.usdz
+[ModelLibrary]     achilles_walk.usdz
+[ModelLibrary]     amazon.usdz
+[ModelLibrary]     amazon_attack_basic.usdz
+[ModelLibrary]     amazon_attack_heavy.usdz
+[ModelLibrary]     amazon_break.usdz
+[ModelLibrary]     amazon_death.usdz
+[ModelLibrary]     amazon_hit_react.usdz
+[ModelLibrary]     amazon_idle.usdz
+[ModelLibrary]     amazon_idle_alt.usdz
+[ModelLibrary]     amazon_idle_combat.usdz
+[ModelLibrary]     … and 1626 more
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       ammit -> ammit.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       apep -> apep.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   MISSING  boss_bronze_colossus — will render as a placeholder
+[ModelLibrary]   OK       boss_colossus -> boss_colossus.usdz
+[ModelLibrary]   OK       boss_hydra -> boss_hydra.usdz
+[ModelLibrary]   OK       boss_jotunn -> boss_jotunn.usdz
+[ModelLibrary]   MISSING  boss_longmen_dragon — will render as a placeholder
+[ModelLibrary]   OK       boss_unwrapped_king -> boss_unwrapped_king.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       sandstone_sentinel -> sandstone_sentinel.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       serpopard -> serpopard.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sun_scarab -> sun_scarab.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[Perf] 20:32:27.371 thumbnail portrait_anubis_umbra@256 took 29 ms on main
+[Mem] step 20 victory appeared footprint 33 MB, available n/a MB, peak 33 MB, gpu 0 MB, heap 15 of 76 MB, graphics 0 MB, internal 31 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 1 MB; views battle 0, island 0, reveal 0
+[Perf] 20:32:27.663 main thread was busy for about 525 ms before this
+[Perf] 20:32:28.200 save (13 units, 15 relics) took 48 ms on main
+[Mem] step 20 victory settled footprint 104 MB, available n/a MB, peak 104 MB, gpu 0 MB, heap 56 of 130 MB, graphics 0 MB, internal 103 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 1 MB; views battle 0, island 0, reveal 0
+[Mem] step 20 victory +12 s footprint 112 MB, available n/a MB, peak 147 MB, gpu 0 MB, heap 61 of 142 MB, graphics 0 MB, internal 111 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 2 MB; views battle 0, island 0, reveal 0
+
+== stderr
+2026-09-25 20:32:26.867526+0000 Pantheon[86887:231928] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x600000201620> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-09-25 20:32:27.129772+0000 Pantheon[86887:231928] [library] load_eligibility_plist: Failed to open /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/B76DB8AA-1170-4A2B-AD02-EA716D874FE5/private/var/db/eligibilityd/eligibility.plist: No such file or directory(2)
+2026-09-25 20:32:32.383415+0000 Pantheon[86887:231928] [UIFocus] SCNView implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+2026-09-25 20:32:32.411966+0000 Pantheon[86887:231928] [tbbmain] TBB Global TLS count is not == 1, instead it is: 2
+
+==== relaunched with: -tour-victory field
+== stdout
+[Crash] armed (under the tour MetricKit and the exit flag are off: the job kills the app at every step)
+[Mem] launch footprint 14 MB, available n/a MB, peak 14 MB, gpu 0 MB, heap 0 of 27 MB, graphics 0 MB, internal 5 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Fonts] registered 8 of 8 bundled faces; Cinzel true, Manrope true
+[ModelLibrary] bundle: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Bundle/Application/D0E7CF48-8C44-4E83-8E62-C0CEA80BFA22/Pantheon.app
+[ModelLibrary] 3D files actually inside the app: 1650
+[ModelLibrary]     achilles.usdz
+[ModelLibrary]     achilles_attack_basic.usdz
+[ModelLibrary]     achilles_attack_heavy.usdz
+[ModelLibrary]     achilles_break.usdz
+[ModelLibrary]     achilles_death.usdz
+[ModelLibrary]     achilles_hit_react.usdz
+[ModelLibrary]     achilles_idle.usdz
+[ModelLibrary]     achilles_idle_alt.usdz
+[ModelLibrary]     achilles_idle_combat.usdz
+[ModelLibrary]     achilles_lod.usdz
+[ModelLibrary]     achilles_skill_x2.usdz
+[ModelLibrary]     achilles_skill_x3.usdz
+[ModelLibrary]     achilles_ultimate.usdz
+[ModelLibrary]     achilles_victory.usdz
+[ModelLibrary]     achilles_walk.usdz
+[ModelLibrary]     amazon.usdz
+[ModelLibrary]     amazon_attack_basic.usdz
+[ModelLibrary]     amazon_attack_heavy.usdz
+[ModelLibrary]     amazon_break.usdz
+[ModelLibrary]     amazon_death.usdz
+[ModelLibrary]     amazon_hit_react.usdz
+[ModelLibrary]     amazon_idle.usdz
+[ModelLibrary]     amazon_idle_alt.usdz
+[ModelLibrary]     amazon_idle_combat.usdz
+[ModelLibrary]     … and 1626 more
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       ammit -> ammit.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       apep -> apep.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   MISSING  boss_bronze_colossus — will render as a placeholder
+[ModelLibrary]   OK       boss_colossus -> boss_colossus.usdz
+[ModelLibrary]   OK       boss_hydra -> boss_hydra.usdz
+[ModelLibrary]   OK       boss_jotunn -> boss_jotunn.usdz
+[ModelLibrary]   MISSING  boss_longmen_dragon — will render as a placeholder
+[ModelLibrary]   OK       boss_unwrapped_king -> boss_unwrapped_king.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       sandstone_sentinel -> sandstone_sentinel.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       serpopard -> serpopard.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sun_scarab -> sun_scarab.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[Mem] step 20 victory appeared footprint 23 MB, available n/a MB, peak 23 MB, gpu 0 MB, heap 8 of 65 MB, graphics 0 MB, internal 21 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Perf] 20:32:47.003 main thread was busy for about 343 ms before this
+[Frames] battle hitch 150 ms at 0.2 s
+[Frames] battle hitch 167 ms at 0.3 s
+[Frames] battle hitch 117 ms at 0.4 s
+[Frames] battle hitch 550 ms at 1.2 s
+[Frames] battle hitch 767 ms at 2.0 s
+[Frames] battle hitch 283 ms at 2.3 s
+[Frames] battle hitch 133 ms at 2.4 s
+[ModelLibrary] 'anubis_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'anubis_lod' built 1 node(s) of interest:
+      anubis_mesh: geometry 3 sources, 1 elements, bbox x -0.40..0.40 y 0.00..2.05 z -0.33..0.33; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 17° for #F2703C in the surface shader
+[ModelLibrary] 'anubis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] model: awakened look: costume glow 0.12, rim 0.18 at power 4.0
+[ModelLibrary] 'anubis_lod': measured x0.79 y2.05 z0.66, 2.0 units → 2.05 m (×1.0004)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.05 s, a group of 72 tracks
+[Perf] 20:32:51.278 unit anubis built took 2188 ms on main
+[Frames] battle p50 16.8 p95 127.8 p99 127.8 · 10 over 33 ms of 47, the longest 767 ms
+[Frames] battle hitch 117 ms at 3.6 s
+[ModelLibrary] 'sekhmet_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'sekhmet_lod' built 1 node(s) of interest:
+      sekhmet_mesh: geometry 3 sources, 1 elements, bbox x -0.39..0.39 y 0.00..2.00 z -0.40..0.40; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 269° for #9B5FD9 in the surface shader
+[ModelLibrary] 'sekhmet_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sekhmet_lod': measured x0.78 y2.00 z0.80, 2.0 units → 2.00 m (×1.0002)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.27 s, a group of 72 tracks
+[Perf] 20:32:52.433 unit sekhmet built took 1131 ms on main
+[ModelLibrary] 'zeus_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'zeus_lod' built 1 node(s) of interest:
+      zeus_mesh: geometry 3 sources, 1 elements, bbox x -0.55..0.54 y -0.00..2.15 z -0.47..0.47; skinner with 22 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 28° for #FF9A3C in the surface shader
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'zeus_lod': measured x1.09 y2.15 z0.93, 2.1 units → 2.15 m (×1.0003)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[Perf] 20:32:53.412 unit zeus built took 974 ms on main
+[ModelLibrary] 'shabti_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'shabti_lod' built 1 node(s) of interest:
+      shabti_mesh: geometry 3 sources, 1 elements, bbox x -0.34..0.34 y 0.00..1.70 z -0.25..0.25; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 222° for #6C7A9C in the surface shader
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': measured x0.68 y1.70 z0.50, 1.7 units → 1.90 m (×1.1189)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 6.70 s, a group of 72 tracks
+[Perf] 20:32:54.388 unit shabti built took 976 ms on main
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 12 over 33 ms of 215, the longest 767 ms
+[VFX] script stands: 3.20 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] vfx_wisp refused: painted on a light ground (an opaque square when added)
+[VFX] shadow stands: 3.00 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] sunburst stands: 3.40 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] heal stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] buff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] debuff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] shield stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] pre-drawn under the stage card: 17 effect(s), 1 projectile(s), 10 skill painting(s)
+[Perf] 20:32:55.032 battle build: stage 2061 ms, light and camera 3 ms, 5 unit(s) 5306 ms, 8008 ms in all
+[Perf] 20:32:55.116 main thread was busy for about 7966 ms before this
+[Perf] 20:32:55.217 save (13 units, 15 relics) took 100 ms on main
+[Mem] step 20 victory settled footprint 172 MB, available n/a MB, peak 350 MB, gpu 0 MB, heap 89 of 161 MB, graphics 0 MB, internal 209 MB, compressed 91 MB; cache 4 files, 213 MB, 4 pinned, 5 clones, 4 clip sets; decoded alive 0, 0 MB; alive prototypes 4, clones 5, tinted materials 5, cloth chains 0; stranded 0: none; textures alive 16, 213 MB, stranded 0: none; art 0 MB, thumbs 0 MB; views battle 1, island 0, reveal 0
+[Frames] battle hitch 450 ms at 7.2 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.50 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.33 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.37 s, a group of 72 tracks
+[Perf] 20:32:56.196 warmed 0 meshes, clips of 1 took 1162 ms off main
+[Frames] battle hitch 450 ms at 7.7 s
+[Frames] battle hitch 117 ms at 7.8 s
+[Frames] battle hitch 350 ms at 8.2 s
+[VFX] 20:32:56.576 vfx_predraw retired, 14 system(s) taken off
+[TourCue] shown (drawn)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 66 tracks
+[ClipTimings] 493 clip(s) of 115 asset(s) timed from clip_timings.json
+[Perf] 20:32:57.260 cast Thunderclap by zeus as skillArea (plays skillArea, 2.50 s), 1 hit(s) on 2 target(s)
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 21 over 33 ms of 295, the longest 767 ms
+[VFX] lightning stands: 3.40 m, its centre 2.04 m up, 0.95 of it upright
+[Frames] battle hitch 117 ms at 9.5 s
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[Frames] battle hitch 133 ms at 10.7 s
+[VFX] 20:32:59.177 combatant_BD7964B8-1C98-4AF8-9052-7D01B80D8953 retired, 0 system(s) taken off
+[VFX] 20:32:59.195 combatant_6B906FC8-5E91-4567-87C3-C76453DF36C3 retired, 0 system(s) taken off
+[Perf] 20:32:59.554 cast Verdict of Ash by anubis as attackHeavy (plays attackHeavy, 2.00 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.47 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 36 over 33 ms of 408, the longest 767 ms
+[VFX] 20:33:00.626 swing trail of anubis taken off
+[VFX] 20:33:00.929 vfx_thunderclap retired, 0 system(s) taken off
+[VFX] 20:33:00.948 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[VFX] 20:33:00.949 vfx_thunderclap_sparks retired, 0 system(s) taken off
+[Perf] 20:33:00.991 cast Breath of Plague by sekhmet as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[VFX] 20:33:02.611 swing trail of sekhmet taken off
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[VFX] 20:33:03.004 combatant_BDF01F18-65CE-4E01-B7F3-980158F1E647 retired, 0 system(s) taken off
+[VFX] 20:33:03.011 combatant_8ACE98B1-FBCA-4B87-B181-114BCDEC0D06 retired, 0 system(s) taken off
+[Perf] 20:33:03.332 cast Keraunos by zeus as ultimate (plays ultimate, 2.97 s), 1 hit(s) on 1 target(s)
+[Frames] battle p50 16.8 p95 50.2 p99 127.8 · 50 over 33 ms of 536, the longest 767 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 66 tracks
+[VFX] 20:33:03.931 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:33:03.936 vfx_ember_burst retired, 0 system(s) taken off
+[VFX] 20:33:03.936 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:33:05.165 vfx_soul_column retired, 0 system(s) taken off
+[VFX] 20:33:05.482 vfx_eye_of_ra retired, 0 system(s) taken off
+[VFX] 20:33:05.501 vfx_sparks retired, 0 system(s) taken off
+[VFX] 20:33:05.501 vfx_umbra_slash retired, 0 system(s) taken off
+[VFX] 20:33:05.501 vfx_umbra_burst retired, 0 system(s) taken off
+[Perf] 20:33:05.589 cast Jackal's Due by anubis as attackBasic (plays attackBasic, 1.97 s), 1 hit(s) on 1 target(s)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[Frames] battle p50 16.8 p95 50.2 p99 127.8 · 62 over 33 ms of 669, the longest 767 ms
+[VFX] 20:33:06.719 swing trail of anubis taken off
+[Mem] step 20 victory +12 s footprint 240 MB, available n/a MB, peak 350 MB, gpu 0 MB, heap 97 of 177 MB, graphics 0 MB, internal 291 MB, compressed 75 MB; cache 4 files, 213 MB, 4 pinned, 5 clones, 4 clip sets; decoded alive 0, 0 MB; alive prototypes 4, clones 5, tinted materials 5, cloth chains 0; stranded 0: none; textures alive 16, 213 MB, stranded 0: none; art 0 MB, thumbs 0 MB; views battle 1, island 0, reveal 0
+[VFX] 20:33:07.713 vfx_keraunos retired, 0 system(s) taken off
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.53 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.93 s, a group of 66 tracks
+[TourCue] triumph
+[VFX] 20:33:08.791 vfx_soul_column retired, 0 system(s) taken off
+[VFX] 20:33:09.133 vfx_ember_slash retired, 0 system(s) taken off
+[VFX] 20:33:09.138 vfx_scale_strike retired, 0 system(s) taken off
+[VFX] 20:33:09.222 vfx_crit retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 50.2 p99 127.8 · 63 over 33 ms of 835, the longest 767 ms
+[VFX] 20:33:10.272 vfx_soul_column retired, 0 system(s) taken off
+[Frames] battle p50 16.8 p95 50.2 p99 116.8 · 64 over 33 ms of 1,008, the longest 767 ms
+[Frames] battle p50 16.8 p95 49.8 p99 116.8 · 66 over 33 ms of 1,177, the longest 767 ms
+[Frames] battle p50 16.8 p95 49.8 p99 116.8 · 80 over 33 ms of 1,309, the longest 767 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.20 s, a group of 72 tracks
+[Idle] sekhmet: idle_combat off over 0.25 s for idle
+[Mem] step 20 victory +24 s footprint 244 MB, available n/a MB, peak 350 MB, gpu 0 MB, heap 101 of 189 MB, graphics 0 MB, internal 279 MB, compressed 92 MB; cache 4 files, 213 MB, 4 pinned, 5 clones, 4 clip sets; decoded alive 0, 0 MB; alive prototypes 4, clones 5, tinted materials 5, cloth chains 0; stranded 0: none; textures alive 16, 213 MB, stranded 0: none; art 0 MB, thumbs 0 MB; views battle 1, island 0, reveal 0
+[Frames] battle p50 16.8 p95 49.8 p99 99.8 · 88 over 33 ms of 1,438, the longest 767 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[Idle] zeus: idle_combat off over 0.25 s for idle
+[Frames] battle p50 16.8 p95 49.8 p99 99.8 · 95 over 33 ms of 1,585, the longest 767 ms
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 102 over 33 ms of 1,730, the longest 767 ms
+[Frames] battle p50 16.8 p95 33.2 p99 83.2 · 107 over 33 ms of 1,879, the longest 767 ms
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.05 s, a group of 72 tracks
+[Idle] anubis: idle_combat off over 0.25 s for idle
+[Mem] step 20 victory +36 s footprint 246 MB, available n/a MB, peak 350 MB, gpu 0 MB, heap 104 of 191 MB, graphics 0 MB, internal 224 MB, compressed 106 MB; cache 4 files, 213 MB, 4 pinned, 5 clones, 4 clip sets; decoded alive 0, 0 MB; alive prototypes 4, clones 5, tinted materials 5, cloth chains 0; stranded 0: none; textures alive 16, 213 MB, stranded 0: none; art 0 MB, thumbs 0 MB; views battle 1, island 0, reveal 0
+[Frames] battle hitch 233 ms at 43.1 s
+[Perf] 20:33:32.542 thumbnail portrait_anubis_ember_awakened@256 took 33 ms on main
+[Perf] 20:33:32.650 thumbnail portrait_zeus_ember@256 took 30 ms on main
+[Perf] 20:33:32.722 main thread was busy for about 332 ms before this
+[Frames] battle hitch 133 ms at 44.5 s
+[Frames] battle hitch 800 ms at 45.3 s
+[Frames] battle p50 16.8 p95 49.8 p99 99.8 · 122 over 33 ms of 1,960, the longest 800 ms
+[Perf] 20:33:33.821 main thread was busy for about 1089 ms before this
+[Frames] battle hitch 117 ms at 45.7 s
+[Frames] battle hitch 117 ms at 46.1 s
+[Frames] battle hitch 133 ms at 46.5 s
+[TourCue] levelup
+[Frames] battle p50 16.8 p95 50.2 p99 99.8 · 154 over 33 ms of 2,025, the longest 800 ms
+[Frames] battle hitch 117 ms at 48.8 s
+[Frames] battle p50 16.8 p95 50.2 p99 99.8 · 180 over 33 ms of 2,119, the longest 800 ms
+[Frames] battle hitch 100 ms at 53.1 s
+[Frames] battle hitch 117 ms at 54.2 s
+[Frames] battle p50 16.8 p95 50.2 p99 100.2 · 204 over 33 ms of 2,215, the longest 800 ms
+[Mem] step 20 victory +48 s footprint 262 MB, available n/a MB, peak 350 MB, gpu 0 MB, heap 105 of 191 MB, graphics 0 MB, internal 162 MB, compressed 154 MB; cache 4 files, 213 MB, 4 pinned, 5 clones, 4 clip sets; decoded alive 0, 0 MB; alive prototypes 4, clones 5, tinted materials 5, cloth chains 0; stranded 0: none; textures alive 16, 213 MB, stranded 0: none; art 0 MB, thumbs 1 MB; views battle 1, island 0, reveal 0
+
+== stderr
+2026-09-25 20:32:46.328054+0000 Pantheon[87526:233631] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x60000020f180> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-09-25 20:32:46.620191+0000 Pantheon[87526:233631] [library] load_eligibility_plist: Failed to open /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/B76DB8AA-1170-4A2B-AD02-EA716D874FE5/private/var/db/eligibilityd/eligibility.plist: No such file or directory(2)
+2026-09-25 20:32:46.870792+0000 Pantheon[87526:233631] [UIFocus] Pantheon.BattleStageView implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+2026-09-25 20:32:48.270503+0000 Pantheon[87526:233631] [tbbmain] TBB Global TLS count is not == 1, instead it is: 2
+
+==== relaunched with: -tour-victory defeat
+== stdout
+[Crash] armed (under the tour MetricKit and the exit flag are off: the job kills the app at every step)
+[Mem] launch footprint 13 MB, available n/a MB, peak 13 MB, gpu 0 MB, heap 0 of 27 MB, graphics 0 MB, internal 5 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Fonts] registered 8 of 8 bundled faces; Cinzel true, Manrope true
+[ModelLibrary] bundle: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Bundle/Application/D0E7CF48-8C44-4E83-8E62-C0CEA80BFA22/Pantheon.app
+[ModelLibrary] 3D files actually inside the app: 1650
+[ModelLibrary]     achilles.usdz
+[ModelLibrary]     achilles_attack_basic.usdz
+[ModelLibrary]     achilles_attack_heavy.usdz
+[ModelLibrary]     achilles_break.usdz
+[ModelLibrary]     achilles_death.usdz
+[ModelLibrary]     achilles_hit_react.usdz
+[ModelLibrary]     achilles_idle.usdz
+[ModelLibrary]     achilles_idle_alt.usdz
+[ModelLibrary]     achilles_idle_combat.usdz
+[ModelLibrary]     achilles_lod.usdz
+[ModelLibrary]     achilles_skill_x2.usdz
+[ModelLibrary]     achilles_skill_x3.usdz
+[ModelLibrary]     achilles_ultimate.usdz
+[ModelLibrary]     achilles_victory.usdz
+[ModelLibrary]     achilles_walk.usdz
+[ModelLibrary]     amazon.usdz
+[ModelLibrary]     amazon_attack_basic.usdz
+[ModelLibrary]     amazon_attack_heavy.usdz
+[ModelLibrary]     amazon_break.usdz
+[ModelLibrary]     amazon_death.usdz
+[ModelLibrary]     amazon_hit_react.usdz
+[ModelLibrary]     amazon_idle.usdz
+[ModelLibrary]     amazon_idle_alt.usdz
+[ModelLibrary]     amazon_idle_combat.usdz
+[ModelLibrary]     … and 1626 more
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       ammit -> ammit.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       apep -> apep.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   MISSING  boss_bronze_colossus — will render as a placeholder
+[ModelLibrary]   OK       boss_colossus -> boss_colossus.usdz
+[ModelLibrary]   OK       boss_hydra -> boss_hydra.usdz
+[ModelLibrary]   OK       boss_jotunn -> boss_jotunn.usdz
+[ModelLibrary]   MISSING  boss_longmen_dragon — will render as a placeholder
+[ModelLibrary]   OK       boss_unwrapped_king -> boss_unwrapped_king.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       sandstone_sentinel -> sandstone_sentinel.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       serpopard -> serpopard.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sun_scarab -> sun_scarab.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[Mem] step 20 victory appeared footprint 23 MB, available n/a MB, peak 23 MB, gpu 0 MB, heap 8 of 65 MB, graphics 0 MB, internal 21 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Perf] 20:33:47.088 main thread was busy for about 333 ms before this
+[Frames] battle hitch 167 ms at 0.2 s
+[Frames] battle hitch 167 ms at 0.3 s
+[Frames] battle hitch 133 ms at 0.5 s
+[Frames] battle hitch 150 ms at 0.6 s
+[Frames] battle hitch 467 ms at 1.2 s
+[Frames] battle hitch 800 ms at 2.0 s
+[ModelLibrary] 'anubis_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'anubis_lod' built 1 node(s) of interest:
+      anubis_mesh: geometry 3 sources, 1 elements, bbox x -0.40..0.40 y 0.00..2.05 z -0.33..0.33; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 17° for #F2703C in the surface shader
+[ModelLibrary] 'anubis_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] model: awakened look: costume glow 0.12, rim 0.18 at power 4.0
+[ModelLibrary] 'anubis_lod': measured x0.79 y2.05 z0.66, 2.0 units → 2.05 m (×1.0004)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.05 s, a group of 72 tracks
+[Perf] 20:33:51.525 unit anubis built took 1991 ms on main
+[Frames] battle p50 16.8 p95 127.8 p99 127.8 · 13 over 33 ms of 54, the longest 800 ms
+[Frames] battle hitch 150 ms at 3.4 s
+[ModelLibrary] 'sekhmet_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'sekhmet_lod' built 1 node(s) of interest:
+      sekhmet_mesh: geometry 3 sources, 1 elements, bbox x -0.39..0.39 y 0.00..2.00 z -0.40..0.40; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 269° for #9B5FD9 in the surface shader
+[ModelLibrary] 'sekhmet_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'sekhmet_lod': measured x0.78 y2.00 z0.80, 2.0 units → 2.00 m (×1.0002)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.27 s, a group of 72 tracks
+[Perf] 20:33:52.767 unit sekhmet built took 1231 ms on main
+[ModelLibrary] 'zeus_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'zeus_lod' built 1 node(s) of interest:
+      zeus_mesh: geometry 3 sources, 1 elements, bbox x -0.55..0.54 y -0.00..2.15 z -0.47..0.47; skinner with 22 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 28° for #FF9A3C in the surface shader
+[ModelLibrary] 'zeus_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'zeus_lod': measured x1.09 y2.15 z0.93, 2.1 units → 2.15 m (×1.0003)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 9.25 s, a group of 66 tracks
+[Perf] 20:33:53.692 unit zeus built took 922 ms on main
+[ModelLibrary] 'shabti_lod': 4 texture(s) decoded ahead of the first frame (53 MB)
+[ModelLibrary] 'shabti_lod' built 1 node(s) of interest:
+      shabti_mesh: geometry 3 sources, 1 elements, bbox x -0.34..0.34 y 0.00..1.70 z -0.25..0.25; skinner with 24 bones
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 222° for #6C7A9C in the surface shader
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'shabti_lod': measured x0.68 y1.70 z0.50, 1.7 units → 1.90 m (×1.1189)
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 6.70 s, a group of 72 tracks
+[Perf] 20:33:54.616 unit shabti built took 923 ms on main
+[ModelLibrary] 'shabti_lod': 1 skinner(s) rebound to this instance's own bones
+[VFX] script stands: 3.20 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] vfx_wisp refused: painted on a light ground (an opaque square when added)
+[VFX] shadow stands: 3.00 m, its centre 1.20 m up, 0.95 of it upright
+[VFX] sunburst stands: 3.40 m, its centre 1.20 m up, 0.95 of it upright
+[Frames] battle p50 16.8 p95 50.2 p99 127.8 · 15 over 33 ms of 221, the longest 800 ms
+[VFX] heal stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] buff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] debuff stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] shield stands: 2.47 m, its centre 1.17 m up, 0.95 of it upright
+[VFX] pre-drawn under the stage card: 17 effect(s), 1 projectile(s), 10 skill painting(s)
+[Perf] 20:33:55.187 battle build: stage 2411 ms, light and camera 3 ms, 5 unit(s) 5092 ms, 8070 ms in all
+[Perf] 20:33:55.217 main thread was busy for about 7995 ms before this
+[Perf] 20:33:55.270 thumbnail portrait_zeus_ember@1024 took 80 ms off main
+[Perf] 20:33:55.270 warming 1 thumbnails took 81 ms off main
+[Perf] 20:33:55.319 save (13 units, 15 relics) took 101 ms on main
+[Mem] step 20 victory settled footprint 176 MB, available n/a MB, peak 393 MB, gpu 0 MB, heap 90 of 159 MB, graphics 0 MB, internal 201 MB, compressed 88 MB; cache 4 files, 213 MB, 4 pinned, 5 clones, 4 clip sets; decoded alive 0, 0 MB; alive prototypes 4, clones 5, tinted materials 5, cloth chains 0; stranded 0: none; textures alive 16, 213 MB, stranded 0: none; art 0 MB, thumbs 4 MB; views battle 1, island 0, reveal 0
+[Frames] battle hitch 467 ms at 6.9 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 8.00 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.50 s, a group of 72 tracks
+[TourCue] fallen
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.33 s, a group of 72 tracks
+[Frames] battle hitch 400 ms at 7.4 s
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 1.63 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.97 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 3.87 s, a group of 72 tracks
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 4.20 s, a group of 72 tracks
+[VFX] 20:33:56.397 vfx_predraw retired, 26 system(s) taken off
+[ModelLibrary] clip animation taken from Skeleton / /root/Armature/Skeleton/Anim, 2.37 s, a group of 72 tracks
+[Perf] 20:33:56.402 warmed 0 meshes, clips of 1 took 1215 ms off main
+[TourCue] shown (drawn)
+[Frames] battle p50 16.8 p95 66.8 p99 127.8 · 28 over 33 ms of 308, the longest 800 ms
+[Frames] battle p50 16.8 p95 50.2 p99 127.8 · 33 over 33 ms of 469, the longest 800 ms
+[Mem] step 20 victory +12 s footprint 205 MB, available n/a MB, peak 393 MB, gpu 0 MB, heap 93 of 166 MB, graphics 0 MB, internal 216 MB, compressed 82 MB; cache 4 files, 213 MB, 4 pinned, 5 clones, 4 clip sets; decoded alive 0, 0 MB; alive prototypes 4, clones 5, tinted materials 5, cloth chains 0; stranded 0: none; textures alive 16, 213 MB, stranded 0: none; art 0 MB, thumbs 4 MB; views battle 1, island 0, reveal 0
+[Frames] battle hitch 117 ms at 15.0 s
+[Frames] battle p50 16.8 p95 49.8 p99 127.8 · 36 over 33 ms of 628, the longest 800 ms
+[Frames] battle p50 16.8 p95 49.8 p99 127.8 · 46 over 33 ms of 767, the longest 800 ms
+[Frames] battle p50 16.8 p95 50.2 p99 127.8 · 69 over 33 ms of 878, the longest 800 ms
+[Frames] battle hitch 133 ms at 22.6 s
+
+== stderr
+2026-09-25 20:33:46.361107+0000 Pantheon[89418:238375] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x600000239380> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-09-25 20:33:46.581397+0000 Pantheon[89418:238375] [library] load_eligibility_plist: Failed to open /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/B76DB8AA-1170-4A2B-AD02-EA716D874FE5/private/var/db/eligibilityd/eligibility.plist: No such file or directory(2)
+2026-09-25 20:33:46.878097+0000 Pantheon[89418:238375] [UIFocus] Pantheon.BattleStageView implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+2026-09-25 20:33:48.673277+0000 Pantheon[89418:238375] [tbbmain] TBB Global TLS count is not == 1, instead it is: 2
+
+==== relaunched with: -tour-spoils legend
+== stdout
+[Crash] armed (under the tour MetricKit and the exit flag are off: the job kills the app at every step)
+[Mem] launch footprint 14 MB, available n/a MB, peak 14 MB, gpu 0 MB, heap 0 of 27 MB, graphics 0 MB, internal 5 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 0 MB; views battle 0, island 0, reveal 0
+[Fonts] registered 8 of 8 bundled faces; Cinzel true, Manrope true
+[ModelLibrary] bundle: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Bundle/Application/D0E7CF48-8C44-4E83-8E62-C0CEA80BFA22/Pantheon.app
+[ModelLibrary] 3D files actually inside the app: 1650
+[ModelLibrary]     achilles.usdz
+[ModelLibrary]     achilles_attack_basic.usdz
+[ModelLibrary]     achilles_attack_heavy.usdz
+[ModelLibrary]     achilles_break.usdz
+[ModelLibrary]     achilles_death.usdz
+[ModelLibrary]     achilles_hit_react.usdz
+[ModelLibrary]     achilles_idle.usdz
+[ModelLibrary]     achilles_idle_alt.usdz
+[ModelLibrary]     achilles_idle_combat.usdz
+[ModelLibrary]     achilles_lod.usdz
+[ModelLibrary]     achilles_skill_x2.usdz
+[ModelLibrary]     achilles_skill_x3.usdz
+[ModelLibrary]     achilles_ultimate.usdz
+[ModelLibrary]     achilles_victory.usdz
+[ModelLibrary]     achilles_walk.usdz
+[ModelLibrary]     amazon.usdz
+[ModelLibrary]     amazon_attack_basic.usdz
+[ModelLibrary]     amazon_attack_heavy.usdz
+[ModelLibrary]     amazon_break.usdz
+[ModelLibrary]     amazon_death.usdz
+[ModelLibrary]     amazon_hit_react.usdz
+[ModelLibrary]     amazon_idle.usdz
+[ModelLibrary]     amazon_idle_alt.usdz
+[ModelLibrary]     amazon_idle_combat.usdz
+[ModelLibrary]     … and 1626 more
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       achilles -> achilles.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       amazon -> amazon.usdz
+[ModelLibrary]   OK       ammit -> ammit.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anhur -> anhur.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       anubis -> anubis.usdz
+[ModelLibrary]   OK       apep -> apep.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       aphrodite -> aphrodite.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       apollo -> apollo.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       artemis -> artemis.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       atalanta -> atalanta.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       athena -> athena.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       azure_dragon -> azure_dragon.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       baldr -> baldr.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bastet -> bastet.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       bellona -> bellona.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       berserker -> berserker.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   OK       bes -> bes.usdz
+[ModelLibrary]   MISSING  boss_bronze_colossus — will render as a placeholder
+[ModelLibrary]   OK       boss_colossus -> boss_colossus.usdz
+[ModelLibrary]   OK       boss_hydra -> boss_hydra.usdz
+[ModelLibrary]   OK       boss_jotunn -> boss_jotunn.usdz
+[ModelLibrary]   MISSING  boss_longmen_dragon — will render as a placeholder
+[ModelLibrary]   OK       boss_unwrapped_king -> boss_unwrapped_king.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       bragi -> bragi.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       centurion -> centurion.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       chang_e -> chang_e.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cobra_priestess -> cobra_priestess.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       cyclops -> cyclops.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       dark_elf -> dark_elf.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       demeter -> demeter.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       diana -> diana.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dionysus -> dionysus.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       dragon_king -> dragon_king.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       draugr -> draugr.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       dwarf_smith -> dwarf_smith.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       einherjar -> einherjar.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fenrir -> fenrir.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       fox_spirit -> fox_spirit.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       freya -> freya.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frigg -> frigg.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       frost_troll -> frost_troll.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       gladiator -> gladiator.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       guan_yu -> guan_yu.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       hades -> hades.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       harpy -> harpy.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       hathor -> hathor.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       heimdall -> heimdall.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hel -> hel.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hephaestus -> hephaestus.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       hera -> hera.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       heracles -> heracles.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hermes -> hermes.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       hoplite -> hoplite.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       horus -> horus.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       idunn -> idunn.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       isis -> isis.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jackal_warrior -> jackal_warrior.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       jiangshi -> jiangshi.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       khnum -> khnum.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       light_elf -> light_elf.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       loki -> loki.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       maat -> maat.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       mars -> mars.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medjay -> medjay.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       medusa -> medusa.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       mercury -> mercury.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minerva -> minerva.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       minotaur -> minotaur.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       mummy -> mummy.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       nephthys -> nephthys.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       neptune -> neptune.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nezha -> nezha.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       nike -> nike.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       njord -> njord.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nuwa -> nuwa.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       nymph -> nymph.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       odin -> odin.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       osiris -> osiris.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       perseus -> perseus.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       pluto -> pluto.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       poseidon -> poseidon.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ptah -> ptah.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       ra -> ra.usdz
+[ModelLibrary]   OK       sandstone_sentinel -> sandstone_sentinel.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       satyr -> satyr.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       scarab_knight -> scarab_knight.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       serpopard -> serpopard.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       serqet -> serqet.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       set -> set.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shabti -> shabti.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       shield_maiden -> shield_maiden.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       sif -> sif.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       siren -> siren.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       skadi -> skadi.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sobek -> sobek.usdz
+[ModelLibrary]   OK       sun_scarab -> sun_scarab.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       sun_wukong -> sun_wukong.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       surtr -> surtr.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       taweret -> taweret.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       terracotta_soldier -> terracotta_soldier.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thor -> thor.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       thoth -> thoth.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       tyr -> tyr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       ullr -> ullr.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       valkyrie -> valkyrie.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vestal -> vestal.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       vidar -> vidar.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[ModelLibrary]   OK       zeus -> zeus.usdz
+[Perf] 20:34:13.499 thumbnail portrait_anubis_umbra@256 took 25 ms on main
+[Mem] step 20 victory appeared footprint 29 MB, available n/a MB, peak 29 MB, gpu 0 MB, heap 12 of 74 MB, graphics 0 MB, internal 28 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 1 MB; views battle 0, island 0, reveal 0
+[Perf] 20:34:13.697 main thread was busy for about 323 ms before this
+[Perf] 20:34:14.228 save (13 units, 15 relics) took 50 ms on main
+[Mem] step 20 victory settled footprint 92 MB, available n/a MB, peak 92 MB, gpu 0 MB, heap 48 of 109 MB, graphics 0 MB, internal 93 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 1 MB; views battle 0, island 0, reveal 0
+[TourCue] spoils-legend
+[Mem] step 20 victory +12 s footprint 114 MB, available n/a MB, peak 149 MB, gpu 0 MB, heap 62 of 143 MB, graphics 0 MB, internal 113 MB, compressed 0 MB; cache 0 files, 0 MB, 0 pinned, 0 clones, 0 clip sets; decoded alive 0, 0 MB; alive prototypes 0, clones 0, tinted materials 0, cloth chains 0; stranded 0: none; art 0 MB, thumbs 3 MB; views battle 0, island 0, reveal 0
+
+== stderr
+2026-09-25 20:34:13.026892+0000 Pantheon[90113:240265] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x600000234c00> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-09-25 20:34:13.290999+0000 Pantheon[90113:240265] [library] load_eligibility_plist: Failed to open /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/B76DB8AA-1170-4A2B-AD02-EA716D874FE5/private/var/db/eligibilityd/eligibility.plist: No such file or directory(2)
+2026-09-25 20:34:18.515459+0000 Pantheon[90113:240265] [UIFocus] SCNView implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+2026-09-25 20:34:18.534644+0000 Pantheon[90113:240265] [tbbmain] TBB Global TLS count is not == 1, instead it is: 2

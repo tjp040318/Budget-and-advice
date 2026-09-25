@@ -1,0 +1,57 @@
+IOSurfaceClientSetSurfaceNotify failed e00002c7
+2026-09-25 19:56:40.867666+0000 Pantheon[15118:47167] fopen failed for data file: errno = 2 (No such file or directory)
+2026-09-25 19:56:55.064795+0000 Pantheon[15118:47167] fopen failed for data file: errno = 2 (No such file or directory)
+[Backend] erase failed: The backend answered 400: Invalid Refresh Token
+[Backend] erase failed: The backend answered 503: upstream unavailable
+	 Executed 10 tests, with 0 failures (0 unexpected) in 12.843 (12.924) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 9.250 (9.252) seconds
+[Analytics] upload failed: the backend answered 503; 2 events kept for later
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.254 (1.376) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.104 (0.228) seconds
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.053 (0.065) seconds
+	 Executed 27 tests, with 0 failures (0 unexpected) in 0.268 (0.283) seconds
+	 Executed 22 tests, with 0 failures (0 unexpected) in 0.049 (0.067) seconds
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.083 (0.169) seconds
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.016 (0.037) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.027 (0.029) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.103 (0.103) seconds
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.059 (0.081) seconds
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.080 (0.195) seconds
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.429 (0.434) seconds
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.287 (0.300) seconds
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.038 (0.054) seconds
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.028 (0.082) seconds
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.029 (0.090) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.028 (0.034) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.017 (0.148) seconds
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.020 (0.070) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.009 (0.020) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.011 (0.011) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.073 (0.097) seconds
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.026 (0.033) seconds
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.011 (0.046) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.028 (0.041) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.011 (0.017) seconds
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.030 (0.032) seconds
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.007 (0.009) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.015 (0.030) seconds
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.056 (0.214) seconds
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.107 (0.114) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.178 (0.185) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.108 (0.110) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.012 (0.021) seconds
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.297 (0.301) seconds
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.759 (0.762) seconds
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.100 (0.102) seconds
+	 Executed 19 tests, with 0 failures (0 unexpected) in 0.034 (0.078) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.084 (0.104) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.043 (0.073) seconds
+	 Executed 26 tests, with 0 failures (0 unexpected) in 0.136 (0.165) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.103 (0.112) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.003) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+	 Executed 592 tests, with 0 failures (0 unexpected) in 26.320 (28.737) seconds
+	 Executed 592 tests, with 0 failures (0 unexpected) in 26.320 (28.738) seconds
+** TEST SUCCEEDED **

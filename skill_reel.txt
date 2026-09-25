@@ -1,0 +1,9 @@
+21:01:17 skill reel: recording, and the app told to begin
+21:03:48 the recorder did not finish its file in 30 s
+21:03:48 skill reel: 18 casts, 438088726 bytes recorded
+21:03:54 skill reel: converting
+reel_convert: no video track in /Users/runner/work/Budget-and-advice/Budget-and-advice/shots/skill_reel.mov
+avconvert:  unable to read shots/skill_reel.mov -- file:///Users/runner/work/Budget-and-advice/Budget-and-advice/
+skill reel: no MP4; the recording is skill_reel.mov as the simulator wrote it
+21:04:13 skill reel: shots/skill_reel.mov 438088726 bytes 
+skill_reel.mov is 438088726 bytes, too big for the branch
