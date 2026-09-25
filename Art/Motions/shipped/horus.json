@@ -79,5 +79,17 @@
    22.8
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/style_blade_x2.motion.npz",
+  "frames": 70,
+  "seconds": 2.33,
+  "rate": 0.97
+ },
+ "skill_x4": {
+  "preset": "Art/Motions/style_blade_x4.motion.npz",
+  "frames": 102,
+  "seconds": 3.4,
+  "rate": 1.06
  }
 }

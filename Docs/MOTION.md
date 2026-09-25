@@ -1291,16 +1291,25 @@ A family ships only the shapes its five forms use. A missing file falls back
   `Art/Motions/<key>.motion.npz`. Every take is judged on its donor board
   (`skill_moves.py board <key>`) and the verdict, the reason, the corrected
   sentence and the frame of each strike are kept in `Art/Motions/skills.json`.
-  A take the judge sends back plays nothing until its new take is judged; the
-  family keeps the palette's clip for that slot meanwhile.
+  A take the judge sends back never plays: the family keeps the palette's
+  clip for that slot until a new take is judged. The judges are
+  `tools/skills/judge_workflow.js` (one agent per batch of keys) and their
+  verdicts go in through `tools/skills/apply_verdicts.py <journal.jsonl>`,
+  which applies a verdict only when its judge STARTED after the take it
+  names was queued: a workflow rewrites its journal for as long as it runs,
+  and trusting the file's time put second-take verdicts on third takes.
 - **The second-skill moves** (30) are chained from single strikes
   (`tools/skills/style_moves.json`, `skill_moves.py compose`), each segment
   carried onto the first segment's rig first; their contacts are exact.
-- **Retired** (`retired` in the record, with the reason): a signature that
-  failed twice keeps the palette's clip for good. Archery failed more than
-  anything else (the draw is held and never loosed, or the loose comes out
-  an overhand throw): Artemis, Diana, Skadi and Ullr play the palette's
-  archery, aimed; Atalanta's basic is the archery sentence that held.
+- **Retired** (`retired` in the record, with the reason in words): a
+  signature that failed twice keeps the palette's clip for good; the credits
+  ran out at the second take. Archery failed more than anything else (the
+  draw is held and never loosed, or the loose comes out an overhand throw):
+  Artemis, Diana, Skadi and Ullr play the palette's archery, aimed;
+  Atalanta's basic is the archery sentence that held. A take whose only fault
+  was the hand that leads is kept MIRRORED instead of retired (a judged
+  `flip`): Chang'e's ultimate raised and swept with the empty left hand, so
+  mirrored it is the mirror hand that does, as written.
 
 ### What the ship does to a source
 

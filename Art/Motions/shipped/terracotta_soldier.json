@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "220",
-  "frames": 59,
-  "seconds": 1.97,
-  "blow_source": 0.483,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 1.15,
-  "follow_speed": 0.89,
-  "rate": 1.52
+  "preset": "Art/Motions/aimed/terracotta_soldier_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "221",
@@ -78,5 +73,11 @@
    44.7
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_polearm_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
  }
 }

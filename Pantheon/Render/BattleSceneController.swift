@@ -1276,9 +1276,10 @@ final class BattleSceneController: NSObject {
         // (`playNext`): the units back on their marks first, then the camera
         // home (2026-09-25). An ultimate's push now holds on its caster until
         // its first contact (`CameraDirector.perform`'s `holdUntil`), up to
-        // three seconds at ×1, and a skip in its wind-up left the camera
-        // pushed in on a caster whose blow would never come, beside a striker
-        // still standing in the enemy line.
+        // three seconds at ×1, so a skip in its wind-up left the camera pushed
+        // in on a caster whose blow would never come; and a striker a skip
+        // caught beside its victim stood in the enemy line until the next
+        // turn began.
         returnEveryoneHome()
         director?.returnHome()
         delegate?.battleSceneDidFinishPlayback(self)

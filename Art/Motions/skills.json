@@ -2625,7 +2625,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790359249.3954394,
+      "touched": 1790361403.1529808,
       "motion_task": "01a0d9b6-7126-71e8-a828-46bf225093f3",
       "motion_created": "2026-09-25T17:56:47Z",
       "balance_before": 388,
@@ -2643,7 +2643,17 @@
       "seconds_made": 3.5,
       "blow_frame": 90,
       "blow_fraction": 0.865,
-      "archived_at": "2026-09-25T18:00:49Z"
+      "archived_at": "2026-09-25T18:00:49Z",
+      "contact_frames": [
+        88
+      ],
+      "contacts": [
+        0.846
+      ],
+      "judged": "keep",
+      "judged_prompt": "A standing, light-footed pose facing the target, a winged staff in the right hand. Rising onto the toes, the right arm lifts the staff straight up to the sky, the left arm out low, the chest square to the target; then the right arm sweeps the staff down in one arc to point straight ahead at chest height, and he settles back to standing. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board /tmp/judge_0_hermes_ultimate.jpg; f0-f10 and f76-f99 re-rendered at every frame, the hold at 520 px from front, side and back, per-frame joint numbers. Starts and ends in the same light-footed stance (heels 8-19 cm up throughout, arms out low; f104 matches f0). Wind-up: the right arm swings forward and straight up in 7 frames (9 m/s at f1) and is held overhead at 2.1-2.2 m from f8 to f75 (ha"
     },
     "hoplite_attack_basic": {
       "history": [
@@ -2692,7 +2702,7 @@
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790359250.3056445,
+      "touched": 1790361403.154165,
       "motion_task": "01a0d9b6-7401-7004-9069-82e66e5e5410",
       "motion_created": "2026-09-25T17:56:48Z",
       "balance_before": 378,
@@ -2710,7 +2720,19 @@
       "seconds_made": 2.0,
       "blow_frame": 12,
       "blow_fraction": 0.203,
-      "archived_at": "2026-09-25T18:00:50Z"
+      "archived_at": "2026-09-25T18:00:50Z",
+      "contact_frames": [
+        13
+      ],
+      "contacts": [
+        0.22
+      ],
+      "judged": "reroll",
+      "judged_prompt": "Fighting stance, the left fist raised before the left shoulder like a shield, a short sword in the right hand cocked high beside the ear. A short step forward and one short, hard overhand stab straight down and forward into the target's chest, the right hand stopping straight ahead at chest height, the shoulders square to the target, then a step back to the fighting stance. In place.",
+      "judge_reason": "A flat sweep across to her left, not a stab, and she winds round until her back is to the target. The sword starts upright in front of the chest (not beside the ear), swings down and back to waist height behind her right side (f6-f10), then whips across the front at waist height (hand 1.23 m, 15-16 m/s, f11-f14) and carries on round behind her left: the sword arm points straight back from f17 to f24. The chest turns up to 150 deg to her left in a deep lunge, past 90 deg from f15 to f26 (0.4 s), before she comes back to the stance.",
+      "judge_notes": "Board /tmp/judge_0_hoplite_attack_basic.jpg; f0-f34 re-rendered at 280 px, per-frame joint numbers. Contact 13: the hand at its farthest forward (0.75 m ahead of the hips, elbow 149 deg) at 1.23 m, 13 deg left of the target line; at the automatic peak f12 it is 0.67 m ahead and 22 deg right. blow_heading reads a spread at f12, and no turn could undo the follow-through behind her. Both takes turned",
+      "suggested": "Fighting stance, the left fist raised before the left shoulder like a shield, a short sword in the right hand cocked at the right shoulder. A short step forward and one hard thrust, the right arm punching straight forward from the shoulder, the hand stopping straight in front at chest height, shoulders square to the target; then a step back to the fighting stance. In place.",
+      "retired": "two takes: a sweep round to the back, then a flat sweep with the back to the target; the palette basic"
     },
     "horus_attack_basic": {
       "history": [
@@ -2761,7 +2783,7 @@
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790359251.586181,
+      "touched": 1790361403.1551826,
       "motion_task": "01a0d9b6-76da-74f8-a196-b60c5e5aff47",
       "motion_created": "2026-09-25T17:56:49Z",
       "balance_before": 368,
@@ -2779,7 +2801,23 @@
       "seconds_made": 2.5,
       "blow_frame": 26,
       "blow_fraction": 0.351,
-      "archived_at": "2026-09-25T18:00:51Z"
+      "archived_at": "2026-09-25T18:00:51Z",
+      "contact_frames": [
+        5,
+        22,
+        26
+      ],
+      "contacts": [
+        0.068,
+        0.297,
+        0.351
+      ],
+      "judged": "reroll",
+      "judged_prompt": "Fighting stance, a curved sword in the right hand. A quick step in with the left foot and a forehand slash from above the right shoulder down across the target's chest to the left hip, the shoulders square to the target, then at once a rising backhand slash back up across the chest to above the right shoulder, and a snap back to the fighting stance. In place.",
+      "judge_reason": "She turns her back and swings three times. The body turns to her right until the pelvis is past 90 deg from the target from f8 to f48 (about 1.4 s) and at 170-187 deg from f30 to f40, then turns back the way it came, square by f63. The swings are a flat backhand to her right (f4-f7, 11 m/s), a forehand from behind her right that stops pointing forward (f16-f22), and a backhand away to her right again (f25-f28, 9.6 m/s). None is the forehand down to the left hip followed by the rising backhand, and the left hand stays on the hilt beside the right for the whole clip.",
+      "judge_notes": "Board /tmp/judge_0_horus_attack_basic.jpg; f0-f31 re-rendered at every frame, per-frame joint numbers. Contacts: 5, the first swing's hand at full reach (0.49 m ahead, elbow 151 deg, 1.45 m) crossing the target line; 22, the second swing arriving in front (0.47 m ahead, 13 deg right, 1.48 m); 26, the third at its fastest as it leaves to the right. The automatic peaks 7, 17 and 27 are the same thre",
+      "suggested": "Fighting stance facing the target, a curved sword in the right hand, the left fist at the hip. Feet planted: one short, fast diagonal slash from above the right shoulder down across the chest to the left hip, then at once one slash back up the same line to above the right shoulder, the chest facing forward throughout; then back to the fighting stance. In place.",
+      "retired": "two takes, both spin on the step in (143 and 187 deg) and swing three times; the palette basic"
     },
     "horus_ultimate": {
       "history": [
@@ -2828,7 +2866,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790359252.657386,
+      "touched": 1790361403.1562853,
       "motion_task": "01a0d9b6-79e3-7117-a399-b0afe6e09cbd",
       "motion_created": "2026-09-25T17:56:50Z",
       "balance_before": 358,
@@ -2846,7 +2884,21 @@
       "seconds_made": 3.0,
       "blow_frame": 33,
       "blow_fraction": 0.371,
-      "archived_at": "2026-09-25T18:00:52Z"
+      "archived_at": "2026-09-25T18:00:52Z",
+      "contact_frames": [
+        8,
+        32
+      ],
+      "contacts": [
+        0.09,
+        0.36
+      ],
+      "judged": "reroll",
+      "judged_prompt": "Fighting stance, a curved sword in the right hand. Rising onto the toes, the right hand draws the sword high behind the head as the left arm points straight at the target, the chest square to it; then a short hop straight forward and a one-handed chop straight down onto the target, landing with the knees bent deep, then rising back to the fighting stance. In place.",
+      "judge_reason": "Two blows, and the chop whirls across instead of coming down. After lifting the sword up behind the right shoulder (f1-f5), she slashes it down across the front to her left at full speed (f6-f10: hand 18.7 m/s, crossing the target line at f8), the chest turning 65-100 deg to her left. Then a jump (hips 0.47 m up, f16-f31) and the second blow: from high on her left, across the front at head height (f32), down to her right and round behind her right hip (f34-f35), the chest whipping from about 80-110 deg left to 80 deg right in a third of a second. She then holds the landing crouch for 0.8 s (f3",
+      "judge_notes": "Board /tmp/judge_0_horus_ultimate.jpg; f4-f11 and f28-f37 re-rendered at every frame, per-frame joint numbers. Contact 8: the first slash's hand at full reach (0.75 m ahead, 9 deg left, 1.23 m, 18.7 m/s). Contact 32: the chop's hand on the target line at its farthest forward (0.72 m ahead, 1.66 m, 15 m/s); the blade crosses chest height between f32 and f33. It ends square in the stance (f76-f89). ",
+      "suggested": "Fighting stance, a curved sword in the right hand. Rising onto the toes, the right hand lifts the sword high overhead and holds it there as the left arm points straight at the target, the chest square to it; then a short hop forward and a single one-handed chop straight down in front, landing with the knees bent deep, then rising to the fighting stance. In place.",
+      "retired": "two takes: side-on with two hands, then a slash before the hop and a chop that whirls across; the palette ultimate"
     },
     "isis_attack_basic": {
       "history": [
@@ -2891,7 +2943,7 @@
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790359254.705867,
+      "touched": 1790361403.1572306,
       "motion_task": "01a0d9b6-7d51-779a-945a-df72e49002de",
       "motion_created": "2026-09-25T17:56:50Z",
       "balance_before": 348,
@@ -2909,7 +2961,19 @@
       "seconds_made": 2.0,
       "blow_frame": 35,
       "blow_fraction": 0.593,
-      "archived_at": "2026-09-25T18:00:54Z"
+      "archived_at": "2026-09-25T18:00:54Z",
+      "contact_frames": [
+        36
+      ],
+      "contacts": [
+        0.61
+      ],
+      "judged": "reroll",
+      "judged_prompt": "A standing priestess's pose, a sceptre in the right hand. The right hand lifts from the hip and circles once in front of the chest, then thrusts the sceptre hard straight at the target, the arm fully extended at chest height, with a small step forward on the right foot, the left hand opening low at the side, then settles back to standing. In place.",
+      "judge_reason": "There is no clear fast blow. The thrust is a slow push. The arm straightens over f28-f37 (elbow 91 to 163 deg, reach 0.42 to 0.54 m) with the hand at 1.2-2.0 m/s the whole way. Its 3-frame peak is about 1.5 m/s; the slowest basic kept so far, Chang'e's, peaks at 2.3 m/s on this donor. Most of the hand's travel also goes out to her right (0.28 m) rather than forward (0.13 m). Before the thrust, the sceptre hand hangs almost still in front of the face for 0.6 s (f12-f30, under 0.7 m/s); only the wrist turns, and the asked circle is not there. It reads as a slow point, not a hard thrust at the ta",
+      "judge_notes": "Sources: board /tmp/judge_1_isis_attack_basic.jpg, 280-340 px renders with a top view (f28-f39 at every frame) and per-frame joint numbers.\n\nTimeline:\n- f0: the sceptre hand is already raised by the right shoulder (1.41 m).\n- f0-f12: it comes in to the front of the face (2.2 m/s at f6).\n- f12-f30: near-still. There is a wrist turn and a small right-foot step (lifted 7 cm, 11 cm forward, f19-f28).\n",
+      "suggested": "A standing priestess's pose, a sceptre in the right hand. The right hand draws the sceptre back beside the right shoulder, then drives it fast and hard straight forward at the target's chest, the arm snapping out to full length, with a small step forward on the right foot, the left hand low at the side, then settles back to standing. In place.",
+      "retired": "two takes, no clear fast blow (a slow push at 1.5 m/s); the palette basic"
     },
     "isis_ultimate": {
       "history": [
@@ -2954,7 +3018,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790359276.5905695,
+      "touched": 1790361403.158328,
       "motion_task": "01a0d9b6-7fe9-705d-88f0-0679f216ed17",
       "motion_created": "2026-09-25T17:56:51Z",
       "balance_before": 338,
@@ -2972,7 +3036,17 @@
       "seconds_made": 3.0,
       "blow_frame": 30,
       "blow_fraction": 0.337,
-      "archived_at": "2026-09-25T18:01:16Z"
+      "archived_at": "2026-09-25T18:01:16Z",
+      "contact_frames": [
+        41
+      ],
+      "contacts": [
+        0.461
+      ],
+      "judged": "keep",
+      "judged_prompt": "A standing priestess's pose, the arms at the sides. Both arms unfold out to the sides and up into a high V like great wings opening, the chest lifting, then both arms sweep forward and inward in one wide, strong arc, stopping straight out in front at chest height, hands apart, as if folding wings around the allies, then lower back to standing. In place.",
+      "judge_reason": "",
+      "judge_notes": "Sources: board /tmp/judge_1_isis_ultimate.jpg, 240-320 px renders with a top view, and per-frame numbers.\n\nWind-up: the arms fly out and up from the sides into a high V (f0-f12, 5 m/s at f6). They end slightly behind the body, with the head tipped back 37 deg. Held f12-f25.\n\nRelease: both arms sweep forward and in from the V (f26-f41, 1.0-2.5 m/s). The sweep is soft but big: the hands travel about"
     },
     "jackal_warrior_attack_basic": {
       "history": [
@@ -3021,7 +3095,7 @@
       "role": "basic",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790359287.194288,
+      "touched": 1790361403.159223,
       "motion_task": "01a0d9b6-8275-708a-9385-f535102d306e",
       "motion_created": "2026-09-25T17:56:52Z",
       "balance_before": 328,
@@ -3039,7 +3113,19 @@
       "seconds_made": 2.0,
       "blow_frame": 12,
       "blow_fraction": 0.203,
-      "archived_at": "2026-09-25T18:01:27Z"
+      "archived_at": "2026-09-25T18:01:27Z",
+      "contact_frames": [
+        11
+      ],
+      "contacts": [
+        0.186
+      ],
+      "judged": "keep",
+      "kept_as": "aimed at ship by the judge's heading +35: the tool read +20, the tolerance, and left the side-on body unturned",
+      "judged_prompt": "Fighting stance, crouched low, a curved dagger in the right hand, the left fist raised as a guard. One darting lunge straight forward on the right foot, the left foot planted, and one fast straight stab of the right hand into the target's chest, the shoulders square to the target, then the right foot steps straight back into the crouched stance. In place.",
+      "judge_reason": "The only fault is direction. It is one clean right-hand dagger strike, but the body pivots to its left as it strikes. The chest is 71 deg off the target at the contact and 85-99 deg (side-on) from f12 to f24, and the cut carries on up over the left shoulder. It ends in its raised guard still turned 47 deg (hips 63 deg). The blow is a rising diagonal cut rather than the straight stab asked for, but it is one fast, readable strike that starts in the crouched guard.",
+      "judge_notes": "Sources: board /tmp/judge_1_jackal_warrior_attack_basic.jpg, 260-340 px renders with a top view (f9-f14 at every frame) and per-frame numbers.\n\nTimeline:\n- f0-f9: the crouched guard, a small sink, and the left fist swinging out.\n- f10-f14: the dagger hand rises from in front of the belly across to high over the left shoulder, peaking at 9.7 m/s at f11. The chest turns 47 deg at f10, 71 at f11 and ",
+      "aim_heading": 35
     },
     "khnum_attack_basic": {
       "prompt": "Fighting stance, a short mace in the right hand. He lowers his head like a butting ram and drives forward one heavy step off the back foot, ramming the target at chest height with the head and shoulders, both arms pulled back for power, then back to the fighting stance. In place.",
@@ -5264,7 +5350,7 @@
       "role": "area",
       "queued": "2026-09-25T16:48:51Z",
       "state": "archived",
-      "touched": 1790354987.9498956,
+      "touched": 1790361353.871097,
       "motion_task": "01a0d978-5dae-7332-9101-55e6c2af1159",
       "motion_created": "2026-09-25T16:48:59Z",
       "balance_before": 2547,
@@ -5282,7 +5368,17 @@
       "seconds_made": 2.5,
       "blow_frame": 19,
       "blow_fraction": 0.257,
-      "archived_at": "2026-09-25T16:49:47Z"
+      "archived_at": "2026-09-25T16:49:47Z",
+      "contact_frames": [
+        20
+      ],
+      "contacts": [
+        0.27
+      ],
+      "judged": "keep",
+      "judged_prompt": "A standing mage's pose. Both hands draw in to the chest, gathering power, then both arms sweep outward and forward together in one wide horizontal arc across the whole front with the palms facing out, the body leaning forward into the release, and the mage settles back to standing. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board: /tmp/judge_8_style_caster_area.jpg. I re-rendered f17-f23 frame by frame (front and back), the coil from the back and her right side, the recovery larger, and top-down stick plots (scratchpad judge8/). It is one wind-up and one sweep. f1-f15: both hands draw in to her right hip as the chest coils to -100 deg; it is past -90 only f12-f15. f16-f22: both hands sweep TOGETHER (0.23-0.37 m apart"
     },
     "style_robed_area": {
       "prompt": "A robed priest stands tall and raises the right hand high to the sky with the palm open, holds it there for a moment with the head lifted, then sweeps the arm down and forward to point at the ground in front as if calling judgement down on the enemies, the left hand held at the chest, and settles back to standing. In place.",
@@ -5291,7 +5387,7 @@
       "role": "area",
       "queued": "2026-09-25T16:48:51Z",
       "state": "archived",
-      "touched": 1790354988.9546094,
+      "touched": 1790361353.8724797,
       "motion_task": "01a0d978-6093-70dd-8734-de21fe5aa754",
       "motion_created": "2026-09-25T16:49:00Z",
       "balance_before": 2527,
@@ -5309,7 +5405,17 @@
       "seconds_made": 3.0,
       "blow_frame": 40,
       "blow_fraction": 0.449,
-      "archived_at": "2026-09-25T16:49:48Z"
+      "archived_at": "2026-09-25T16:49:48Z",
+      "contact_frames": [
+        43
+      ],
+      "contacts": [
+        0.483
+      ],
+      "judged": "keep",
+      "judged_prompt": "A robed priest stands tall and raises the right hand high to the sky with the palm open, holds it there for a moment with the head lifted, then sweeps the arm down and forward to point at the ground in front as if calling judgement down on the enemies, the left hand held at the chest, and settles back to standing. In place.",
+      "judge_reason": "",
+      "judge_notes": "Board: /tmp/judge_8_style_robed_area.jpg. I re-rendered f39-f47 frame by frame, plus back views (the game camera's side), in scratchpad judge8/. f6-f11: the right hand goes up to the sky (2.0-2.09 m). f12-f38: she holds it there with the head thrown back (trunk arched back up to 29 deg) and the left hand at the lower chest (1.22 m). f39-f44: the right arm comes over the top and down in front, fast"
     },
     "baldr_attack_basic": {
       "prompt": "A standing prince's pose, a spear in the right hand. He draws the spear back level at the shoulder, sighting along it at the target, then takes a short step forward on the left foot and thrusts it straight forward at chest height, the arm snapping fully out, as if loosing a ray of light from its point, and settles back to standing. In place.",
@@ -7316,7 +7422,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T18:10:16Z",
       "state": "archived",
-      "touched": 1790359847.0792303,
+      "touched": 1790361561.9073722,
       "motion_task": "01a0d9c2-cfd1-7336-8e09-9f6623c1cbcd",
       "motion_created": "2026-09-25T18:10:18Z",
       "balance_before": 157,
@@ -7334,7 +7440,19 @@
       "seconds_made": 3.0,
       "blow_frame": 31,
       "blow_fraction": 0.348,
-      "archived_at": "2026-09-25T18:10:47Z"
+      "archived_at": "2026-09-25T18:10:47Z",
+      "contact_frames": [
+        32
+      ],
+      "contacts": [
+        0.36
+      ],
+      "judged": "reroll",
+      "judged_prompt": "Fighting stance, a hand axe in the right hand. He throws both arms up high in a wide V and roars, chest out, then tucks the right fist by the chin, drops the right shoulder and lunges one short step straight at the target in front, driving the shoulder into its chest in one crushing body blow, then pushes straight back to the fighting stance. In place.",
+      "judge_reason": "No clear blow once the hips are held (barely moving at the release). The wind-up reads: a dip, both arms flung up in a wide V with the head back (f4-f11, hands 8.6 m/s), then the right fist tucked by the chin (f15-f17). But the lunge came out as a charging run. Five strides (right f3-f9, left f11-f17, right f25-f32, left f35-f48, right f50-f57) carry the hips 3.3 m, and the drive (hips 4.9 m/s at f31) is all travel, which the game removes. On the spot he jogs in place while the trunk creeps from 27 to 46 deg of lean (f32-f40). The hands stay at the belly, and after f16 the neck and shoulders n",
+      "judge_notes": "Board /tmp/judge_1_tyr_ultimate.jpg. Re-rendered large (f0-f18, f20-f44, f46-f89, and the side view f24-f47 every frame) and measured on the raw archive and in the hip-held frame. Contact f32 is the end of the drive: the right foot plants at the front of its stride, the hips slow 4.9 -> 3.1 -> 1.9 m/s (f31-f33), and the trunk leans 27 deg. The auto peaks [5, 12, 32] are the arms flinging up, the a",
+      "suggested": "Fighting stance, a hand axe in the right hand. He throws both arms up high in a wide V and roars, then tucks the right fist by the chin and lunges once onto the front foot, the back foot planted, snapping the upper body forward to drive the right shoulder into the target's chest in one crushing blow, then pushes back to the fighting stance. In place.",
+      "retired": "two takes, both run: the second is five strides and no blow once the hips are held; the palette ultimate"
     },
     "ullr_attack_basic": {
       "prompt": "A standing hunter's pose, the bow in the left hand. He stands tall and still, lifts the bow level at the target at chest height and slowly pulls the string to the cheek with the right hand, holding the aim for a breath, then looses, the right hand opening back past the jaw, and settles back to standing. In place.",
@@ -7500,7 +7618,7 @@
       "role": "basic",
       "queued": "2026-09-25T18:10:16Z",
       "state": "archived",
-      "touched": 1790359862.74258,
+      "touched": 1790361561.9083061,
       "motion_task": "01a0d9c2-d402-71d8-a63e-a2a6db0d3eef",
       "motion_created": "2026-09-25T18:10:20Z",
       "balance_before": 147,
@@ -7518,7 +7636,19 @@
       "seconds_made": 2.0,
       "blow_frame": 14,
       "blow_fraction": 0.237,
-      "archived_at": "2026-09-25T18:11:02Z"
+      "archived_at": "2026-09-25T18:11:02Z",
+      "contact_frames": [
+        26
+      ],
+      "contacts": [
+        0.441
+      ],
+      "judged": "keep",
+      "kept_as": "aimed at ship by the judge's heading +47: the blow is the right foot (a front kick) and the arms are flung apart",
+      "judged_prompt": "Fighting stance, an axe held low in the right hand. He draws the right knee up high in front of the body, then drives the right boot straight forward into the target's chest in one heavy stamping kick, the leg snapping straight, hips and chest square to the target, the arms held in close, then sets the foot down back into the fighting stance. In place.",
+      "judge_reason": "Direction only: one right-leg front kick that lands 47 deg to his LEFT, with the hips turned 93-113 deg to his left from f26 to f45 (0.63 s). Turned -47 deg it is one clean high front kick on the target.",
+      "judge_notes": "SHIP: set aim_heading 47 (the right toe's bearing from the hips at f26). blow_heading is None at f26-f28 because the arms are flung apart, so aim_blows([26]) alone turns nothing, and the take would ship with the hips past side-on for 0.63 s. Checked on an aimed render: turned -47, the toe lands 0.3 deg off the target line at f26, and the hips stay within 66 deg over the whole clip. The default rel",
+      "aim_heading": 47
     },
     "vidar_ultimate": {
       "history": [
@@ -7567,7 +7697,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T18:10:16Z",
       "state": "archived",
-      "touched": 1790359863.8974464,
+      "touched": 1790361561.9093251,
       "motion_task": "01a0d9c2-d956-74fd-81e6-4aea8001c527",
       "motion_created": "2026-09-25T18:10:21Z",
       "balance_before": 137,
@@ -7585,7 +7715,18 @@
       "seconds_made": 3.0,
       "blow_frame": 26,
       "blow_fraction": 0.292,
-      "archived_at": "2026-09-25T18:11:03Z"
+      "archived_at": "2026-09-25T18:11:03Z",
+      "contact_frames": [
+        29
+      ],
+      "contacts": [
+        0.326
+      ],
+      "judged": "keep",
+      "kept_as": "aimed at ship",
+      "judged_prompt": "Fighting stance, an axe in the right hand. In grim silence he raises the axe high beside the head and sinks the knees, coiled, then explodes in one short, heavy step straight at the target in front, driving the left shoulder into its chest as the axe chops down beside that shoulder, his whole weight in the blow, then straight back to the fighting stance. In place.",
+      "judge_reason": "Direction only: one coiled overhead chop that lands about 95 deg to his LEFT. From the coil (hips -42, shoulders -32 deg, left side to the target, f18) the body whips round to his left (shoulders +103 to +105 deg, f31-f33) as both arms bring the axe down past his left hip. He then holds a deep crouch side-on (shoulders 73-78 deg, f40-f55). Turned -95 deg, the coil shows the left side to the target, the chop comes straight down the target line, and the trunk drives 40 deg forward into it, left shoulder leading.",
+      "judge_notes": "The ship aims this one itself: blow_heading reads +95.0 at f29 (both hands out the same way), so aim_blows([29]) turns it -95 deg. No aim_heading is needed (95 if one is set). Checked on an aimed render. The hips pass side-on only at f19-f20 (-94/-95 deg, left side to the target) and the shoulders reach -86 at most. At the chop the shoulders are square (-9 to +10 deg, f30-f32) and the axe hand com"
     },
     "style_polearm_thrust": {
       "prompt": "Fighting stance holding a long spear level in both hands, the point toward the target. The warrior drives the spear straight forward in one fast, powerful thrust at chest height, the back hand pushing the shaft through the front hand and the front knee bending, then draws it back into the fighting stance. In place.",
@@ -8730,7 +8871,7 @@
       "role": "basic",
       "queued": "2026-09-25T18:10:16Z",
       "state": "archived",
-      "touched": 1790359865.081797,
+      "touched": 1790361561.905251,
       "motion_task": "01a0d9c2-dc51-76cf-bb44-643fcf2f14f3",
       "motion_created": "2026-09-25T18:10:21Z",
       "balance_before": 124,
@@ -8748,7 +8889,21 @@
       "seconds_made": 2.0,
       "blow_frame": 22,
       "blow_fraction": 0.373,
-      "archived_at": "2026-09-25T18:11:05Z"
+      "archived_at": "2026-09-25T18:11:05Z",
+      "contact_frames": [
+        13,
+        25
+      ],
+      "contacts": [
+        0.22,
+        0.424
+      ],
+      "judged": "reroll",
+      "judged_prompt": "A grave standing pose, both hands gripping a long two-pronged staff across the body. He leans in hard from the hips and stabs the pronged head fast at the target's chest, both arms straightening, then at once rips it sharply back to his chest in one violent pull, as if tearing the soul out of it, and settles back to standing. In place.",
+      "judge_reason": "Wrong number of blows: three beats of near-equal strength (strike signal 4.41 at f12, 4.59 at f23, 3.42 at f32) and no stab. f11-f14 both hands shove the staff out to her LEFT at chest height, elbows bent, no lean (46 deg left). f21-f25 she bows 42 deg and plunges both hands forward-DOWN to hip height (0.95 m). f28-f40 she drags it low round to her right hip, chest twisting 72 deg right, head down. Nothing drives straight at the chest with the arms straight, and the pull ends at the hip, not the chest.",
+      "judge_notes": "Board /tmp/judge_0_pluto_attack_basic.jpg; f9-f28 re-rendered every frame. Contacts: f13 the shove landing on her left, f25 the plunge at full reach (arm 96% out, 0.57 m ahead). No back turn (chest -72 max), no arm through the body, ends in its stance. The rewrite drops 'leans from the hips' (the bow) and 'across the body' (the sideways shove) and holds the staff level like a spear.",
+      "suggested": "A grave standing pose, both hands on a long two-pronged staff held level at the waist, prongs toward the target, right hand behind the left. He drives it straight forward in one fast two-handed thrust at the target's chest, arms straightening, body upright and square to the target, then draws it smoothly back to the waist as if hooking out a soul, and settles back to standing. In place.",
+      "retired": "two takes, three beats of near-equal strength and no stab (the second shoves and plunges); the palette basic"
     },
     "pluto_ultimate": {
       "history": [
@@ -8797,7 +8952,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T18:10:16Z",
       "state": "archived",
-      "touched": 1790359877.4362166,
+      "touched": 1790361561.906377,
       "motion_task": "01a0d9c2-defc-70e7-8269-f4d48a6df8c9",
       "motion_created": "2026-09-25T18:10:22Z",
       "balance_before": 114,
@@ -8815,7 +8970,18 @@
       "seconds_made": 3.0,
       "blow_frame": 46,
       "blow_fraction": 0.517,
-      "archived_at": "2026-09-25T18:11:17Z"
+      "archived_at": "2026-09-25T18:11:17Z",
+      "contact_frames": [
+        49
+      ],
+      "contacts": [
+        0.551
+      ],
+      "judged": "keep",
+      "kept_as": "aimed at ship",
+      "judged_prompt": "A grave standing pose, both hands gripping a long two-pronged staff across the body. He sinks low, head bowed over the staff, gathering for a moment, then surges explosively up onto the toes, both arms heaving the staff high overhead and forward in one great thrust, as if wrenching the underworld up beneath the whole enemy line, and settles back to standing. In place.",
+      "judge_reason": "Direction only. One clear release: she sinks into a deep squat, head bowed (f0-f25), rises and leaps about 0.34 m with the head thrown back (f33-f45), lands in a very deep crouch and whips the staff hand across the front at knee height (f46-f49; 9.5 m/s at f49, strike signal 6.73 against 3.2 for anything else), holds the crouch to f75 and rises to her starting stance by f89. The release lands 31 deg to her left (the ship's own blow_heading at f49), chest 17 deg left.",
+      "judge_notes": "Contact f49: fastest frame of the sweep, both hands out in front at knee height (0.65 m). The ship reads +31 there and turns it itself; no manual heading needed. Not the sentence's shape: no staff heaved overhead (hands at the hips in the leap) and the release is a slam down, but it reads as gather, leap, slam. No back turn, wrists 0.35 m+ from the legs, head back 32 deg (a roar), no collapse."
     },
     "vestal_attack_basic": {
       "history": [
@@ -8968,7 +9134,7 @@
       "role": "ultimate",
       "queued": "2026-09-25T17:56:46Z",
       "state": "archived",
-      "touched": 1790360212.9255414,
+      "touched": 1790361403.1602674,
       "motion_task": "01a0d9b6-8703-73e2-9d59-e4b4e851b65a",
       "motion_created": "2026-09-25T17:56:53Z",
       "balance_before": 318,
@@ -8986,7 +9152,20 @@
       "seconds_made": 3.0,
       "blow_frame": 65,
       "blow_fraction": 0.73,
-      "archived_at": "2026-09-25T18:01:32Z"
+      "archived_at": "2026-09-25T18:01:32Z",
+      "contact_frames": [
+        70
+      ],
+      "contacts": [
+        0.787
+      ],
+      "judged": "keep",
+      "judged_prompt": "A standing lady's pose, both feet on the ground, a small round mirror in the right hand. She slowly raises the mirror high overhead toward the moon, rising onto the toes of both feet, holds a moment, then sweeps it down and forward in one wide arc before her chest, blessing the allies, the left hand opening beside it, and settles back to standing. In place.",
+      "judge_reason": "The wrong hand leads. The empty LEFT hand does the whole rite: it rises straight overhead (2.18 m, f12-f45) and makes the sweep down and forward in front of the left shoulder (f51-f75). The RIGHT hand holds the mirror. It stays bent at shoulder height out to her right side (1.40-1.55 m, elbow 101-120 deg, f12-f50) and then only sinks to her waist, so the mirror is never raised to the moon or swept over the allies.",
+      "judge_notes": "Sources: board /tmp/judge_1_chang_e_ultimate.jpg, 300 px renders with a top view, and per-frame numbers.\n\nTimeline:\n- f0: she starts standing, both hands before the waist, so it does not start part-way.\n- f0-f12: both hands rise in front.\n- f12-f50: the left arm goes on straight up and is held nearly still for 1.0 s (f21-f50, under 0.6 m/s). She rises slightly onto the toes (hips +5 cm, heels +4 c",
+      "suggested": "A standing lady's pose, a small round mirror in the right hand, the left arm low at her side. She lifts the right arm straight overhead, the mirror to the moon, rising onto her toes, holds a beat, then sweeps the right arm down and forward in one wide, quick arc to chest height, blessing the allies, the left hand opening low, and settles back to standing. In place.",
+      "flip": true,
+      "kept_as": "mirrored (flip): the take's LEFT hand raised and swept the rite; mirrored it is the mirror hand, as written"
     },
     "fox_spirit_attack_basic": {
       "history": [
@@ -9491,7 +9670,7 @@
       "role": "basic",
       "queued": "2026-09-25T18:09:28Z",
       "state": "archived",
-      "touched": 1790360212.925549,
+      "touched": 1790361561.904158,
       "motion_task": "01a0d9c2-10fc-771d-864e-cba7163e50ab",
       "motion_created": "2026-09-25T18:09:29Z",
       "balance_before": 167,
@@ -9509,7 +9688,19 @@
       "seconds_made": 2.0,
       "blow_frame": 45,
       "blow_fraction": 0.763,
-      "archived_at": "2026-09-25T18:10:33Z"
+      "archived_at": "2026-09-25T18:10:33Z",
+      "contact_frames": [
+        48
+      ],
+      "contacts": [
+        0.814
+      ],
+      "judged": "keep",
+      "kept_as": "aimed at ship by the judge's heading -25: the free hand hangs behind, so the hands read as a spread",
+      "judged_prompt": "Fighting stance, square and upright like a soldier on parade, a short sword in the right hand, the left fist at the hip. He snaps the sword up before the face in a crisp salute, raises it overhead and chops straight down in one hard drilled stroke that stops in front of the belly, chest square to the target, then back to the stance. In place.",
+      "judge_reason": "Direction only. One clean right-hand chop: the sword, already up by the head at f0 and held almost still to f20, is lifted and cocked back over the left shoulder (f21-f40), then comes straight down over the top (f41-f51, tip 9.1 m/s at f46) and stops level at belly height; lowered by f59. It falls in a vertical plane 0.5 m right of her centre (tip 29 deg right at f48) with the chest 21-29 deg left, so at the 1.37 m stride it passes beside the victim's shoulder.",
+      "judge_notes": "SHIP: blow_heading is None on f46-f51 (a spread: the free left hand hangs behind-left), so set aim_heading -25 or it ships unturned. Contact f48: end of the fast swing (tip 7.1->4.5 m/s), wrist 1.28 m, arm 89% out, tip furthest forward. Auto peaks 31/46/51 = cock-back, blade still upright, drop to level. No back turn (chest max +32), no step, ends upright. Kept: no salute, late blow (0.81).",
+      "aim_heading": -25
     }
   }
 }

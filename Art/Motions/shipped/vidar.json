@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "97",
-  "frames": 67,
-  "seconds": 2.23,
-  "blow_source": 0.318,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.76,
-  "follow_speed": 1.18,
-  "rate": 1.72
+  "preset": "Art/Motions/aimed/vidar_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "238",
@@ -22,15 +17,10 @@
   "rate": 1.49
  },
  "ultimate": {
-  "preset": "105",
-  "frames": 101,
-  "seconds": 3.37,
-  "blow_source": 0.74,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 1.19,
-  "follow_speed": 0.68,
-  "rate": 1.4
+  "preset": "Art/Motions/aimed/vidar_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88
  },
  "idle_combat": {
   "preset": "ready (a) over the 89 guard half",
@@ -120,5 +110,11 @@
    2.5
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_polearm_area.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 0.96
  }
 }
