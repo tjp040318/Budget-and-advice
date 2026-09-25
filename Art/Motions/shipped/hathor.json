@@ -22,15 +22,10 @@
   "rate": 1.34
  },
  "ultimate": {
-  "preset": "126",
-  "frames": 130,
-  "seconds": 4.33,
-  "blow_source": 0.574,
-  "blow": 0.62,
-  "target": 0.62,
-  "windup_speed": 0.93,
-  "follow_speed": 1.12,
-  "rate": 1.8
+  "preset": "Art/Motions/hathor_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88
  },
  "idle_combat": {
   "preset": "natural (tools/natural_idle.py): the stages' idle, the same file",
@@ -100,5 +95,11 @@
    24.0
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_robed_area.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.15
  }
 }

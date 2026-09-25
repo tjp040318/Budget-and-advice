@@ -1,14 +1,14 @@
 {
  "attack_basic": {
-  "preset": "206",
-  "frames": 44,
-  "seconds": 1.47,
-  "blow_source": 0.372,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.89,
-  "follow_speed": 1.08,
-  "rate": 1.13
+  "preset": "Art/Motions/aimed/heimdall_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 7e-08
+  }
  },
  "attack_heavy": {
   "preset": "238",
@@ -78,5 +78,16 @@
    20.5
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_blade_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07,
+  "mirrored": {
+   "mode": "delta, on the donor",
+   "weapon_hand": "R",
+   "round_trip": 7.6e-08
+  }
  }
 }

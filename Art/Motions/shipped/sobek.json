@@ -32,18 +32,13 @@
   }
  },
  "ultimate": {
-  "preset": "102",
-  "frames": 132,
-  "seconds": 4.4,
-  "blow_source": 0.29,
-  "blow": 0.58,
-  "target": 0.62,
-  "windup_speed": 0.5,
-  "follow_speed": 1.69,
-  "rate": 1.83,
+  "preset": "Art/Motions/aimed/sobek_ultimate.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 0.88,
   "snout": {
    "limit": 75.0,
-   "closest_before": 45,
+   "closest_before": 56,
    "closest_after": 75
   }
  },
@@ -98,5 +93,11 @@
    16.3
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_area": {
+  "preset": "Art/Motions/style_polearm_area.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 0.96
  }
 }

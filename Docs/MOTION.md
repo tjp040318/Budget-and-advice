@@ -1256,3 +1256,98 @@ stance were re-made through `roll` into scratch and compared):
     five presets (§9); the finger's gaze on the Hall of Ka, the Stage and the
     unit sheet, and the gaze in battle toward the acting unit; 306 dealt to
     no one until a rig reads it as a raised hand.
+
+## 12. The skill clips (2026-09-25)
+
+The owner: "the characters skills dont match their animations … If a skill
+attacks 3 times, the character might hit once, but 3 hits occur." The study,
+the options and the choice are in `Docs/PLAN.md`, *Skills that look like
+themselves*; this is what each family plays for a skill now and how it is
+made.
+
+### What a skill plays
+
+A skill's clip is derived when the cast is emitted (`AnimationClip.forSkill`,
+`Skill.presentedClip`), so the kits keep their data:
+
+| slot | the skill | the clip |
+|---|---|---|
+| 0 | any | `attack_basic`, the family's signature where it has one |
+| 1 | a rite (a heal, a shield, a buff, no damage) | `cast_release` |
+| 1 | on every enemy | `skill_area` |
+| 1 | N strikes, 2–5 (random targets included) | `skill_x2` … `skill_x5` |
+| 1 | one strike | `attack_heavy`, the palette's |
+| 2 | any | `ultimate`, the family's signature where it has one |
+
+A family ships only the shapes its five forms use. A missing file falls back
+`skill_xN` → `attack_heavy` → procedural (`AnimationClip.fallbackClip`,
+`ModelLibrary.resolvedClip`). The strikes land where the file's contacts say
+(`clip_timings.json`, `ClipTimings`), one damage number per strike.
+
+### Where each comes from
+
+- **The signatures** (152 sentences: 92 basics, 60 ultimates) are Meshy Text
+  to Motion on the donor `shield_maiden_serious`, archived as
+  `Art/Motions/<key>.motion.npz`. Every take is judged on its donor board
+  (`skill_moves.py board <key>`) and the verdict, the reason, the corrected
+  sentence and the frame of each strike are kept in `Art/Motions/skills.json`.
+  A take the judge sends back plays nothing until its new take is judged; the
+  family keeps the palette's clip for that slot meanwhile.
+- **The second-skill moves** (30) are chained from single strikes
+  (`tools/skills/style_moves.json`, `skill_moves.py compose`), each segment
+  carried onto the first segment's rig first; their contacts are exact.
+- **Retired** (`retired` in the record, with the reason): a signature that
+  failed twice keeps the palette's clip for good. Archery failed more than
+  anything else (the draw is held and never loosed, or the loose comes out
+  an overhand throw): Artemis, Diana, Skadi and Ullr play the palette's
+  archery, aimed; Atalanta's basic is the archery sentence that held.
+
+### What the ship does to a source
+
+`python3 tools/skill_moves.py ship [families] --bundle
+Pantheon/Resources/Models --real` passes each family's sources to
+`motion_palette.py ship`, after:
+
+1. **cut** (`cut_source`, the record's `cut`): a take whose first blow is the
+   whole skill is kept to a window of its frames — Sun Wukong's basic jabbed
+   twice for a one-hit kit (kept f0–32), Taweret's chopped twice (kept its
+   second, harder chop, f22–59);
+2. **aim** (`aim_blows`): a blow more than 20° off the target is turned onto
+   it by a yaw on the root that rises from a quarter of the way to the first
+   strike, holds through the last and eases away, so the figure starts and
+   ends square. The heading is the hand furthest from the hips at each
+   strike, both hands when they strike together, and none for a spread of
+   both arms; where that misleads (a one-handed strike whose other hand hangs
+   on the far side reads as a spread: the cobra priestess, Osiris), the
+   judge's own measure is the record's `aim_heading`. Never a rite's spread.
+3. **archery** (`aimed`, `aimed_preset`): every archery clip is turned so the
+   bow arm points at the target at the loose (`bow_yaw`) — the signatures and
+   the palette's own 224 (the heavy, and the basic where no signature fills
+   it) and 222 (the ultimate), which loose 50–86° to the side as Meshy made
+   them.
+4. **mirror**: a clip is mirrored where the family's weapon hand is not the
+   source's (`source_side`: every sentence right-handed but the archers';
+   `HAND_OVERRIDE` for Heimdall and Idunn left, the dark elf and Bellona
+   right; a judged `flip`).
+
+Then `python3 tools/skill_moves.py timings` writes `clip_timings.json` from
+the cut reports. Run it after every ship.
+
+### The lengths
+
+A clip plays at its own length up to its ceiling and never faster than 2×:
+basic 2.0 s, heavy 2.0, ×2 2.4, ×3 2.8, ×4 3.2, ×5 3.6, area 2.6, rite 2.8,
+ultimate 3.4 (`ClipTimings.ceiling`, `motion_palette.CONTRACT`,
+`ClipTimingTests`). The ceilings were 1.6/1.7/2.6/3.4 when the signatures
+came in at 2 s and 3 s; played at 1.25–1.6× they looked hurried.
+
+### Left
+
+- The game holds the hips on the spot, so a motion that travels (a lunge, a
+  leap) skates its feet a little. The worst took a re-roll.
+- The caster ×N moves release with both arms flung wide (Mage Spell Cast 4,
+  133): a burst, not a push.
+- A robe or a skirt welded to the arm stretches on the big arm moves as it
+  did on the old ones (Athena, Freya, Baldr, the berserker, Fenrir; measured
+  by the scratch `tear_check.py` on `clip_fix.clip_stretch`): the remake is
+  the fix.

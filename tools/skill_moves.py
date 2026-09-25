@@ -724,7 +724,7 @@ def blow_heading(motion, frame):
 AIM_TOLERANCE = 20.0          # degrees: a blow this close to the target is left as made
 
 
-def aim_blows(motion, contacts):
+def aim_blows(motion, contacts, heading=None):
     """A signature motion turned so its blows land on the target: the mean
     heading of its blows at the judged contacts, if more than AIM_TOLERANCE
     off +Z, is taken off by a turn that grows from a quarter of the way to
@@ -733,11 +733,14 @@ def aim_blows(motion, contacts):
     F = len(motion.anim["T"])
     if not contacts:
         return motion, 0.0
-    heads = [h for h in (blow_heading(motion, c) for c in contacts) if h is not None]
-    if not heads:
-        return motion, 0.0
-    heads = np.radians(heads)
-    mean = float(np.degrees(np.arctan2(np.sin(heads).mean(), np.cos(heads).mean())))
+    if heading is not None:
+        mean = float(heading)          # a judge's own measure, where the hands mislead the reading
+    else:
+        heads = [h for h in (blow_heading(motion, c) for c in contacts) if h is not None]
+        if not heads:
+            return motion, 0.0
+        heads = np.radians(heads)
+        mean = float(np.degrees(np.arctan2(np.sin(heads).mean(), np.cos(heads).mean())))
     if abs(mean) <= AIM_TOLERANCE:
         return motion, 0.0
     first, last = min(contacts), max(contacts)
@@ -791,6 +794,26 @@ def aimed(src, key=None):
     return out
 
 
+def cut_source(src, key, cut):
+    """A take cut to a window of its own frames (the manifest's `cut`:
+    [first, last]), for a take whose first blow is the whole skill and whose
+    extra beat the kit does not have — Sun Wukong's basic jabbed twice for a
+    one-hit basic; its first jab is kept and the game's cross-fade takes it
+    back to the stance. Written to Art/Motions/cut/, so the aim below reads
+    the cut and not the archive; the record's contacts are the cut's."""
+    from retarget import Motion
+    src = Path(src)
+    out = MOTIONS / "cut" / src.name
+    if out.exists() and out.stat().st_mtime >= src.stat().st_mtime:
+        return out
+    m = Motion.load(src)
+    a, b = int(cut[0]), int(cut[1]) + 1
+    anim = dict(m.anim, T=m.anim["T"][a:b], R=m.anim["R"][a:b], S=m.anim["S"][a:b])
+    Motion(m.joints, m.parents, m.rest_local, anim, f"{m.source} cut {a}-{b - 1}").save(out)
+    print(f"  cut {src.name} to frames {a}-{b - 1}")
+    return out
+
+
 def aimed_blow(src, key):
     """A signature or composed motion whose blows land beside the target,
     turned onto it (`aim_blows`, at the judged or composed contacts) and
@@ -808,15 +831,20 @@ def aimed_blow(src, key):
     frames = [int(f) for f in frames]
     out = AIMED / src.name
     note = AIMED / src.name.replace(".motion.npz", ".aim.json")
+    # `aim_heading`: a judge's measure of where the blow lands, for a take the
+    # hands mislead - a one-handed strike whose other hand hangs on the far
+    # side reads as a spread (cobra priestess, Osiris) and was left unturned
+    heading = rec.get("aim_heading")
     if note.exists() and json.loads(note.read_text()).get("frames") == frames \
+            and json.loads(note.read_text()).get("heading") == heading \
             and note.stat().st_mtime >= src.stat().st_mtime:
         return out if json.loads(note.read_text()).get("turned") else src
-    m, degrees = aim_blows(Motion.load(src), frames)
+    m, degrees = aim_blows(Motion.load(src), frames, heading)
     AIMED.mkdir(parents=True, exist_ok=True)
     if degrees:
         m.save(out)
         print(f"  aimed {src.name}: its blows landed {-degrees:+.0f} deg off the target; turned {degrees:+.0f}")
-    note.write_text(json.dumps(dict(frames=frames, turned=round(degrees, 1)), indent=1) + "\n")
+    note.write_text(json.dumps(dict(frames=frames, turned=round(degrees, 1), heading=heading), indent=1) + "\n")
     return out if degrees else src
 
 
@@ -887,6 +915,8 @@ def skill_assign(family, plan_row, shapes):
                                and not rec.get("retired"))
 
     def source(src, key, blow=True):
+        if moves.get(key, {}).get("cut"):
+            src = cut_source(src, key, moves[key]["cut"])
         if archer:
             src = aimed(src, key)
         elif blow:
