@@ -1525,7 +1525,9 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty-nine screens (steps 0–48): the sign-in screen (48,
+  thousands of images. The CI tour is fifty-five steps (0–54): the skill reel (54,
+  `skill_reel`, a RECORDED video of named families casting every skill, below),
+  the sign-in screen (48,
   `sign_in`), the reveal twice (5, `reveal`: a fire Sekhmet, then relaunched
   with `-tour-reveal awakened` for an awakened light Ares on the beam — the
   frame that judges the awakened look every run), the Allies screen (47,
@@ -2505,7 +2507,69 @@ environment can and cannot do. The short version:
   now; the finger and the battle are later. `-tour-gaze left` relaunches
   steps 3 and 21 (`[Gaze]` lines). A new stage that holds a figure starts
   its idle the same way and sets `lens`.
-- Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
+- **Skills look like themselves (2026-09-25; PLAN.md *Skills that look like
+  themselves*, MOTION.md §12; the owner: "If a skill attacks 3 times, the
+  character might hit once, but 3 hits occur. Theres no magic animations").**
+  A skill's clip is DERIVED when the cast is emitted (`AnimationClip.forSkill`,
+  `Skill.presentedClip`; the kits are untouched): slot 0 `attack_basic`, slot 2
+  `ultimate`, slot 1 `cast_release` for a rite, `skill_area` on every enemy,
+  `skill_x2`…`skill_x5` for N strikes, `attack_heavy` for one; a missing file
+  falls back `skill_xN → attack_heavy → procedural` (`fallbackClip`,
+  `ModelLibrary.resolvedClip`, a miss cache). **Every hit lands on its own
+  strike:** `Resources/Models/clip_timings.json` (`ClipTimings`, written by
+  `python3 tools/skill_moves.py timings` from the cut reports — run it after
+  any ship) holds each shipped clip's seconds and contact list; the scene reads
+  the queue ahead (`CastReading`), plans the cast (`CastTimeline`: hit k on
+  contact k, a line's victims 40 ms apart, the dwell after the LAST hit only),
+  and a ranged hit lands a flight after its release (`SkillFX.flight`: an arrow
+  0.20 s, an orb 0.28 s). A clip plays at its own length up to its ceiling
+  (`ClipTimings.ceiling`: basic 2.0, heavy 2.0, ×2 2.4, ×3 2.8, ×4 3.2, ×5
+  3.6, area 2.6, rite 2.8, ultimate 3.4 — `motion_palette.CONTRACT` and
+  `ClipTimingTests` in step), never faster than 2×. **The moves:** every family
+  its own signature basic and (4★/5★) ultimate from a sentence
+  (`tools/skills/signatures.tsv`, Meshy Text to Motion on the donor
+  `shield_maiden_serious`, archived as `Art/Motions/<key>.motion.npz` with its
+  judged contacts in `Art/Motions/skills.json`), and the second skill a shared
+  move per weapon kind and strike count chained from single strikes
+  (`tools/skills/style_moves.json`, `skill_moves.py compose`). `python3
+  tools/skill_moves.py ship [families] --bundle Pantheon/Resources/Models
+  --real` puts them on every rig: cut to the judged window (`cut`), mirrored
+  where the family's hand is not the source's (`source_side`, `HAND_OVERRIDE`,
+  a judged `flip`), every blow turned onto the target (`aim_blows`, at the
+  judged contacts, when more than 20° off), every archery clip aimed at its
+  loose (`bow_yaw`; Meshy's archery looses 50–86° to the side, the palette's
+  224 and 222 included — `aimed_preset`). **The aim's hand rule misreads:**
+  `blow_heading` takes the hand furthest from the hips, so a one-handed blow
+  whose free hand is flung further, a kick, and a combo that ends in a sweep
+  read wrong. A judge's `aim_heading` (the record's; a composed move's in its
+  recipe in `style_moves.json`) overrides it; a judge's `SHIP:` note is an
+  instruction to apply before the ship; and a clip its judge saw facing the
+  target that the ship turns more than 30° is a misread until its board says
+  otherwise (PLAN.md has the audit of every such turn). A signature a judge
+  sent back plays the palette's clip until a new take is judged; a RETIRED one
+  (`retired`, why in words: two failed takes, or archery, which never looses
+  in text to motion) never plays. Judge a new motion on `skill_moves.py board
+  <key>` before shipping it (the judges are `tools/skills/judge_workflow.js`;
+  their verdicts go in through `tools/skills/apply_verdicts.py <journal>`,
+  which applies a verdict only when its judge started after the take was
+  queued); the donor rig answers until 2026-09-26 21:12 UTC, after which a
+  motion needs a re-rigged donor (5 credits, `model_url`). **The effects:**
+  `SkillFX` resolves a cast's look from its element, clip, reach and, for an
+  ultimate, the family's signature (`SkillFX.signatures`, mirrored in
+  `tools/skills/signature_fx.json`); every host hangs from
+  `VFXLibrary.stageRoot(of:)` and a new kind of piece goes into
+  `VFXLibrary.predraw`; the sheets are `vfx_<name>_sheet.png`, painted on
+  Meshy (nano-banana-2, 6 credits) and keyed per cell by `tools/skill_fx.py`.
+  **The sounds** are `SkillSound` (`tools/sfx.py elements skills`;
+  `skills_mix_check` sums every kind of cast at SkillFX's own timings, and the
+  worst case reaches 1.61 of full scale: a limiter, which means
+  `AVAudioEngine`, is the fix). **Seeing it:** CI step 54 `skill_reel` records
+  a video of named families casting every skill (`-tour-skill-reel
+  zeus,ra,…`; by default Zeus, Ra, Sif, Artemis, Isis and Poseidon), which
+  `ciframes.py` fetches and sheets (SKILL REEL, `reel_sheet.jpg`) and
+  `tools/reel_frames.py <video> --from A --to B --every 0.1` cuts finer.
+- Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus), the skills' sixteen
+  (`SkillSound`, above) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 
 - **The serious roster (2026-09-18, 17:30; the owner, with 6,505 credits:

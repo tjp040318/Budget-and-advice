@@ -757,11 +757,11 @@ jobs:
                 again -tour-events-week plain; sleep 5; shoot "$step-${names[$step]}-plain" ;;
               # The skill reel (2026-09-25, Docs/PLAN.md "Skills that look
               # like themselves"), the last step, so every step before it
-              # keeps its number: Horus, Thor, Artemis, Isis and Poseidon
+              # keeps its number: Zeus, Ra, Sif, Artemis, Isis and Poseidon
               # (TourView's SkillReelCast) each casting its basic, its second
               # skill and its third on the real engine, at x1 under the home
               # camera, one family after another — about a minute and a
-              # quarter, RECORDED, because a still cannot show a body
+              # half, RECORDED, because a still cannot show a body
               # striking as many times as its numbers land. The app prints
               # [TourCue] reel-ready once its card has lifted and the first
               # family's turn is up, then waits for this job's word — a file

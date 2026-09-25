@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "97",
-  "frames": 67,
-  "seconds": 2.23,
-  "blow_source": 0.318,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 0.76,
-  "follow_speed": 1.18,
-  "rate": 1.72
+  "preset": "Art/Motions/nike_attack_basic.motion.npz",
+  "frames": 75,
+  "seconds": 2.5,
+  "rate": 1.25
  },
  "attack_heavy": {
   "preset": "238",
@@ -78,5 +73,17 @@
    3.4
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "skill_x2": {
+  "preset": "Art/Motions/style_blade_x2.motion.npz",
+  "frames": 70,
+  "seconds": 2.33,
+  "rate": 0.97
+ },
+ "skill_x4": {
+  "preset": "Art/Motions/style_blade_x4.motion.npz",
+  "frames": 102,
+  "seconds": 3.4,
+  "rate": 1.06
  }
 }

@@ -1,14 +1,9 @@
 {
  "attack_basic": {
-  "preset": "129",
-  "frames": 69,
-  "seconds": 2.3,
-  "blow_source": 0.426,
-  "blow": 0.42,
-  "target": 0.42,
-  "windup_speed": 1.02,
-  "follow_speed": 0.99,
-  "rate": 1.77
+  "preset": "Art/Motions/aimed/vestal_attack_basic.motion.npz",
+  "frames": 60,
+  "seconds": 2.0,
+  "rate": 1.0
  },
  "attack_heavy": {
   "preset": "125",
@@ -104,5 +99,11 @@
    72.5
   ],
   "tool": "tools/motion_palette.py breaks"
+ },
+ "cast_release": {
+  "preset": "Art/Motions/style_robed_rite.motion.npz",
+  "frames": 90,
+  "seconds": 3.0,
+  "rate": 1.07
  }
 }

@@ -353,7 +353,7 @@ struct TourView: View {
     /// instead of MORE.
     static var pinnedRelicFilter: String? { argument(after: "-tour-relic-filter") }
 
-    /// `-tour-skill-reel horus,thor,artemis,isis,poseidon` (2026-09-25,
+    /// `-tour-skill-reel zeus,ra,sif,artemis,isis,poseidon` (2026-09-25,
     /// Docs/PLAN.md *Skills that look like themselves*): the families the
     /// skill reel (the last step) plays, in the order they step up. A name
     /// is a family (`horus`, in the form `SkillReelCast.showcase` picks) or
@@ -667,8 +667,8 @@ struct TourView: View {
             TourStressView(mode: Self.argument(after: "-tour-stress"))
         case "skill_reel":
             // The skill reel (2026-09-25, Docs/PLAN.md *Skills that look like
-            // themselves*): the families `-tour-skill-reel` names — Horus,
-            // Thor, Artemis, Isis and Poseidon by default — each casting its
+            // themselves*): the families `-tour-skill-reel` names — Zeus,
+            // Ra, Sif, Artemis, Isis and Poseidon by default — each casting its
             // basic, its second skill and its third on the real engine, at
             // ×1, under the home camera, on the Duat's set against three
             // dummies, one family after another (`SkillReel`). The CI job
@@ -1922,20 +1922,28 @@ private final class TourStressDriver: ObservableObject {
 /// family to outlast its whole kit. The reel itself is `SkillReel`, played
 /// by `BattleViewModel`.
 private enum SkillReelCast {
-    /// The default families: between them their second skills take every
-    /// shape the new clips have but three strikes — two, four and five
-    /// strikes, a sweep of the line and a rite — and their thirds a single
-    /// blow, a sweep, a volley and a rite, from five kits and four elements.
-    static let defaultFamilies: [String] = ["horus", "thor", "artemis", "isis", "poseidon"]
+    /// The default families: Zeus first, since his bolt thrown with a
+    /// generic swing is the fault the owner named; then second skills of
+    /// three, four and five strikes, a sweep of the line and a rite, and
+    /// thirds of a single blow, a volley and a rite — six kits, five
+    /// elements, each family on its own signature moves wherever the judges
+    /// kept them. Horus and Thor opened the reel until their signatures were
+    /// retired to the palette's clips (2026-09-25).
+    static let defaultFamilies: [String] = ["zeus", "ra", "sif", "artemis", "isis", "poseidon"]
 
     /// The form a family named bare plays in, for what its second skill
     /// shows; a family not here plays its first form in the elements'
     /// order.
     static let showcase: [String: Element] = [
-        // Fourfold Stoop: four cuts (skill_x4); then a sure critical.
-        "horus": .gale,
-        // Twin Hammer Blows: two (skill_x2); Giant-Slayer sweeps the line.
-        "thor": .ember,
+        // Thunderbolt, then the Thunderclap over the line and the Keraunos
+        // on one: the bolt the owner named, on his own clips (the fire form
+        // is the one first written).
+        "zeus": .ember,
+        // Three orbs (skill_x3, the caster's), each landing a flight after
+        // its release; then a volley on the line.
+        "ra": .tide,
+        // Four cuts (skill_x4); then a sure critical on one.
+        "sif": .gale,
         // Five from the Hills: five shots (skill_x5); a volley on the line.
         "artemis": .gale,
         // A heal with a shield for everyone (cast_release); then a heal
