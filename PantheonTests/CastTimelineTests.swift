@@ -167,6 +167,27 @@ final class CastTimelineTests: XCTestCase {
         XCTAssertEqual(soakHold, CastTimeline.leadStep, accuracy: tolerance)
     }
 
+    func testALaterHitsSoakIsPressedAgainstItsOwnBlow() throws {
+        // The second hit's shield soak is told just before its damage, as the
+        // first hit's is: it is shown on its blow, and only the first hit's
+        // burn shares the gap between the two.
+        let timeline = CastTimeline(times: [0.5, 1.1], recovery: 0.4)
+        let events: [BattleEvent] = [
+            castEvent(),
+            strike(0, of: 2), burning(),
+            .shieldAbsorbed(target: victim, amount: 50, shieldRemaining: 0), strike(1, of: 2),
+        ]
+        let due = timeline.dues(in: events)
+        let expected: [TimeInterval] = [0, 0.5, 0.79, 1.08, 1.1]
+        XCTAssertEqual(due.count, expected.count)
+        for (index, wanted) in expected.enumerated() {
+            let found: TimeInterval = try XCTUnwrap(due[index], "event \(index)")
+            XCTAssertEqual(found, wanted, accuracy: tolerance, "event \(index)")
+        }
+        let start: Int = CastTimeline.leadInStart(before: 4, after: 1, in: events)
+        XCTAssertEqual(start, 3, "the soak opens the second hit's lead-in; the burn is the first hit's")
+    }
+
     func testARiteHoldsToItsRelease() throws {
         let ally = UUID()
         let timeline = CastTimeline(times: [0.9], recovery: 0.8)

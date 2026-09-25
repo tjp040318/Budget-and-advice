@@ -69,7 +69,9 @@ jobs:
     # of casts recorded, and the video turned and encoded after the tour; at
     # most eight when every wait runs out (the ready cue's 180 s, the
     # recorder's 10, the done cue's 150 and the recorder's 30 to finish).
-    timeout-minutes: 110
+    # Runs 261 and 263 took 95 and 92 minutes before the reel, and a run past
+    # the limit is cancelled and publishes no frames, so the limit is 120.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:

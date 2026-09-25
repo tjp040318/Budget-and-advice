@@ -523,11 +523,17 @@ enum VFXLibrary {
             print("[VFX] \(name) stands: \(across) m, its centre \(up) m up, \(cosine) of it upright")
         }
         let count = cut.count
-        let start = CACurrentMediaTime()
+        // Scene time, not the wall's: a hit-stop pauses the scene, and the
+        // number each sheet stands for lands after the freezes before it,
+        // so the sheet waits with them (the swing trail's rule).
+        var elapsed: Double = 0
+        var last = CACurrentMediaTime()
         var shown = 0
-        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak node] timer in
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak node, weak scene] timer in
             guard let node, node.parent != nil else { timer.invalidate(); return }
-            let elapsed = CACurrentMediaTime() - start
+            let now = CACurrentMediaTime()
+            if scene?.isPaused != true { elapsed += now - last }
+            last = now
             guard elapsed < life else {
                 timer.invalidate()
                 node.removeFromParentNode()
@@ -680,11 +686,15 @@ enum VFXLibrary {
         node.castsShadow = false
         stageRoot(of: scene).addChildNode(node)
         let count = cut.count
-        let start = CACurrentMediaTime()
+        // Scene time, as the standing sheet's: a hit-stop holds it.
+        var elapsed: Double = 0
+        var last = CACurrentMediaTime()
         var shown = 0
-        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak node] timer in
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak node, weak scene] timer in
             guard let node, node.parent != nil else { timer.invalidate(); return }
-            let elapsed = CACurrentMediaTime() - start
+            let now = CACurrentMediaTime()
+            if scene?.isPaused != true { elapsed += now - last }
+            last = now
             guard elapsed < life else {
                 timer.invalidate()
                 node.removeFromParentNode()

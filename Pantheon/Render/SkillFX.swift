@@ -234,8 +234,6 @@ enum SkillFX {
     /// the hit's freeze holds, whichever of the two reaches the main thread
     /// first.
     static let impactLead: TimeInterval = 0.03
-    /// Seconds between one victim's piece and the next along a line.
-    static let rowStagger: TimeInterval = 0.06
     /// Seconds of a pillar's or a strike's painting before it lands: started
     /// that far ahead, it erupts on the number.
     static let risesAhead: TimeInterval = 0.25
@@ -383,8 +381,11 @@ enum SkillFX {
             if cast.isArea, index == 0, named == nil, signed == nil {
                 let ahead: TimeInterval = VFXLibrary.hasSheet(risingSheet(cast.element)) ? risesAhead : 0
                 let start: TimeInterval = max(clipStart, contact - ahead)
+                // Each victim's piece `victimStep` after the last, as its
+                // number is (`CastTimeline`), beaten to the fight's speed.
+                let stagger: TimeInterval = beat(CastTimeline.victimStep)
                 for (order, victimID) in ids.enumerated() {
-                    at(start + rowStagger * Double(order)) { [weak scene] in
+                    at(start + stagger * Double(order)) { [weak scene] in
                         guard let scene, let victim = node(victimID) else { return }
                         SkillFX.rise(cast.element, under: victim, colours: colours, in: scene)
                     }
@@ -397,8 +398,9 @@ enum SkillFX {
                 let start: TimeInterval = max(clipStart, contact - ahead)
                 let line = cast.isArea && ids.count > 1
                 if line, look.fallsOnEach {
+                    let stagger: TimeInterval = beat(CastTimeline.victimStep)
                     for (order, victimID) in ids.enumerated() {
-                        at(start + rowStagger * Double(order)) { [weak scene] in
+                        at(start + stagger * Double(order)) { [weak scene] in
                             guard let scene, let victim = node(victimID) else { return }
                             SkillFX.sign(look, on: [victim], reach: .member, cast: cast, colours: colours, in: scene)
                         }

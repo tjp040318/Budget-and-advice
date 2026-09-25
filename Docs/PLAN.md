@@ -10851,7 +10851,16 @@ and the skill reel, CI step 54 (lane D). The integrator's fixes: a serial
 that stops a scheduled effect drawing after a skip or a forfeit, the swing
 sound led in real seconds (at ×3 it had peaked after the blow), the
 ultimate's charge sound started a charge's length before the first hit, and
-a skip that sends the camera home from an ultimate's push.
+a skip that sends the camera home from an ultimate's push. The review (four
+finders over the whole diff, each finding put to a skeptic) found nothing
+that breaks the build and fixed: a later hit's shield or barrier soak shown
+before the blow it blocks (`CastTimeline.leadInStart`: every hit's lead-in
+is pressed against its own contact, as the first's was), a line's painted
+pieces stepping on the wall clock through the hit-stops (the sheets step on
+scene time now, `victimStep` apart like their numbers), the reel converter's
+unbounded waits, and the job's limit (120 minutes). Left: a victim that
+counters a line blow leaves the victims after it with their numbers but no
+strike drawn.
 
 **Checked.** `tear_check.py` (the scratch, on `clip_fix.clip_stretch`)
 measured every new clip's cloth on its family's base beside the clip it

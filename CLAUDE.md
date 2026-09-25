@@ -1586,7 +1586,7 @@ environment can and cannot do. The short version:
   the pose slowed to `tourPosePace` 0.25 because a screenshot lands two to
   three seconds late) gives `20-victory-0`, `-triumph` and `-levelup`, and
   `-tour-victory defeat` gives `20-victory-defeat`; `-tour-triumph win|loss`
-  is a lab nobody photographs. The job's limit is 110 minutes.
+  is a lab nobody photographs. The job's limit is 120 minutes (the skill reel, 2026-09-25).
 - **The premium feel's Wave 2, the battle's half (2026-09-24; `Docs/FEEL.md`
   W2.1, W2.8–W2.11, each with its *As built*).** The numbers are
   `Pantheon/Render/FieldBeats.swift`'s (`UltimateSplash`, `Spotlight`,

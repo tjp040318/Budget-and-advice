@@ -4335,19 +4335,62 @@ struct CastTimeline: Equatable {
             due[to.index] = to.due
             let between = to.index - from.index - 1
             guard between > 0 else { continue }
+            // A hit's own lead-in — a barrier's or a shield's soak, the
+            // barrier shattering and its stun, an Endure spent — comes out
+            // of the engine just before its damage and is shown on the blow,
+            // `leadStep` apart; only what comes before it (the last hit's
+            // aftermath) shares the gap. Everything before the first hit is
+            // lead-in.
+            let leadIn: Int = from.index == 0
+                ? from.index + 1
+                : Self.leadInStart(before: to.index, after: from.index, in: events)
+            let pressedFrom: TimeInterval = leadIn < to.index
+                ? max(from.due, to.due - Self.leadStep * TimeInterval(to.index - leadIn))
+                : to.due
+            let shared = leadIn - from.index - 1
             for step in 1...between {
+                let index = from.index + step
                 let at: TimeInterval
-                if from.index == 0 {
-                    let back: TimeInterval = Self.leadStep * TimeInterval(between - step + 1)
+                if index >= leadIn {
+                    let back: TimeInterval = Self.leadStep * TimeInterval(to.index - index)
                     at = max(from.due, to.due - back)
                 } else {
-                    let share: TimeInterval = TimeInterval(step) / TimeInterval(between + 1)
-                    at = from.due + (to.due - from.due) * share
+                    let share: TimeInterval = TimeInterval(step) / TimeInterval(shared + 1)
+                    at = from.due + (pressedFrom - from.due) * share
                 }
-                due[from.index + step] = at
+                due[index] = at
             }
         }
         return due
+    }
+
+    /// Where the lead-in of the damage at `index` begins: the first of the
+    /// events `BattleEngine.applyDamage` tells before a hit's own number — a
+    /// barrier's or a shield's soak on its target (then a shattering, its
+    /// stun, a shield worn through) or an Endure spent — or `index` itself
+    /// when the hit has none. Only `applyDamage` tells a soak or spends an
+    /// Endure, so the previous hit's aftermath is never taken for it.
+    static func leadInStart(before index: Int, after start: Int, in events: [BattleEvent]) -> Int {
+        guard index > start + 1, index < events.count,
+              case .damage(_, let target, _, _, _, _, _, _, _) = events[index] else { return index }
+        var first = index
+        for position in stride(from: index - 1, to: start, by: -1) {
+            switch events[position] {
+            case .shieldAbsorbed(let soaked, _, _) where soaked == target:
+                first = position
+            case .statusRemoved(let removed, .endure, _) where removed == target:
+                first = position
+            case .statusRemoved(let removed, .shield, _) where removed == target:
+                continue
+            case .passiveTriggered(let actor, _) where actor == target:
+                continue
+            case .statusApplied(_, let stunned, .stun, _) where stunned == target:
+                continue
+            default:
+                return first
+            }
+        }
+        return first
     }
 
     /// The dwell after the last hit: the longest any of its damage earned.
