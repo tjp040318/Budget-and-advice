@@ -1,0 +1,18 @@
+{
+  "id": "01a0d94e-ba99-740d-ac95-d91d5935a842",
+  "kind": "picture",
+  "created": "2026-09-25T16:03:30Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG VFX texture, hand-painted with luminous glowing light, NO outlines, NO cartoon line art, on one continuous solid pure black background, no text, no border, nothing touching the image's edge. The image: a magic circle of fire seen from directly above: concentric rings of glowing orange-gold runes and flame glyphs, a six-pointed ember star at the centre, thin bright engraved lines, perfectly symmetric, the circle filling the image.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3591,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352210596,
+  "started_at": 1790352210603,
+  "polled": "2026-09-25T16:04:44Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352278304
+}

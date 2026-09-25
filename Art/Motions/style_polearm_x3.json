@@ -1,0 +1,15 @@
+{
+ "recipe": "style_polearm_x3",
+ "frames": 91,
+ "seconds": 3.033,
+ "contacts": [
+  10,
+  29,
+  56
+ ],
+ "contact_fractions": [
+  0.111,
+  0.322,
+  0.622
+ ]
+}

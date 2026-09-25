@@ -1,0 +1,18 @@
+{
+  "id": "01a0d951-78a8-7158-a1f4-6993164a761f",
+  "kind": "picture",
+  "created": "2026-09-25T16:06:30Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a vortex of wind blades descending from the sky onto the ground. Frames 1 to 4: a spiral of pale green wind blades and a thin crackle of lightning drops from the top of the cell toward the bottom centre. Frames 5 to 7: it strikes the bottom centre in a white flash. Frames 8 to 12: a burst of wind blades and torn leaves spirals outward from the impact. Frames 13 to 16: the wisps fade until the last frame is nearly black.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3453,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352390321,
+  "started_at": 1790352390328,
+  "polled": "2026-09-25T16:07:10Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352426982
+}

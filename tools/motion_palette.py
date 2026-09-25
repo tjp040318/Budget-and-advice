@@ -83,7 +83,14 @@ MOTIONS = REPO / "Art" / "Motions"
 MANIFEST = MOTIONS / "palette.json"
 WORK = Path(os.environ.get("PALETTE_WORK", "/tmp/motion_palette"))
 LIVE_DAYS = 6          # a clip task younger than this still answers (Meshy keeps a rig about a week)
-CONTRACT = {"attack_basic": 1.3, "attack_heavy": 1.7, "ultimate": 2.4, "victory": 2.0}   # AnimationClip.fallbackDuration
+# The seconds the game plays each clip in: its own length, sped up to these
+# (ClipTimings.ceiling since 2026-09-25; AnimationClip.fallbackDuration for a
+# clip with no timing entry - the victory). Only the report's rate reads them.
+CONTRACT = {"attack_basic": 2.0, "attack_heavy": 2.0, "ultimate": 3.4, "victory": 2.0}
+# the skill moves' ceilings (ClipTimings.contract): a clip plays at its own
+# length, sped up to fit these and never slowed
+CONTRACT.update({"skill_x2": 2.4, "skill_x3": 2.8, "skill_x4": 3.2, "skill_x5": 3.6, "skill_area": 2.6,
+                 "cast_release": 2.8})
 # BattleSceneController.contactFraction's defaults: where the game fires the
 # damage, the flash and the hit-stop in a clip that has no row of its own.
 # `ship` warps a palette clip so its blow lands HERE, so a family wearing it
@@ -1324,7 +1331,10 @@ WEAPON_HAND = {
 # and a long snout kept `limit` degrees off the torso's line.
 BOW_WRIST = {"skadi"}
 SNOUT = {"sobek": 75.0}
-LATERAL_CLIPS = ("attack_basic", "attack_heavy", "ultimate", "idle_combat", "victory")
+LATERAL_CLIPS = ("attack_basic", "attack_heavy", "ultimate", "idle_combat", "victory",
+                 # the skill moves (tools/skill_moves.py, 2026-09-25): right-handed at the
+                 # source, mirrored with `~m` for a left-handed family like any preset
+                 "skill_x2", "skill_x3", "skill_x4", "skill_x5", "skill_area", "cast_release")
 NO_MIRROR = "~nm"      # a value's suffix: this clip is NOT mirrored to the family's weapon hand (JUDGED)
 FORCE_MIRROR = "~m"    # ... and this one IS mirrored whatever the hand: the free hand leads (VICTORY_SIDE)
 ABSOLUTE = "+abs"      # before the side suffix: a `rebase` preset shipped as retargeted, not over the idle (VICTORY_SIDE)

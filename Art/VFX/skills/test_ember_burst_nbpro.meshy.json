@@ -1,0 +1,18 @@
+{
+  "id": "01a0d94a-850c-7499-a7c6-6585bc9bc4a2",
+  "kind": "picture",
+  "created": "2026-09-25T15:58:54Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and embers, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a fire impact explosion seen from the front, as a blow of fire magic lands. Frames 1 to 2: a small white-hot flash at the centre. Frames 3 to 6: a ball of orange flame bursts outward with licking tongues of fire and a ring of sparks. Frames 7 to 11: the fireball billows larger, turning deep red-orange, embers flying outward. Frames 12 to 16: it breaks into curling smoke wisps and dying embers and fades until the last frame is nearly black.",
+    "ai_model": "nano-banana-pro"
+  },
+  "balance_before": 3642,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790351934742,
+  "started_at": 1790351934751,
+  "polled": "2026-09-25T15:59:26Z",
+  "consumed_credits": 9,
+  "finished_at": 1790351960823
+}

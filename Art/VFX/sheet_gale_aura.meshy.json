@@ -1,0 +1,18 @@
+{
+  "id": "01a0d951-90ee-7110-aa35-6be9576c8c83",
+  "kind": "picture",
+  "created": "2026-09-25T16:06:36Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a swirling aura of wind currents and leaves rising around an invisible standing figure: the centre of each cell stays dark and empty, pale green streaks and leaves spiral upward around it. All 16 frames are one seamless loop.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3441,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352396533,
+  "started_at": 1790352396539,
+  "polled": "2026-09-25T16:06:56Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352407677
+}

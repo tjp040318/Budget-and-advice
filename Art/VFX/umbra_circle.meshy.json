@@ -1,0 +1,18 @@
+{
+  "id": "01a0d954-1955-73e7-95d2-9048580d5ffd",
+  "kind": "picture",
+  "created": "2026-09-25T16:09:22Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG VFX texture, hand-painted with luminous glowing light, NO outlines, NO cartoon line art, on one continuous solid pure black background, no text, no border, nothing touching the image's edge. The image: a dark magic circle seen from directly above: concentric rings of glowing violet runes, a crescent moon and an eye glyph, a jagged star at the centre, thin bright engraved lines in violet and magenta, perfectly symmetric, the circle filling the image.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3321,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352562525,
+  "started_at": 1790352562531,
+  "polled": "2026-09-25T16:09:42Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352575189
+}

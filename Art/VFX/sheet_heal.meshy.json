@@ -1,0 +1,18 @@
+{
+  "id": "01a0d954-6f47-728e-9db4-41e167529038",
+  "kind": "picture",
+  "created": "2026-09-25T16:09:44Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a healing effect: from the bottom of each cell green and gold leaves and sparkles spiral upward while a soft green glow blooms at the centre. Frames 1 to 4: the first leaves and sparkles rise. Frames 5 to 10: the green-gold glow blooms at full strength with leaves swirling. Frames 11 to 16: it softens and fades until the last frame is nearly black.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3315,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352584530,
+  "started_at": 1790352584536,
+  "polled": "2026-09-25T16:12:06Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352716253
+}

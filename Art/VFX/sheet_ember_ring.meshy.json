@@ -1,0 +1,18 @@
+{
+  "id": "01a0d94e-6d75-7359-be99-4fadb27d5fff",
+  "kind": "picture",
+  "created": "2026-09-25T16:03:10Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a ring shockwave of fire spreading across the ground, seen from directly above. Frames 1 to 3: a small bright ring of flame at the centre. Frames 4 to 10: it expands outward as a thin fiery ring throwing embers, the centre dark. Frames 11 to 16: the ring thins, breaks into sparks and fades before it reaches the cell's edge.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3603,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352190848,
+  "started_at": 1790352190854,
+  "polled": "2026-09-25T16:03:22Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352201003
+}

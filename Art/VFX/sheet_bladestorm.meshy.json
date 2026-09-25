@@ -1,0 +1,18 @@
+{
+  "id": "01a0d958-bec7-77aa-88a7-a94da937d21d",
+  "kind": "picture",
+  "created": "2026-09-25T16:14:26Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a whirling storm of glowing spectral swords circling around the centre of each cell and slashing through it, bright steel-blue light trails. Frames 1 to 4: the swords appear and begin to circle. Frames 5 to 11: they whirl at full speed in a ring of light trails. Frames 12 to 16: they scatter and fade until the last frame is nearly black.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3195,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352867024,
+  "started_at": 1790352867031,
+  "polled": "2026-09-25T16:14:47Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352878234
+}

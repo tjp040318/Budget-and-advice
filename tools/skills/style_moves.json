@@ -1,0 +1,557 @@
+{
+ "style_blade_x2": {
+  "note": "Left Slash (97): a rising forehand then a falling backhand, both in place",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_97.motion.npz",
+    "from": 6,
+    "to": 32,
+    "blow": 23
+   },
+   {
+    "src": "Art/Motions/preset_97.motion.npz",
+    "from": 32,
+    "to": 62,
+    "blow": 38
+   }
+  ],
+  "blend": 4,
+  "recover": 12
+ },
+ "style_blade_x3": {
+  "note": "Triple Combo Attack (105): three fast cuts, backhand, forehand, rising backhand",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_105.motion.npz",
+    "from": 0,
+    "to": 28,
+    "blow": 21,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_105.motion.npz",
+    "from": 28,
+    "to": 55,
+    "blow": 46,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_105.motion.npz",
+    "from": 55,
+    "to": 90,
+    "blow": 66,
+    "speed": 1.15
+   }
+  ],
+  "blend": 4,
+  "recover": 12
+ },
+ "style_blade_x4": {
+  "note": "Weapon Combo (199): four cuts in an X, back in its guard at the end",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_199.motion.npz",
+    "from": 0,
+    "to": 30,
+    "blow": 19,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_199.motion.npz",
+    "from": 30,
+    "to": 43,
+    "blow": 39,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_199.motion.npz",
+    "from": 43,
+    "to": 76,
+    "blow": 66,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_199.motion.npz",
+    "from": 76,
+    "to": 104,
+    "blow": 87,
+    "speed": 1.15
+   }
+  ],
+  "blend": 4,
+  "recover": 8
+ },
+ "style_heavy_x2": {
+  "note": "Axe Spin Attack's whirl and backhand (238), then Heavy Hammer Swing's overhead chop (128)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_238.motion.npz",
+    "from": 0,
+    "to": 36,
+    "blow": 29,
+    "speed": 1.1
+   },
+   {
+    "src": "Art/Motions/preset_128.motion.npz",
+    "from": 16,
+    "to": 55,
+    "blow": 45,
+    "speed": 1.1
+   }
+  ],
+  "blend": 8,
+  "recover": 16
+ },
+ "style_heavy_x3": {
+  "note": "the whirl and backhand (238), the overhead chop (128), then Charged Ground Slam's slam (127)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_238.motion.npz",
+    "from": 0,
+    "to": 34,
+    "blow": 29,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_128.motion.npz",
+    "from": 19,
+    "to": 50,
+    "blow": 45,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_127.motion.npz",
+    "from": 38,
+    "to": 64,
+    "blow": 48,
+    "speed": 1.1
+   }
+  ],
+  "blend": 8,
+  "recover": 16
+ },
+ "style_heavy_x4": {
+  "note": "the whirl (238), two overhead chops (128), the ground slam (127)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_238.motion.npz",
+    "from": 0,
+    "to": 34,
+    "blow": 29,
+    "speed": 1.2
+   },
+   {
+    "src": "Art/Motions/preset_128.motion.npz",
+    "from": 19,
+    "to": 50,
+    "blow": 45,
+    "speed": 1.2
+   },
+   {
+    "src": "Art/Motions/preset_128.motion.npz",
+    "from": 22,
+    "to": 50,
+    "blow": 45,
+    "speed": 1.25
+   },
+   {
+    "src": "Art/Motions/preset_127.motion.npz",
+    "from": 38,
+    "to": 64,
+    "blow": 48,
+    "speed": 1.15
+   }
+  ],
+  "blend": 8,
+  "recover": 16
+ },
+ "style_polearm_x2": {
+  "note": "a level two-handed thrust, then a high stab driven down (two single sentences bought for the chain)",
+  "segments": [
+   {
+    "src": "Art/Motions/style_polearm_thrust.motion.npz",
+    "from": 4,
+    "to": 28,
+    "blow": 15
+   },
+   {
+    "src": "Art/Motions/style_polearm_stab.motion.npz",
+    "from": 6,
+    "to": 40,
+    "blow": 17
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_polearm_x3": {
+  "note": "thrust, stab, then the wide sweep of style_polearm_area",
+  "segments": [
+   {
+    "src": "Art/Motions/style_polearm_thrust.motion.npz",
+    "from": 4,
+    "to": 26,
+    "blow": 15,
+    "speed": 1.1
+   },
+   {
+    "src": "Art/Motions/style_polearm_stab.motion.npz",
+    "from": 8,
+    "to": 30,
+    "blow": 17,
+    "speed": 1.1
+   },
+   {
+    "src": "Art/Motions/style_polearm_area.motion.npz",
+    "from": 6,
+    "to": 46,
+    "blow": 21,
+    "speed": 1.1
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_polearm_x4": {
+  "note": "two quick thrusts, the stab, the sweep",
+  "segments": [
+   {
+    "src": "Art/Motions/style_polearm_thrust.motion.npz",
+    "from": 4,
+    "to": 24,
+    "blow": 15,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/style_polearm_thrust.motion.npz",
+    "from": 8,
+    "to": 24,
+    "blow": 15,
+    "speed": 1.25
+   },
+   {
+    "src": "Art/Motions/style_polearm_stab.motion.npz",
+    "from": 8,
+    "to": 30,
+    "blow": 17,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/style_polearm_area.motion.npz",
+    "from": 6,
+    "to": 46,
+    "blow": 21,
+    "speed": 1.15
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_caster_x2": {
+  "note": "Mage Spell Cast 4 (133): a lunging cast from the right hand, then Mage Spell Cast (129): the hand raised high and thrown down at the target",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 4,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.1,
+    "mirror": false
+   },
+   {
+    "src": "Art/Motions/preset_129.motion.npz",
+    "from": 28,
+    "to": 52,
+    "blow": 38,
+    "speed": 1.1
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_caster_x3": {
+  "note": "a cast from each hand (133, the second mirrored), then the raised throw (129)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 4,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.2,
+    "mirror": false
+   },
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 6,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.2,
+    "mirror": true
+   },
+   {
+    "src": "Art/Motions/preset_129.motion.npz",
+    "from": 28,
+    "to": 52,
+    "blow": 38,
+    "speed": 1.1
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_caster_x4": {
+  "note": "right, left, right casts (133), then the raised throw (129)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 4,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.25,
+    "mirror": false
+   },
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 6,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.25,
+    "mirror": true
+   },
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 6,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.3,
+    "mirror": false
+   },
+   {
+    "src": "Art/Motions/preset_129.motion.npz",
+    "from": 28,
+    "to": 52,
+    "blow": 38,
+    "speed": 1.1
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_caster_x5": {
+  "note": "four alternating casts (133), then the raised throw (129)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 4,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.3,
+    "mirror": false
+   },
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 6,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.3,
+    "mirror": true
+   },
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 6,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.35,
+    "mirror": false
+   },
+   {
+    "src": "Art/Motions/preset_133.motion.npz",
+    "from": 6,
+    "to": 28,
+    "blow": 15,
+    "speed": 1.35,
+    "mirror": true
+   },
+   {
+    "src": "Art/Motions/preset_129.motion.npz",
+    "from": 28,
+    "to": 52,
+    "blow": 38,
+    "speed": 1.1
+   }
+  ],
+  "blend": 5,
+  "recover": 12
+ },
+ "style_unarmed_x2": {
+  "note": "Punch Combo (198): its two punches",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_198.motion.npz",
+    "from": 0,
+    "to": 30,
+    "blow": 19
+   },
+   {
+    "src": "Art/Motions/preset_198.motion.npz",
+    "from": 30,
+    "to": 58,
+    "blow": 38
+   }
+  ],
+  "blend": 4,
+  "recover": 12
+ },
+ "style_unarmed_x3": {
+  "note": "Punch Combo's two punches (198), then a Right Uppercut from Guard (194)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_198.motion.npz",
+    "from": 0,
+    "to": 30,
+    "blow": 19,
+    "speed": 1.1
+   },
+   {
+    "src": "Art/Motions/preset_198.motion.npz",
+    "from": 30,
+    "to": 48,
+    "blow": 38,
+    "speed": 1.1
+   },
+   {
+    "src": "Art/Motions/preset_194.motion.npz",
+    "from": 6,
+    "to": 31,
+    "blow": 17
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_unarmed_x4": {
+  "note": "two punches (198), the uppercut (194), then a Spartan Kick (206)",
+  "segments": [
+   {
+    "src": "Art/Motions/preset_198.motion.npz",
+    "from": 0,
+    "to": 30,
+    "blow": 19,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_198.motion.npz",
+    "from": 30,
+    "to": 48,
+    "blow": 38,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/preset_194.motion.npz",
+    "from": 6,
+    "to": 29,
+    "blow": 17,
+    "speed": 1.1
+   },
+   {
+    "src": "Art/Motions/preset_206.motion.npz",
+    "from": 4,
+    "to": 36,
+    "blow": 16
+   }
+  ],
+  "blend": 6,
+  "recover": 12
+ },
+ "style_archer_x2": {
+  "note": "an arrow from the quiver, drawn and loosed, then a second nocked and loosed at once (one sentence bought for the chain; the bow in the LEFT hand)",
+  "segments": [
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 6,
+    "to": 58,
+    "blow": 56,
+    "speed": 1.3
+   },
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 38,
+    "to": 59,
+    "blow": 56,
+    "speed": 1.1
+   }
+  ],
+  "blend": 5,
+  "recover": 12
+ },
+ "style_archer_x3": {
+  "note": "the quiver shot, then two quick draws",
+  "segments": [
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 8,
+    "to": 58,
+    "blow": 56,
+    "speed": 1.35
+   },
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 38,
+    "to": 59,
+    "blow": 56,
+    "speed": 1.15
+   },
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 38,
+    "to": 59,
+    "blow": 56,
+    "speed": 1.15
+   }
+  ],
+  "blend": 5,
+  "recover": 12
+ },
+ "style_archer_x5": {
+  "note": "the quiver shot, then four quick draws",
+  "segments": [
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 10,
+    "to": 58,
+    "blow": 56,
+    "speed": 1.4
+   },
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 38,
+    "to": 59,
+    "blow": 56,
+    "speed": 1.25
+   },
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 38,
+    "to": 59,
+    "blow": 56,
+    "speed": 1.25
+   },
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 38,
+    "to": 59,
+    "blow": 56,
+    "speed": 1.25
+   },
+   {
+    "src": "Art/Motions/style_archer_quiver.motion.npz",
+    "from": 38,
+    "to": 59,
+    "blow": 56,
+    "speed": 1.25
+   }
+  ],
+  "blend": 4,
+  "recover": 12
+ }
+}

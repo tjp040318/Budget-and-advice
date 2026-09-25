@@ -1,0 +1,13 @@
+{
+ "recipe": "style_heavy_x2",
+ "frames": 86,
+ "seconds": 2.867,
+ "contacts": [
+  26,
+  60
+ ],
+ "contact_fractions": [
+  0.306,
+  0.706
+ ]
+}

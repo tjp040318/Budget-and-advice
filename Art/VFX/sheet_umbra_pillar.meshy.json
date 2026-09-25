@@ -1,0 +1,18 @@
+{
+  "id": "01a0d953-c416-7454-b254-b1a77a00e916",
+  "kind": "picture",
+  "created": "2026-09-25T16:09:00Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: shadow tendrils and dark violet flames erupting from a black pool in the ground, the base at the bottom centre of each cell. Frames 1 to 3: a dark pool opens with a magenta rim. Frames 4 to 8: writhing shadow tendrils shoot upward. Frames 9 to 12: they lash at full height wrapped in violet flame. Frames 13 to 16: they sink back and fade until the last frame is nearly black.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3345,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352540701,
+  "started_at": 1790352540708,
+  "polled": "2026-09-25T16:09:21Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352552347
+}

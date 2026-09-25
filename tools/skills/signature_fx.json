@@ -1,0 +1,16 @@
+{
+  "note": "Each ultimate's signature effect (Docs/PLAN.md *Skills that look like themselves*): the look SkillFX.signatures plays over the target or the line on an ultimate's first hit. A look with an element of its own (meteor ember, tidal tide, tornado gale, holyBlade radiance, maw umbra) is played as painted only by a form of that element; any other form plays its element's strike (single) or pillars (area), so a tide Surtr is never a fire meteor. Rites (every healer and oracle) have no signature: the rite look is the caster's release and each ally's own effect.",
+  "affinity": {"meteor": "ember", "tidal": "tide", "tornado": "gale", "holyBlade": "radiance", "maw": "umbra"},
+  "signatures": {
+    "horus": "holyBlade", "set": "tornado", "bastet": "claw", "sobek": "tidal", "ra": "sunburst",
+    "khnum": "spikes", "nephthys": "maw", "serqet": "claw", "taweret": "tidal", "anhur": "spirit",
+    "sekhmet": "sunburst", "zeus": "lightning", "ares": "blood", "thoth": "script", "anubis": "script",
+    "athena": "holyBlade", "poseidon": "tidal", "hades": "maw", "artemis": "volley", "hephaestus": "meteor",
+    "dionysus": "spikes", "nike": "holyBlade", "achilles": "bladestorm", "heracles": "spikes", "perseus": "holyBlade",
+    "thor": "lightning", "loki": "bladestorm", "tyr": "spirit", "heimdall": "holyBlade", "hel": "maw",
+    "skadi": "volley", "surtr": "meteor", "njord": "tidal", "sif": "bladestorm", "ullr": "volley",
+    "vidar": "spikes", "fenrir": "spirit",
+    "mars": "bladestorm", "neptune": "tidal", "pluto": "maw", "diana": "volley", "mercury": "tornado", "bellona": "meteor",
+    "sun_wukong": "spikes", "nezha": "meteor", "guan_yu": "bladestorm", "azure_dragon": "lightning", "dragon_king": "tidal"
+  }
+}

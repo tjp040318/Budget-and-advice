@@ -1,0 +1,18 @@
+{
+  "id": "01a0d957-4cdc-709f-9dc7-90ea6c342f9b",
+  "kind": "picture",
+  "created": "2026-09-25T16:12:52Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG VFX texture, hand-painted with luminous glowing light, NO outlines, NO cartoon line art, on one continuous solid pure black background, no text, no border, nothing touching the image's edge. The image: a single arrow in flight pointing to the right, a thin dark wooden shaft, a sharp bright steel arrowhead and pale fletching, with a faint glowing streak trailing behind it, the arrow horizontal across the middle of the image.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3243,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352772326,
+  "started_at": 1790352772332,
+  "polled": "2026-09-25T16:13:12Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352785399
+}

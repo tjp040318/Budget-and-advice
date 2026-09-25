@@ -44,6 +44,7 @@ def ship(src: Path, dst: Path) -> None:
     if im.size != (SIZE, SIZE):
         im = im.resize((SIZE, SIZE), Image.LANCZOS)
     rgb = np.asarray(im).astype(np.float32) / 255.0
+    rgb = remove_cell_grounds(rgb, GRID, GRID)
     alpha = rgb.max(axis=2)
     # Un-premultiply so the colour of a faint pixel is its hue at full
     # strength and the alpha carries the faintness.
@@ -52,6 +53,32 @@ def ship(src: Path, dst: Path) -> None:
     alpha = alpha * cell_fade(SIZE // GRID, SIZE // GRID, GRID, GRID)
     out = np.dstack([colour, alpha])
     Image.fromarray(np.clip(out * 255 + 0.5, 0, 255).astype(np.uint8), "RGBA").save(dst, optimize=True)
+
+
+def remove_cell_grounds(rgb: np.ndarray, rows: int, cols: int) -> np.ndarray:
+    """Takes each cell's own ground off it: the painter sometimes lays a few
+    frames on a dark tinted square instead of the sheet's black (the wind
+    burst and pillar of 2026-09-25 put dark green behind three frames each),
+    and with the alpha read off the brightest channel that square would draw
+    as a faint block of colour over the field. The ground is the median of
+    the cell's outer ring (the effect never reaches its rim - the prompt
+    keeps a black margin - so the ring is ground), subtracted and the rest
+    rescaled so the brightest light keeps its value."""
+    out = rgb.copy()
+    h, w = rgb.shape[:2]
+    ch, cw = h // rows, w // cols
+    ring = max(2, min(ch, cw) // 24)
+    for r in range(rows):
+        for c in range(cols):
+            cell = out[r * ch:(r + 1) * ch, c * cw:(c + 1) * cw]
+            border = np.concatenate([cell[:ring].reshape(-1, 3), cell[-ring:].reshape(-1, 3),
+                                     cell[:, :ring].reshape(-1, 3), cell[:, -ring:].reshape(-1, 3)])
+            ground = np.median(border, axis=0)
+            if ground.max() < 0.02:
+                continue
+            lifted = np.clip((cell - ground) / np.maximum(1e-3, 1 - ground), 0, 1)
+            out[r * ch:(r + 1) * ch, c * cw:(c + 1) * cw] = lifted
+    return out
 
 
 def cell_fade(cell_w: int, cell_h: int, rows: int, cols: int) -> np.ndarray:

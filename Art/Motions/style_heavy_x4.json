@@ -1,0 +1,17 @@
+{
+ "recipe": "style_heavy_x4",
+ "frames": 119,
+ "seconds": 3.967,
+ "contacts": [
+  24,
+  51,
+  74,
+  88
+ ],
+ "contact_fractions": [
+  0.203,
+  0.432,
+  0.627,
+  0.746
+ ]
+}

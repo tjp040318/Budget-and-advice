@@ -1,0 +1,18 @@
+{
+  "id": "01a0d951-a0f6-71bf-b810-1b6785cc3999",
+  "kind": "picture",
+  "created": "2026-09-25T16:06:40Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG VFX texture, hand-painted with luminous glowing light, NO outlines, NO cartoon line art, on one continuous solid pure black background, no text, no border, nothing touching the image's edge. The image: a magic circle of wind seen from directly above: concentric rings of glowing pale green runes, spiral and feather glyphs, a four-pointed swirl star at the centre, thin bright engraved lines, perfectly symmetric, the circle filling the image.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3435,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352400642,
+  "started_at": 1790352400647,
+  "polled": "2026-09-25T16:07:00Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352411130
+}

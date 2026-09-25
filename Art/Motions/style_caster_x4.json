@@ -1,0 +1,17 @@
+{
+ "recipe": "style_caster_x4",
+ "frames": 92,
+ "seconds": 3.067,
+ "contacts": [
+  9,
+  27,
+  46,
+  66
+ ],
+ "contact_fractions": [
+  0.099,
+  0.297,
+  0.505,
+  0.725
+ ]
+}

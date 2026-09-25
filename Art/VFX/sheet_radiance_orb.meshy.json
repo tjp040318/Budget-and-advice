@@ -1,0 +1,18 @@
+{
+  "id": "01a0d952-1cef-70a8-93f2-5a653cac7465",
+  "kind": "picture",
+  "created": "2026-09-25T16:07:12Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a lance of golden holy light flying to the right, a bright white core with a golden spear-shaped glow and a trail of sparkles streaming behind it to the left. All 16 frames are one seamless loop of the lance in flight, the same size and in the same place in every cell.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3399,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352432375,
+  "started_at": 1790352432381,
+  "polled": "2026-09-25T16:07:32Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352449923
+}

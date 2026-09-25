@@ -1,0 +1,18 @@
+{
+  "id": "01a0d952-f0b3-744a-9d3a-622a32c1ca91",
+  "kind": "picture",
+  "created": "2026-09-25T16:08:06Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG VFX texture, hand-painted with luminous glowing light, NO outlines, NO cartoon line art, on one continuous solid pure black background, no text, no border, nothing touching the image's edge. The image: a holy magic circle seen from directly above: concentric rings of glowing golden runes and sun glyphs, a twelve-rayed sun star at the centre, thin bright engraved lines, perfectly symmetric, the circle filling the image.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3369,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352486591,
+  "started_at": 1790352486597,
+  "polled": "2026-09-25T16:08:37Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352514861
+}

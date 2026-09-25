@@ -1,0 +1,17 @@
+{
+ "recipe": "style_unarmed_x4",
+ "frames": 111,
+ "seconds": 3.7,
+ "contacts": [
+  17,
+  34,
+  54,
+  78
+ ],
+ "contact_fractions": [
+  0.155,
+  0.309,
+  0.491,
+  0.709
+ ]
+}

@@ -10479,3 +10479,212 @@ the face +26° to +27°, the lab's +40° direction and the face +22° to +25°
 — the gaze's turn of about 25° with the idle's own head survey a few
 degrees either side of it. During a break (strength falling) the face is
 the break's.
+
+## Skills that look like themselves (2026-09-25; the owner: "the characters skills dont match their animations. If zeus uses a lightning bolt, it has a generic swing as opposed to its own custom animation. If a skill attacks 3 times, the character might hit once, but 3 hits occur. Theres no magic animations, only your generic sphere looking hits. I want more custom, high end, REAL GAME FEEL")
+
+His four answers, asked before anything was planned: **signature + style
+moves** (every family its OWN basic attack and ultimate; the second skill
+from a shared move for its weapon and its strike count; the five elements
+share a family's moves, as in Summoners War); **effects painted on Meshy**
+("you can use 100% of the credits between the animations and this" — 3,754
+on the morning of the 25th); **Summoners War's ultimate** (in the arena:
+the move, a push-in, the big effect, 2–3 s); **all at once**.
+
+### The fault, measured
+
+Read off the kits (`balance.py`'s mirrors of every blueprint, 99 families ×
+5 elements = 495 forms) and the bundle:
+
+1. **The clip ignores the skill.** A skill's clip is `Skill.animation`,
+   which the table families set from the slot alone (`elementalSkill`:
+   a blow is `attackHeavy` on the second skill, `ultimate` on the third):
+   - **72 second skills strike 2–5 times (213 strikes)** and play the
+     one-blow heavy. So do **65 two-hit basic attacks** (the duelists).
+   - **84 second skills hit the whole enemy line** and play a one-victim
+     heavy blow.
+   - **102 second-skill rites and 112 third-skill rites** (heals, shields,
+     buffs, cleanses: no damage) play `cast_release`, which NO family
+     ships (0 files of 1,502), so `UnitNode.playProcedural` rocks and
+     lunges the whole node. The third-skill rites play the family's
+     ultimate, which for 46 blade families is the Sword Judgment slam: a
+     heal cast as a sword blow.
+2. **One contact per cast.** `contactFraction` is one number per clip. The
+   first damage event lands on it, and every later hit 0.30–0.55 s after
+   the one before, whatever the body is doing. A three-hit skill is one
+   swing and three numbers.
+3. **The generic sphere.** 10 of 21 named effects, and every table family's
+   `impact_generic` (resolved to `impact_<element>`), are two puffs of
+   sprite on the victim, plus a slash arc for a melee blow. Only a handful
+   of the hand-written gods' named effects play the painted flipbooks.
+   Nothing travels except one sprite from a ranged caster. Nothing falls
+   from the sky, rises from the ground or crosses the row, and no cast
+   shows its element.
+
+### How the genre does it
+
+- **Summoners War.** Each family has its own motion for each skill; the
+  five elements share them and differ in effect colour and kit. A
+  multi-hit skill's body strikes N times, and each strike raises its own
+  number in step (the per-hit numbers and a total). An area skill has one
+  body move and one effect over the whole line, with a number on each
+  victim at once. Ranged skills fly a projectile per hit and land it on
+  the number. The third skill plays in the arena with a short push on the
+  caster, then the effect. The effects are element-coloured painted
+  textures (flipbooks, rings, beams, flares) on quads and particles, lit
+  by bloom, with a hit-stop and a shake on the heavy blow.
+- **Raid: Shadow Legends.** A champion's skills are distinct clips on
+  shared humanoid skeletons, built from a studio library varied per
+  champion. Each hit is keyed to its damage number.
+- **Epic Seven.** A full-screen, hand-animated third skill per hero. It is
+  the most expensive approach in the genre, and not what the owner chose.
+
+The common rule: **the body strikes as many times as the numbers, where
+the numbers are, and the effect says the element and the shape** (one
+victim, a flurry, the whole line, a rite on the team).
+
+### What the tools can do (measured or read on the 25th)
+
+- **Meshy Text to Motion**: a clip from a sentence, 2–10 s, prime 10
+  credits (FBX) or swift 3 (BVH), plus 3 to apply it to a rig. Meshy's own
+  guidance (read through a search, since docs.meshy.ai is refused here):
+  *"keep to a single, simple action … rather than a multi-beat
+  sequence."* The five gods' fourteen single-action sentences of the
+  15th all read right on the first take. A three- or five-strike combo is
+  exactly the multi-beat sequence it does worst.
+- **The preset library**: 678 motions, 3 credits each on a live rig.
+  There are few multi-strike presets (92 Double Combo, 105 Triple Combo,
+  199/202/241 Weapon Combo, the punch combos 198/200–205, 414 Double
+  Kick), and many single strikes, casts and shots. Previews are on
+  `cdn.meshy.ai`, which the proxy refused again today, so a preset is
+  judged on our own board after it is bought.
+- **The donor rig** (`shield_maiden_serious`, rig of 2026-09-23 21:12)
+  answers until **2026-09-26 21:12 UTC** (`expires_at`, read today). Every
+  preset or motion applied through the API must be applied to it before
+  then. After that, the rigging API takes `model_url` as well as
+  `input_task_id` (read off its validation error), so a decimated donor
+  can be re-rigged from its GLB for 5 credits.
+- **`retarget.py` and `motion_palette.py ship`** carry an archived motion
+  onto any of the 117 rigs for nothing: mirrored for a left-handed
+  family, grounded, bind-checked. That is proven on 115 families.
+- **Composing**: the palette already trims, time-warps, eases and blends
+  motions in Python (`prepare`, `mirror_motion`, `rebase_on_idle`).
+  Chaining single strikes into a combo is the same arithmetic.
+- **Meshy's painter** (`meshy.py picture`): 6 credits on nano-banana-2, 9
+  on nano-banana-pro. The nine flipbooks of the 15th (4×4 on black) are
+  coherent sequences.
+- **ufbx** (PyPI, cp311) and **assimp** (apt) read FBX. That may let a
+  prime motion's own FBX be retargeted without the 3-credit apply. One
+  test motion will settle it.
+
+### The options, and the choice
+
+| part | options | chosen |
+|---|---|---|
+| second-skill moves (37 kind × shape: blade/polearm/heavy x2–x4 + area + rite, unarmed x2–x4 + area, caster x2–x5 + area + rite, robed area + rite, archer x2/x3/x5; the single heavy blow stays each family's own `attack_heavy`) | (a) text to motion, 37 × 13 = 481, counts unreliable; (b) multi-strike presets only, too few; **(c) COMPOSED from single strikes** (presets bought at 3 and a few single-action sentences at 13), chained with blends, mirrored for the other hand | **(c)**: the strike count is exact by construction and so are the contacts. About 40 presets (120) and 8 rite and area sentences (104). |
+| signature basics (99) and ultimates (67 4★ and 5★ families) | (a) presets by kind, not signature; **(b) one sentence per family per move**, written from its design (weapon, myth, kit, element set), 2 s basics and 3 s ultimates, single actions | **(b)**: 166 × 13 = 2,158, or 1,660 if the FBX route holds. The five gods keep the bespoke basic, heavy and ultimate they have. |
+| timing | (a) one contact, as now; **(b) a list of contacts per clip file, measured and shipped as data**, each hit presented on its own contact | **(b)**: `ClipTimings.json` in the bundle. A composed move's contacts are known; a signature's are measured (hand speed peaks, the arrow's loose, a cast's thrust) and judged on its board. |
+| effects | (a) particles in code, which is today's sphere; **(b) painted flipbooks per element and shape**, composed per skill in code; (c) video flipbooks (Veo), billed per second, not without his word | **(b)**: about 64 sheets at 6–9 = 384–576. |
+| ultimates | the push, the splash and the spotlight exist (W2.1, W2.9) | the family's signature move, and a signature EFFECT chosen per family from a set of about ten built from the element's sheets |
+| sound | synthesised (`tools/sfx.py`) | a swing per kind, an impact per element, a cast, a shot, a loose, a rite, and the ultimate's boom, about 24 new sounds |
+| seeing it | stills can't show motion | **the CI records a skill reel** (`simctl io recordVideo`, `avconvert` to 720p) and publishes it beside the frames; locally the video becomes contact sheets, and the owner gets the video itself |
+
+### The design
+
+**Clip slots** (files `<asset>_<clip>.usdz`, new `AnimationClip` cases):
+`attack_basic` (the signature), `attack_heavy` (one heavy blow: each
+family's own, as the palette dealt it), `skill_x2` … `skill_x5`,
+`skill_area`, `cast_release` (a rite), `ultimate` (the signature). A
+family ships only the shapes its five forms use. That is about 400 new
+carriers at ~220 KB, about 90 MB on a 3.2 GB bundle.
+
+**The rule** (`AnimationClip.forSkill`, derived when the cast is emitted,
+so the kits keep their data):
+- slot 0 → `attack_basic`; slot 2 → `ultimate`;
+- slot 1 → `cast_release` for a rite, `skill_area` on every enemy,
+  `skill_xN` for N strikes (random targets included), and `attack_heavy`
+  for one.
+- A family missing a file falls back down the chain
+  `skill_xN → attack_heavy → procedural`, with its extra hits spread over
+  the heavy's follow-through. A boss keeps its own set.
+
+**Timing.** `ClipTimings.json`: per asset, per clip, the clip's seconds
+and its contacts as fractions. The battle reads the contacts in place of
+`contactFraction` (the gods' rows become entries). When a cast is
+presented, the queue is read ahead to the next turn: which hit each damage
+event belongs to and whom it strikes. Hit k's events are presented on
+contact k, a line's victims 40 ms apart, and whatever the kit puts between
+two hits (a per-hit status, a shield) spends its time inside the gap. The
+dwell after a heavy blow comes after the LAST hit only. Freezes and the
+speed steps pass through as today (`beat`, the frozen time returned). A
+clip plays at its own length, sped up to fit a ceiling (basic 1.6 s,
+skill 2.6 s, ultimate 3.4 s) and never slowed.
+
+**Effects, the grammar** (`SkillFX.swift`: a skill's look resolved from
+its element, its kind, its shape, its statuses and, for an ultimate, the
+family's signature):
+- *wind-up*: the element's circle under a caster, an aura for an
+  ultimate, the weapon's trail through a melee clip (exists);
+- *delivery, per hit*: a melee slash in the element at the victim; a
+  projectile per hit timed to land on its contact (an arrow for an
+  archer); a sky strike, an eruption or a beam where the skill asks;
+- *impact, per hit*: the element's burst, sparks, a light kept under the
+  key (the rules of 2026-09-15 stand), a ground mark;
+- *area*: one effect over the row (the rule of run 224) and each victim
+  its own impact;
+- *rite*: a release on the caster, then a column of the rite's kind on
+  each ally (heal, buff, shield, cleanse, revive), staggered.
+
+**The sheets** (`vfx_<name>_sheet.png`, 4×4 on black, keyed and faded by
+`tools/vfx_sheets.py`):
+- per element (× 5): burst, slash, projectile loop, pillar or eruption,
+  sky strike, ground ring, magic circle, aura;
+- for any element: heal, buff, debuff, shield, stun, freeze, burn, drain,
+  revive, cleanse, hit spark, dust, arrow, arrow volley;
+- about ten signature pieces: meteor, tidal wave, tornado, blade of light,
+  shadow maw, earth spikes, blade storm, beast spirit, and the lightning,
+  script, claw, blood and scales already shipped.
+
+About 64 in all. One sheet is painted on each model first, and the better
+one sets the model for the rest.
+
+**The skill reel** (tour step `skill_reel`,
+`-tour-skill-reel <families>`): an arena where the named families cast
+each of their skills in turn at home speed, recorded by the CI job as a
+video beside the frames.
+
+### The bill (3,754 credits)
+
+| item | credits |
+|---|---|
+| ~40 presets for the composed moves | ~120 |
+| ~8 rite and area sentences | ~104 |
+| 99 signature basics + 67 signature ultimates − the five gods' 10 | 156 × 13 = 2,028 (1,560 without applies) |
+| ~64 effect sheets | 384–576 |
+| re-rolls: ~15% of the sentences, ~10 sheets | ~390 |
+| **total** | **~3,030–3,220**, inside the 3,754 |
+
+### The order
+
+1. Buy the presets on the donor before it expires; test the FBX route on
+   one sentence. The composer and the contact reader are built beside
+   them, and the style moves are composed and judged on boards.
+2. Write the 156 signature sentences, one family at a time from its
+   design sentence and kit. Launch them in waves, 5★ first. Archive
+   every motion the moment it lands; board, re-roll, retarget and ship
+   onto each base and awakened rig.
+3. Build the engine (clip rule, `ClipTimings`, per-hit presentation,
+   `SkillFX`, the sounds, the reel) against the files as they land,
+   through `swiftcheck`, `balance.py` and new tests.
+4. Paint the sheets, key them and ship them. Wire every recipe.
+5. Take one CI run with the reel. Judge the frames, the video and
+   `framelight.py`, then show the owner the video and the sheets before he
+   tests.
+
+**Risks.**
+- The bundle is 3.2 GB, nearly all of it the base and LOD meshes. The
+  clips add about 3% more, but a store build will need texture
+  compression or on-demand resources whatever this program does.
+- A text-to-motion clip can miss its sentence; each gets a board, and the
+  re-rolls are budgeted.
+- A painted sheet can come back incoherent or on grey; each is keyed and
+  judged on a contact sheet before shipping.

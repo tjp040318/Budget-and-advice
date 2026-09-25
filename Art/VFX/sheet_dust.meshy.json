@@ -1,0 +1,18 @@
+{
+  "id": "01a0d957-3db3-757f-b095-3093aac97541",
+  "kind": "picture",
+  "created": "2026-09-25T16:12:48Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a low cloud of brown-grey dust and small rocks puffing out wide along the ground at the bottom of each cell as something heavy lands. Frames 1 to 4: the dust bursts out low and wide. Frames 5 to 11: it rolls and billows. Frames 12 to 16: it settles and fades until the last frame is nearly black.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3249,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352768448,
+  "started_at": 1790352768454,
+  "polled": "2026-09-25T16:12:58Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352778375
+}

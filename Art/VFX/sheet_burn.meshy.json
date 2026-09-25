@@ -1,0 +1,18 @@
+{
+  "id": "01a0d956-e469-7678-b2de-2455bf25eea3",
+  "kind": "picture",
+  "created": "2026-09-25T16:12:25Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: flames licking upward around an empty centre, like a body on fire: orange and red flames with embers rise from the bottom of each cell. All 16 frames are one seamless loop.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3267,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352745585,
+  "started_at": 1790352745591,
+  "polled": "2026-09-25T16:12:46Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352760589
+}

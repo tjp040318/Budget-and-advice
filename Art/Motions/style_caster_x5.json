@@ -1,0 +1,19 @@
+{
+ "recipe": "style_caster_x5",
+ "frames": 106,
+ "seconds": 3.533,
+ "contacts": [
+  8,
+  26,
+  44,
+  61,
+  80
+ ],
+ "contact_fractions": [
+  0.076,
+  0.248,
+  0.419,
+  0.581,
+  0.762
+ ]
+}

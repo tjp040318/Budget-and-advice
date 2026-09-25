@@ -1,0 +1,18 @@
+{
+  "id": "01a0d958-2445-77c1-bf79-708c61d542e0",
+  "kind": "picture",
+  "created": "2026-09-25T16:13:47Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG skill VFX, hand-painted with luminous volumetric light, bright white-hot cores fading into rich saturated colour, fine sparks and particles, soft glow, NO outlines, NO cartoon line art. IMPORTANT: the whole image is one continuous solid pure black background; every cell sits on the same pure black, no grey, white or coloured cell backgrounds. A sprite sheet: 16 sequential animation frames of ONE effect in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, the effect centred in each cell with black margin all round so nothing touches a cell edge, no borders, no gaps, no numbers, no text. The effect: a colossal sword of golden light descending point-first from the top of each cell and plunging into the ground at the bottom centre. Frames 1 to 4: the sword descends, its edges blazing. Frames 5 to 7: it strikes in a white flash. Frames 8 to 12: rays and a ring of light burst from the impact with the sword standing in it. Frames 13 to 16: the sword dissolves into golden sparkles until the last frame is nearly black.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3213,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352827471,
+  "started_at": 1790352827478,
+  "polled": "2026-09-25T16:13:57Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352837527
+}

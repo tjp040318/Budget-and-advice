@@ -1,0 +1,17 @@
+{
+ "recipe": "style_blade_x4",
+ "frames": 102,
+ "seconds": 3.4,
+ "contacts": [
+  17,
+  35,
+  59,
+  79
+ ],
+ "contact_fractions": [
+  0.168,
+  0.347,
+  0.584,
+  0.782
+ ]
+}

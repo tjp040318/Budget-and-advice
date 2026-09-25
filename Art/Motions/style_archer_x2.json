@@ -1,0 +1,13 @@
+{
+ "recipe": "style_archer_x2",
+ "frames": 73,
+ "seconds": 2.433,
+ "contacts": [
+  38,
+  57
+ ],
+ "contact_fractions": [
+  0.528,
+  0.792
+ ]
+}

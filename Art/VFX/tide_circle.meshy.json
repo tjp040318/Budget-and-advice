@@ -1,0 +1,18 @@
+{
+  "id": "01a0d94f-df26-77c0-a2fe-46c2190d3fa8",
+  "kind": "picture",
+  "created": "2026-09-25T16:04:45Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Premium fantasy mobile RPG VFX texture, hand-painted with luminous glowing light, NO outlines, NO cartoon line art, on one continuous solid pure black background, no text, no border, nothing touching the image's edge. The image: a magic circle of water and ice seen from directly above: concentric rings of glowing cyan runes and wave glyphs, a snowflake star at the centre, thin bright engraved lines, perfectly symmetric, the circle filling the image.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 3543,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790352285491,
+  "started_at": 1790352285498,
+  "polled": "2026-09-25T16:05:36Z",
+  "consumed_credits": 6,
+  "finished_at": 1790352327092
+}

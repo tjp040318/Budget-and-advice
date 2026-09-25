@@ -1,0 +1,17 @@
+{
+ "recipe": "style_polearm_x4",
+ "frames": 100,
+ "seconds": 3.333,
+ "contacts": [
+  10,
+  24,
+  40,
+  65
+ ],
+ "contact_fractions": [
+  0.101,
+  0.242,
+  0.404,
+  0.657
+ ]
+}

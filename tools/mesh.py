@@ -85,7 +85,9 @@ def source_for(name):
 # The clips the game plays (AnimationClip's raw values), the only stems a
 # family's clip file may carry after its name.
 CLIP_NAMES = {"idle", "idle_combat", "attack_basic", "attack_heavy", "cast_loop", "cast_release",
-              "ultimate", "hit_react", "death", "victory", "summon_reveal", "walk"}
+              "ultimate", "hit_react", "death", "victory", "summon_reveal", "walk",
+              # the second skill by its shape (tools/skill_moves.py, 2026-09-25)
+              "skill_x2", "skill_x3", "skill_x4", "skill_x5", "skill_area"}
 
 
 def clip_sources(name):
